@@ -1,0 +1,13 @@
+body {
+  margin: 0;
+  font-family: 'Degular Mono', 'Playfair Display', serif; /* Elegant serif font for body */
+  font-weight: 400;
+  background-color: #1a1a1a; /* Dark background for the body */
+  color: #6ec77a; /* Light mint text */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}

@@ -1,0 +1,132 @@
+.process-images-container {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.instruction-section {
+  margin-bottom: 20px;
+}
+
+.instruction-section label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-weight: 500;
+}
+
+.instruction-section input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.instruction-section input:focus {
+  outline: none;
+  border-color: #179b9b;
+  box-shadow: 0 0 0 2px rgba(23, 155, 155, 0.1);
+}
+
+.file-upload-section {
+  margin-bottom: 20px;
+}
+
+.file-upload-section label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-weight: 500;
+}
+
+.file-upload-section input[type="file"] {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  border: 1px dashed #ddd;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+}
+
+.file-upload-section input[type="file"]:hover {
+  border-color: #179b9b;
+}
+
+.process-button {
+  background-color: #179b9b;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.process-button:hover:not(:disabled) {
+  background-color: #138b8b;
+  transform: translateY(-1px);
+}
+
+.process-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.process-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.error-message {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+/* Loading state styles */
+.process-button.loading {
+  position: relative;
+  padding-right: 40px;
+}
+
+.process-button.loading::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border: 2px solid white;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .process-images-container {
+    padding: 15px;
+  }
+
+  .process-button {
+    width: 100%;
+  }
+}
