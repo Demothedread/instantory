@@ -114,7 +114,7 @@ def process_images():
 
         app.logger.info("Received %d images for processing", len(uploaded_files))
 
-        instruction = request.form.get('instruction', User_Instructions)
+        instruction = request.form.get('instruction', instruction)
         app.logger.debug("Received instruction: %s", instruction)
 
         # Get the absolute path to main.py
