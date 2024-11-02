@@ -15,10 +15,10 @@
     "flask_restful":"0.3.8",
     "subprocess": "0.3.0",
     "requests":"0.3.0",
-    "python-dotenv":"0.10.3"
+    "python-dotenv":"0.10.3",
+    "pandas": "2.1.1",
     "logging":"0.4.9.6"
   },
-
   "keywords": [],
   "author": "Pseudø",
   "license": "ISC"
