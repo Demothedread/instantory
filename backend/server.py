@@ -1,4 +1,3 @@
-# Update imports
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 import sqlite3
@@ -8,12 +7,15 @@ import os
 import shutil
 from datetime import datetime
 import pandas as pd
-from whitenoise import WhiteNoise  # Add whitenoise for static file serving
+from whitenoise import WhiteNoise  # Add for static file serving
 from config import DB_NAME, DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR
 
 app = Flask(__name__)
+# Configure static directory relative to the backend folder
+static_dir = os.path.join(os.path.dirname(__file__), 'static')
+os.makedirs(static_dir, exist_ok=True)
 # Add whitenoise for static file serving in production
-app.wsgi_app = WhiteNoise(app.wsgi_app, root='static/')
+app.wsgi_app = WhiteNoise(app.wsgi_app, root=static_dir)
 
 # Enable CORS for all routes with proper configuration
 CORS_ORIGIN = os.environ.get('CORS_ORIGIN', 'https://instatory.vercel.app')
@@ -25,8 +27,10 @@ CORS(app, resources={
     }
 })
 
-# Set up logging
 logging.basicConfig(level=logging.DEBUG)
+
+# Define User_Instructions with a default value
+User_Instructions =os.environ.get("USER_INSTRUCTIONS", "Catalog, categorize and Describe the item.")
 
 def maintain_inventory_folders(max_folders=10):
     """Keep only the latest N folders in the inventory directory."""
@@ -133,7 +137,6 @@ def process_images():
             text=True
         )
         
-        # Maintain only the last 10 inventory folders
         maintain_inventory_folders()
         
         app.logger.info("Main script output: %s", result.stdout)
@@ -166,7 +169,6 @@ def reset_inventory():
         # Drop existing table if it exists
         cursor.execute(f"DROP TABLE IF EXISTS {table_name}")
         
-        # Create new table
         cursor.execute(f'''
             CREATE TABLE {table_name} (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -282,6 +284,6 @@ if __name__ == '__main__':
     conn.commit()
     conn.close()
     
-    # Bind to the port specified by the PORT environment variable
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    # Get port from environment variable with a default of 10000
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port, debug=False)
