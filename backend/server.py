@@ -1,6 +1,4 @@
-# Define User_Instructions at the top level
-User_Instructions = "You are an assistant that helps name, describe, and catalog products for inventory."
-
+# Update imports
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 import sqlite3
@@ -10,12 +8,22 @@ import os
 import shutil
 from datetime import datetime
 import pandas as pd
+from whitenoise import WhiteNoise  # Add whitenoise for static file serving
 from config import DB_NAME, DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR
 
 app = Flask(__name__)
+# Add whitenoise for static file serving in production
+app.wsgi_app = WhiteNoise(app.wsgi_app, root='static/')
 
-# Enable CORS for all routes
-CORS(app)
+# Enable CORS for all routes with proper configuration
+CORS_ORIGIN = os.environ.get('CORS_ORIGIN', 'https://your-vercel-frontend-url.vercel.app')
+CORS(app, resources={
+    r"/*": {
+        "origins": [CORS_ORIGIN],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)

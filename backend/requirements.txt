@@ -1,0 +1,11 @@
+flask==2.0.1
+flask-cors==3.0.10
+pandas==1.5.3  # Last version with good Python 3.9 support
+pillow==8.3.2
+python-dotenv==0.19.0
+requests==2.26.0
+sqlalchemy==1.4.23
+werkzeug==2.0.1
+gunicorn==20.1.0
+psycopg2-binary==2.9.1
+whitenoise==5.3.0

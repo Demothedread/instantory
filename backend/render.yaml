@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: instantory-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn server:app
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_APP
+        value: server.py
+      - key: PYTHON_VERSION
+        value: 3.9.0  # Using a more stable Python version
+      - key: DATABASE_URL
+        fromDatabase:
+          name: instantory-db
+          property: connectionString
+
+databases:
+  - name: instantory-db
+    databaseName: instantory
+    plan: free
