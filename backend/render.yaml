@@ -15,7 +15,6 @@ services:
         fromDatabase:
           name: instantory-db
           property: connectionString
-
 databases:
   - name: instantory-db
     databaseName: instantory

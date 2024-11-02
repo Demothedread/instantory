@@ -16,7 +16,7 @@ app = Flask(__name__)
 app.wsgi_app = WhiteNoise(app.wsgi_app, root='static/')
 
 # Enable CORS for all routes with proper configuration
-CORS_ORIGIN = os.environ.get('CORS_ORIGIN', 'https://your-vercel-frontend-url.vercel.app')
+CORS_ORIGIN = os.environ.get('CORS_ORIGIN', 'https://instatory.vercel.app')
 CORS(app, resources={
     r"/*": {
         "origins": [CORS_ORIGIN],
