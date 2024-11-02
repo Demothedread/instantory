@@ -114,7 +114,7 @@ def process_images():
 
         app.logger.info("Received %d images for processing", len(uploaded_files))
 
-        instruction = request.form.get('instruction', instruction)
+        instruction = request.form.get('instruction', User_Instructions)
         app.logger.debug("Received instruction: %s", instruction)
 
         # Get the absolute path to main.py
@@ -282,4 +282,6 @@ if __name__ == '__main__':
     conn.commit()
     conn.close()
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Bind to the port specified by the PORT environment variable
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
