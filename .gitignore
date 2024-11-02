@@ -28,7 +28,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 backend/railway.json
-
+backend/package.json
+backend.package-lock.json
 # Database
 *.sqlite3
 
