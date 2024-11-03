@@ -138,7 +138,7 @@ function InventoryTable({ inventory }) {
                   <td className="image-cell">
                     {item?.image_url && (
                       <img 
-                        src={`http://${process.env.PUBLIC_BACKEND_URL}/images/${encodeURIComponent(item.image_url)}`} 
+                        src={`${process.env.PUBLIC_BACKEND_URL}/images/${encodeURIComponent(item.image_url)}`} 
                         alt={item?.name || 'Product'} 
                         style={{width: '100px', height: 'auto'}}
                         className="inventory-image"
