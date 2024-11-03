@@ -19,5 +19,5 @@ services:
           property: connectionString
 databases:
   - name: instantory-db
-    databaseName: instantory
+    databaseName: instantory-db
     plan: free

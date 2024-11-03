@@ -5,7 +5,7 @@ const config = {
   },
   // Production API URL - update this with your Render backend URL
   production: {
-    apiUrl: process.env.REACT_APP_API_URL || 'https://instantory-api.onrender.com'
+    apiUrl: process.env.PUBLIC_BACKEND_URL || 'https://instantory-api.onrender.com'
   }
 };
 

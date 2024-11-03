@@ -7,8 +7,18 @@ import os
 import shutil
 from datetime import datetime
 import pandas as pd
-from whitenoise import WhiteNoise  # Add for static file serving
+from whitenoise import WhiteNoise
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
 from config import DB_NAME, DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR
+
+# Initialize Sentry
+sentry_sdk.init(
+    dsn=os.environ.get("SENTRY_DSN", ""),  # You'll get this from Sentry.io
+    integrations=[FlaskIntegration()],
+    traces_sample_rate=1.0,
+    profiles_sample_rate=1.0,
+)
 
 app = Flask(__name__)
 # Configure static directory relative to the backend folder
@@ -18,7 +28,7 @@ os.makedirs(static_dir, exist_ok=True)
 app.wsgi_app = WhiteNoise(app.wsgi_app, root=static_dir)
 
 # Enable CORS for all routes with proper configuration
-CORS_ORIGIN = os.environ.get('CORS_ORIGIN', 'https://instatory.vercel.app')
+CORS_ORIGIN = os.environ.get('CORS_ORIGIN', '*')  # Updated to allow Webflow origin
 CORS(app, resources={
     r"/*": {
         "origins": [CORS_ORIGIN],
@@ -45,6 +55,7 @@ def maintain_inventory_folders(max_folders=10):
             shutil.rmtree(folder_path)
             app.logger.info(f"Removed old inventory folder: {folder}")
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         app.logger.error(f"Error maintaining inventory folders: {e}")
 
 def check_file_exists(filename):
@@ -90,6 +101,7 @@ def get_inventory():
         app.logger.info("Fetched %d items from the database", len(inventory))
         return jsonify(inventory)
     except sqlite3.Error as e:
+        sentry_sdk.capture_exception(e)
         app.logger.error("Database error: %s", e)
         return jsonify({"error": "Internal Server Error"}), 500
 
@@ -146,10 +158,12 @@ def process_images():
         return jsonify({'status': 'success', 'message': 'Images processed successfully.'})
 
     except subprocess.CalledProcessError as e:
+        sentry_sdk.capture_exception(e)
         app.logger.error("Error processing images: %s", e)
         app.logger.error("Error output: %s", e.stderr)
         return jsonify({'status': 'error', 'message': str(e)}), 500
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         app.logger.error("Unexpected error: %s", e)
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
@@ -200,9 +214,11 @@ def reset_inventory():
         })
         
     except sqlite3.Error as e:
+        sentry_sdk.capture_exception(e)
         app.logger.error("Database error during reset: %s", e)
         return jsonify({'status': 'error', 'message': str(e)}), 500
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         app.logger.error("Error during inventory reset: %s", e)
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
@@ -225,6 +241,7 @@ def export_inventory():
 
         return jsonify({'status': 'success', 'message': f'Inventory exported to {export_path}'})
     except sqlite3.Error as e:
+        sentry_sdk.capture_exception(e)
         app.logger.error("Database error: %s", e)
         return jsonify({"error": "Internal Server Error"}), 500
 
@@ -250,9 +267,11 @@ def serve_image(filename):
 
         return send_file(image_path, mimetype=mime_type)
     except FileNotFoundError:
+        sentry_sdk.capture_exception(e)
         app.logger.error("Image not found: %s", filename)
         return jsonify({"error": "Image not found"}), 404
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         app.logger.error("Error serving image %s: %s", filename, str(e))
         return jsonify({"error": "Internal Server Error"}), 500
 

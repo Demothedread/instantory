@@ -52,7 +52,7 @@ function ProcessImagesButton({ onProcess }) {
     formData.append('instruction', instruction);
 
     try {
-      const response = await axios.post('http://localhost:5000/process-images', formData, {
+      const response = await axios.post('http://${process.env.NEXT_PUBLIC_BACKEND_URL}/process-images', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

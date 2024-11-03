@@ -20,7 +20,7 @@ function App() {
     setLoading(true); 
     setError(null); 
     try {
-      const response = await fetch('http://localhost:5000/api/inventory');
+      const response = await fetch('http://${process.env.PUBLIC_BACKEND_URL}/api/inventory');
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`); 
       }
@@ -40,7 +40,7 @@ function App() {
   const handleProcessImages = async (formData) => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/process-images', {
+      const response = await fetch('http://${process.env.PUBLIC_BACKEND_URL}/process-images', {
         method: 'POST',
         headers: { 
           'Accept': 'application/json, image/jpeg, image/png, image/jpg'
@@ -69,7 +69,7 @@ function App() {
   const handleResetInventory = async () => {
     if (window.confirm('Are you sure you want to reset the current inventory? This will delete all entries and images.')) {
       try {
-        const response = await fetch('http://localhost:5000/api/inventory/reset', {
+        const response = await fetch('http://${process.env.PUBLIC_BACKEND_URL}/api/inventory/reset', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -97,7 +97,7 @@ function App() {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/inventory/reset', {
+      const response = await fetch('http://${process.env.PUBLIC_BACKEND_URL}/api/inventory/reset', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
