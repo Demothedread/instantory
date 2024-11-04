@@ -13,7 +13,9 @@ from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 from PIL import Image
 from io import BytesIO
-from backend.config import DB_NAME, DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR
+from backend.config import DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR  
+import psycopg2
+from psycopg2 import sql, OperationalError
 
 # Load environment variables
 load_dotenv()
@@ -21,17 +23,23 @@ load_dotenv()
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Set your OpenAI API key
-openai.api_key = os.getenv('OPENAI_API_KEY')
-
 def initialize_database() -> None:
     """Initialize the database and create the products table if it doesn't exist."""
     try:
-        with sqlite3.connect(DB_NAME) as conn:
+        # Connect to PostgreSQL
+        with psycopg2.connect(
+            dbname= os.env(DB_NAME),
+            user= os.env(DB_USER),
+            password= os.env(DB_PASSWORD),
+            host= os.env(DB_HOST),
+            port=os.env(DB_PORT)
+        ) as conn:
             cursor = conn.cursor()
+
+            # Create the products table if it doesn't exist
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS products (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id SERIAL PRIMARY KEY,
                     name TEXT,
                     description TEXT,
                     image_url TEXT UNIQUE,
@@ -47,15 +55,21 @@ def initialize_database() -> None:
             ''')
 
             # Check if key_tags column exists, if not, add it
-            cursor.execute("PRAGMA table_info(products)")
-            columns = [column[1] for column in cursor.fetchall()]
-            if 'key_tags' not in columns:
+            cursor.execute("""
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name='products' AND column_name='key_tags';
+            """)
+            if not cursor.fetchone():
                 cursor.execute("ALTER TABLE products ADD COLUMN key_tags TEXT")
 
             conn.commit()
             logging.info("Database initialized successfully.")
-    except sqlite3.Error as e:
+    except OperationalError as e:
         logging.error("Error initializing database: %s", e)
+
+# Set your OpenAI API key
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 def process_uploaded_images(instruction: str) -> None:
     """Process uploaded images recursively, create a new directory, and save the processed images."""
