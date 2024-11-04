@@ -14,20 +14,46 @@ import asyncio
 from config import DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR
 
 app = Quart(__name__)
+
+# Configure CORS properly
+CORS_ORIGIN = os.environ.get('CORS_ORIGIN', 'https://instantory.vercel.app')
+app = cors(app, 
+    allow_origin=[CORS_ORIGIN],
+    allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "Authorization"],
+    allow_credentials=True,
+    max_age=3600
+)
+
 # Configure static directory relative to the backend folder
 static_dir = os.path.join(os.path.dirname(__file__), 'static')
 os.makedirs(static_dir, exist_ok=True)
 # Add whitenoise for static file serving in production
 app.asgi_app = WhiteNoise(app.asgi_app, root=static_dir)
 
-# Enable CORS for all routes with proper configuration
-CORS_ORIGIN = os.environ.get('CORS_ORIGIN', 'https://instantory.vercel.app')
-app = cors(app, allow_origin=[CORS_ORIGIN])
-
 logging.basicConfig(level=logging.DEBUG)
 
 # Define User_Instructions with a default value
 User_Instructions = os.environ.get("USER_INSTRUCTIONS", "Catalog, categorize and Describe the item.")
+
+@app.after_request
+async def after_request(response):
+    """Add CORS headers to all responses."""
+    response.headers.add('Access-Control-Allow-Origin', CORS_ORIGIN)
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
+
+@app.route('/cors-preflight', methods=['OPTIONS'])
+async def handle_cors_preflight():
+    """Handle CORS preflight requests."""
+    response = await app.make_default_options_response()
+    response.headers.add('Access-Control-Allow-Origin', CORS_ORIGIN)
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 async def get_db_pool():
     """Get PostgreSQL connection pool from environment variables or URL."""
@@ -114,8 +140,11 @@ async def get_inventory():
         app.logger.error("Database error: %s", e)
         return jsonify({"error": "Internal Server Error"}), 500
 
-@app.route('/process-images', methods=['POST'])
+@app.route('/process-images', methods=['POST', 'OPTIONS'])
 async def process_images():
+    if request.method == 'OPTIONS':
+        return await handle_cors_preflight()
+
     try:
         # Save uploaded files and validate
         files = await request.files
@@ -171,9 +200,12 @@ async def process_images():
         app.logger.error("Unexpected error: %s", e)
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-@app.route('/api/inventory/reset', methods=['POST'])
+@app.route('/api/inventory/reset', methods=['POST', 'OPTIONS'])
 async def reset_inventory():
     """Reset the inventory by clearing the database and optionally creating a new table."""
+    if request.method == 'OPTIONS':
+        return await handle_cors_preflight()
+
     try:
         data = await request.get_json()
         table_name = data.get('table_name', 'products')
@@ -224,8 +256,11 @@ def allowed_file(filename):
     """Check if the file extension is allowed."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
-@app.route('/export-inventory', methods=['GET'])
+@app.route('/export-inventory', methods=['GET', 'OPTIONS'])
 async def export_inventory():
+    if request.method == 'OPTIONS':
+        return await handle_cors_preflight()
+
     try:
         pool = await get_db_pool()
         async with pool.acquire() as conn:
@@ -259,8 +294,11 @@ async def export_inventory():
         app.logger.error("Database error: %s", e)
         return jsonify({"error": "Internal Server Error"}), 500
 
-@app.route('/images/<path:filename>')
+@app.route('/images/<path:filename>', methods=['GET', 'OPTIONS'])
 async def serve_image(filename):
+    if request.method == 'OPTIONS':
+        return await handle_cors_preflight()
+
     try:
         # Provide the correct MIME type based on the file extension
         mime_type = 'image/jpeg'  # Default MIME type
