@@ -27,13 +27,13 @@ def initialize_database() -> None:
     """Initialize the database and create the products table if it doesn't exist."""
     try:
         # Connect to PostgreSQL
-        with psycopg2.connect(
-            dbname= os.env(DB_NAME),
-            user= os.env(DB_USER),
-            password= os.env(DB_PASSWORD),
-            host= os.env(DB_HOST),
-            port=os.env(DB_PORT)
-        ) as conn:
+        with sqlite3.connect(
+            dbname= os.env.(DB_NAME),
+            user= os.env.(DB_USER),
+            password= os.env.(DB_PASSWORD),
+            host= os.env.(DB_HOST),
+            port=os.env.(DB_PORT))
+        as conn:
             cursor = conn.cursor()
 
             # Create the products table if it doesn't exist

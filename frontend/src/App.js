@@ -17,34 +17,35 @@ function App() {
   }, []);
 
   const fetchInventory = async () => {
-    setLoading(true); 
-    setError(null); 
+    setLoading(true);
+    setError(null);
     try {
-      const response = await fetch('${process.env.PUBLIC_BACKEND_URL}/api/inventory');
+      const response = await fetch('{os.env.PUBLIC_BACKEND_URL}/api/inventory');
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-  
+
       const data = await response.json();
-  
+
       if (!data || typeof data !== 'object') {
         throw new Error("Invalid response format");
       }
-  
+
       const inventoryData = Array.isArray(data) ? data : [data];
-  
+
       console.log('Received inventory data:', inventoryData);
       setInventory(inventoryData);
     } catch (error) {
       console.error('Error fetching inventory:', error);
       let errorMessage = 'Failed to fetch inventory. Please try again later.';
-      
+
       if (error.message.includes('NetworkError')) {
         errorMessage = 'Network error. Please check your connection.';
       } else if (error.message.includes('Invalid response format')) {
         errorMessage = 'Unexpected data format received from the server.';
       }
-      
+
       setError(errorMessage);
       setInventory([]);
     } finally {
@@ -55,7 +56,7 @@ function App() {
   const handleResetInventory = async () => {
     if (window.confirm('Are you sure you want to reset the current inventory? This will delete all entries and images.')) {
       try {
-        const response = await fetch('${process.env.PUBLIC_BACKEND_URL}/api/inventory/reset', {
+        const response = await fetch('${os.env.PUBLIC_BACKEND_URL}/api/inventory/reset', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -83,7 +84,7 @@ function App() {
     }
 
     try {
-      const response = await fetch('${process.env.PUBLIC_BACKEND_URL}/api/inventory/reset', {
+      const response = await fetch('${os.env.PUBLIC_BACKEND_URL}/api/inventory/reset', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
