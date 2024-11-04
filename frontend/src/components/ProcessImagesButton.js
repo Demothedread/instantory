@@ -57,6 +57,7 @@ function ProcessImagesButton({ onProcess }) {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        withCredentials: true,
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
           console.log(`Upload Progress: ${percentCompleted}%`);
@@ -65,15 +66,21 @@ function ProcessImagesButton({ onProcess }) {
 
       if (response.data.status === 'success') {
         alert('Images processed successfully!');
-        onProcess();
+        if (onProcess) {
+          await onProcess();
+        }
         setSelectedFiles(null);
         document.getElementById('file-upload').value = '';
       } else {
-        setErrorMessage(`Error processing images: ${response.data.message || 'An error occurred during image processing.'}`);
+        throw new Error(response.data.message || 'An error occurred during image processing.');
       }
     } catch (error) {
       console.error('Error processing images:', error);
-      setErrorMessage(error.response?.data?.message || 'An error occurred while processing the images.');
+      setErrorMessage(
+        error.response?.data?.message || 
+        error.message || 
+        'An error occurred while processing the images. Please try again.'
+      );
     } finally {
       setIsUploading(false);
     }

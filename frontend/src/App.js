@@ -21,28 +21,31 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${config.apiUrl}/api/inventory`);
+      const response = await fetch(`${config.apiUrl}/api/inventory`, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-
       if (!data || typeof data !== 'object') {
         throw new Error("Invalid response format");
       }
 
       const inventoryData = Array.isArray(data) ? data : [data];
-
       console.log('Received inventory data:', inventoryData);
       setInventory(inventoryData);
     } catch (error) {
       console.error('Error fetching inventory:', error);
       let errorMessage = 'Failed to fetch inventory. Please try again later.';
 
-      if (error.message.includes('NetworkError')) {
-        errorMessage = 'Network error. Please check your connection.';
+      if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
+        errorMessage = 'Network error. Please check your connection and ensure the backend server is running.';
       } else if (error.message.includes('Invalid response format')) {
         errorMessage = 'Unexpected data format received from the server.';
       }
@@ -54,33 +57,8 @@ function App() {
     }
   };
 
-  const handleProcessImages = async (files) => {
-    try {
-      const formData = new FormData();
-      for (let file of files) {
-        formData.append('images', file);
-      }
-
-      const response = await fetch(`${config.apiUrl}/process-images`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      if (result.status === 'success') {
-        await fetchInventory(); // Refresh inventory after processing
-        return { success: true, message: result.message };
-      } else {
-        throw new Error(result.message || 'Failed to process images');
-      }
-    } catch (error) {
-      console.error('Error processing images:', error);
-      return { success: false, message: error.message };
-    }
+  const handleProcessImages = async () => {
+    await fetchInventory();
   };
 
   const handleResetInventory = async () => {
@@ -88,8 +66,10 @@ function App() {
       try {
         const response = await fetch(`${config.apiUrl}/api/inventory/reset`, {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
           },
           body: JSON.stringify({ table_name: 'products' }),
         });
@@ -116,8 +96,10 @@ function App() {
     try {
       const response = await fetch(`${config.apiUrl}/api/inventory/reset`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
         body: JSON.stringify({ table_name: newTableName.trim() }),
       });
@@ -137,52 +119,96 @@ function App() {
   };
 
   const handleExport = (format) => {
+    if (inventory.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
     let data;
+    let filename;
+    let mimeType;
+
     switch (format) {
       case 'csv':
         data = convertToCSV(inventory);
+        filename = 'inventory.csv';
+        mimeType = 'text/csv';
         break;
-      case 'xml':
-        data = convertToXML(inventory);
-        break;
-      case 'sql':
-        data = convertToSQL(inventory);
+      case 'xls':
+        data = convertToXLS(inventory);
+        filename = 'inventory.xls';
+        mimeType = 'application/vnd.ms-excel';
         break;
       default:
         return;
     }
-    saveToFile(data, format);
-  };
 
-  const convertToCSV = (data) => {
-    const header = Object.keys(data[0]).join(',') + '\n';
-    const rows = data.map(item => Object.values(item).join(',')).join('\n');
-    return header + rows;
-  };
-
-  const convertToXML = (data) => {
-    const xml = data.map(item => {
-      return `<item>${Object.entries(item).map(([key, value]) => `<${key}>${value}</${key}>`).join('')}</item>`;
-    }).join('');
-    return `<inventory>${xml}</inventory>`;
-  };
-
-  const convertToSQL = (data) => {
-    return data.map(item => {
-      return `INSERT INTO inventory (name, description, category, material, color, dimensions, origin_source, import_cost, retail_price) VALUES ('${item.name}', '${item.description}', '${item.category}', '${item.material}', '${item.color}', '${item.dimensions}', '${item.origin_source}', ${item.import_cost}, ${item.retail_price});`;
-    }).join('\n');
-  };
-
-  const saveToFile = (data, format) => {
-    const blob = new Blob([data], { type: format === 'csv' ? 'text/csv' : 'application/octet-stream' });
+    const blob = new Blob([data], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `inventory.${format}`;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const convertToCSV = (data) => {
+    if (data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]).filter(key => 
+      !key.includes('_url') && !key.includes('id')
+    );
+    
+    const csvRows = [];
+    
+    // Add headers
+    csvRows.push(headers.join(','));
+    
+    // Add data rows
+    data.forEach(item => {
+      const values = headers.map(header => {
+        const value = item[header];
+        // Handle special cases (null, undefined, strings with commas)
+        if (value == null) return '';
+        if (typeof value === 'string' && value.includes(',')) {
+          return `"${value}"`;
+        }
+        return value;
+      });
+      csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+  };
+
+  const convertToXLS = (data) => {
+    if (data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]).filter(key => 
+      !key.includes('_url') && !key.includes('id')
+    );
+    
+    let xlsContent = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+    xlsContent += '<head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Inventory</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>';
+    xlsContent += '<body><table>';
+    
+    // Add headers
+    xlsContent += '<tr>' + headers.map(header => `<th>${header}</th>`).join('') + '</tr>';
+    
+    // Add data rows
+    data.forEach(item => {
+      xlsContent += '<tr>';
+      headers.forEach(header => {
+        const value = item[header] ?? '';
+        xlsContent += `<td>${value}</td>`;
+      });
+      xlsContent += '</tr>';
+    });
+    
+    xlsContent += '</table></body></html>';
+    return xlsContent;
   };
 
   return (
@@ -193,9 +219,12 @@ function App() {
         <ProcessImagesButton onProcess={handleProcessImages} />
         <div className="App">
           <div style={{ textAlign: 'center', margin: '10px 0' }}>
-            <button onClick={() => handleExport('csv')}>Export as CSV</button>
-            <button onClick={() => handleExport('xml')}>Export as XML</button>
-            <button onClick={() => handleExport('sql')}>Export as SQL</button>
+            <button onClick={() => handleExport('csv')} style={{ backgroundColor: '#4CAF50' }}>
+              Export as CSV
+            </button>
+            <button onClick={() => handleExport('xls')} style={{ backgroundColor: '#2196F3', marginLeft: '10px' }}>
+              Export as XLS
+            </button>
             <button onClick={handleResetInventory} style={{ marginLeft: '20px', backgroundColor: '#ff4444' }}>
               Reset Inventory
             </button>

@@ -18,12 +18,11 @@ app = Quart(__name__)
 # Configure CORS properly
 CORS_ORIGIN = os.environ.get('CORS_ORIGIN', 'https://instantory.vercel.app')
 app = cors(app, 
-    allow_origin=[CORS_ORIGIN],
-    allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
-    allow_headers=["Content-Type", "Authorization"],
-    allow_credentials=True,
-    max_age=3600
-)
+          allow_origin=[CORS_ORIGIN],
+          allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+          allow_headers=["Content-Type", "Authorization", "Accept"],
+          allow_credentials=True,
+          max_age=3600)
 
 # Configure static directory relative to the backend folder
 static_dir = os.path.join(os.path.dirname(__file__), 'static')
@@ -40,7 +39,7 @@ User_Instructions = os.environ.get("USER_INSTRUCTIONS", "Catalog, categorize and
 async def after_request(response):
     """Add CORS headers to all responses."""
     response.headers.add('Access-Control-Allow-Origin', CORS_ORIGIN)
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response
@@ -50,7 +49,7 @@ async def handle_cors_preflight():
     """Handle CORS preflight requests."""
     response = await app.make_default_options_response()
     response.headers.add('Access-Control-Allow-Origin', CORS_ORIGIN)
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response
@@ -146,12 +145,10 @@ async def process_images():
         return await handle_cors_preflight()
 
     try:
-        # Save uploaded files and validate
         files = await request.files
         uploaded_files = []
         for file in files.getlist('images'):
             if file and allowed_file(file.filename):
-                # Check if file already exists
                 if check_file_exists(file.filename):
                     return jsonify({
                         'status': 'error', 
@@ -173,7 +170,6 @@ async def process_images():
         instruction = form.get('instruction', User_Instructions)
         app.logger.debug("Received instruction: %s", instruction)
 
-        # Get the absolute path to main.py
         main_script_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'main.py')
         
         # Run the main.py script with the correct arguments
@@ -202,7 +198,6 @@ async def process_images():
 
 @app.route('/api/inventory/reset', methods=['POST', 'OPTIONS'])
 async def reset_inventory():
-    """Reset the inventory by clearing the database and optionally creating a new table."""
     if request.method == 'OPTIONS':
         return await handle_cors_preflight()
 
@@ -210,13 +205,11 @@ async def reset_inventory():
         data = await request.get_json()
         table_name = data.get('table_name', 'products')
         
-        # Create new uploads folder for the table
         table_uploads_dir = os.path.join(UPLOADS_DIR, f'{table_name}_images')
         os.makedirs(table_uploads_dir, exist_ok=True)
         
         pool = await get_db_pool()
         async with pool.acquire() as conn:
-            # Drop existing table if it exists
             await conn.execute(f'DROP TABLE IF EXISTS "{table_name}"')
             
             await conn.execute(f'''
@@ -238,7 +231,6 @@ async def reset_inventory():
         
         await pool.close()
         
-        # Clear inventory images
         if os.path.exists(INVENTORY_IMAGES_DIR):
             shutil.rmtree(INVENTORY_IMAGES_DIR)
             os.makedirs(INVENTORY_IMAGES_DIR)
@@ -267,7 +259,6 @@ async def export_inventory():
             rows = await conn.fetch("SELECT * FROM products")
         await pool.close()
 
-        # Create CSV in memory
         output = io.StringIO()
         writer = csv.writer(output)
         
@@ -309,10 +300,8 @@ async def serve_image(filename):
         elif filename.endswith('.webp'):
             mime_type = 'image/webp'
 
-        # Construct the full path to the image
         image_path = os.path.join(INVENTORY_IMAGES_DIR, filename)
         
-        # Ensure the path is within the allowed directory
         if not os.path.abspath(image_path).startswith(os.path.abspath(INVENTORY_IMAGES_DIR)):
             app.logger.error("Attempted path traversal: %s", filename)
             return jsonify({"error": "Invalid path"}), 400
@@ -355,12 +344,10 @@ async def initialize_database():
 @app.before_serving
 async def startup():
     """Initialize required directories and database before serving."""
-    # Create required directories
     os.makedirs(UPLOADS_DIR, exist_ok=True)
     os.makedirs(INVENTORY_IMAGES_DIR, exist_ok=True)
     os.makedirs(EXPORTS_DIR, exist_ok=True)
     
-    # Initialize database
     await initialize_database()
 
 if __name__ == '__main__':
