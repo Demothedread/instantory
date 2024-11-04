@@ -12,8 +12,8 @@ from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 from PIL import Image
 from io import BytesIO
-import psycopg2
-from psycopg2 import sql, OperationalError
+import asyncpg
+import asyncio
 import urllib.parse as urlparse
 from backend.config import DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR
 
@@ -23,45 +23,38 @@ load_dotenv()
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def get_db_connection():
-    """Get PostgreSQL database connection from environment variables or URL."""
+async def get_db_pool():
+    """Get PostgreSQL connection pool from environment variables or URL."""
     database_url = os.getenv('DATABASE_URL')
     if database_url:
         # Parse the URL
         url = urlparse.urlparse(database_url)
-        dbname = url.path[1:]
-        user = url.username
-        password = url.password
-        host = url.hostname
-        port = url.port
-
-        return psycopg2.connect(
-            dbname=dbname,
-            user=user,
-            password=password,
-            host=host,
-            port=port,
-            sslmode='require'  # Required for Render PostgreSQL
+        return await asyncpg.create_pool(
+            user=url.username,
+            password=url.password,
+            database=url.path[1:],
+            host=url.hostname,
+            port=url.port,
+            ssl='require'  # Required for Render PostgreSQL
         )
     else:
         # Fallback to individual environment variables
-        return psycopg2.connect(
-            dbname=os.getenv('DB_NAME'),
+        return await asyncpg.create_pool(
             user=os.getenv('DB_USER'),
             password=os.getenv('DB_PASSWORD'),
+            database=os.getenv('DB_NAME'),
             host=os.getenv('DB_HOST'),
             port=os.getenv('DB_PORT'),
-            sslmode='require'  # Required for Render PostgreSQL
+            ssl='require'  # Required for Render PostgreSQL
         )
 
-def initialize_database() -> None:
+async def initialize_database() -> None:
     """Initialize the database and create the products table if it doesn't exist."""
     try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
             # Create the products table if it doesn't exist
-            cursor.execute('''
+            await conn.execute('''
                 CREATE TABLE IF NOT EXISTS products (
                     id SERIAL PRIMARY KEY,
                     name TEXT,
@@ -79,68 +72,63 @@ def initialize_database() -> None:
             ''')
 
             # Check if key_tags column exists, if not, add it
-            cursor.execute("""
+            exists = await conn.fetchval("""
                 SELECT column_name
                 FROM information_schema.columns
                 WHERE table_name='products' AND column_name='key_tags';
             """)
-            if not cursor.fetchone():
-                cursor.execute("ALTER TABLE products ADD COLUMN key_tags TEXT")
+            if not exists:
+                await conn.execute("ALTER TABLE products ADD COLUMN key_tags TEXT")
 
-            conn.commit()
             logging.info("Database initialized successfully.")
-    except OperationalError as e:
+        await pool.close()
+    except Exception as e:
         logging.error("Error initializing database: %s", e)
 
 # Set your OpenAI API key
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
-def process_uploaded_images(instruction: str) -> None:
+async def process_uploaded_images(instruction: str) -> None:
     """Process uploaded images recursively, create a new directory, and save the processed images."""
     logging.info("Starting to process uploaded images")
     
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            # Retrieve existing image URLs from the database to avoid duplicates
+            existing_images = set(await conn.fetch("SELECT image_url FROM products"))
+            existing_images = {row['image_url'] for row in existing_images}
 
-        # Retrieve existing image URLs from the database to avoid duplicates
-        cursor.execute("SELECT image_url FROM products")
-        existing_images = {row[0] for row in cursor.fetchall()}
+            # Create a new directory for this batch of processed images
+            batch_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            batch_dir = os.path.join(INVENTORY_IMAGES_DIR, batch_timestamp)
+            os.makedirs(batch_dir, exist_ok=True)
+            logging.info("Created batch directory: %s", batch_dir)
 
-        # Create a new directory for this batch of processed images
-        batch_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        batch_dir = os.path.join(INVENTORY_IMAGES_DIR, batch_timestamp)
-        os.makedirs(batch_dir, exist_ok=True)
-        logging.info("Created batch directory: %s", batch_dir)
+            # Walk through the uploads directory recursively
+            for root, dirs, files in os.walk(UPLOADS_DIR):
+                logging.info("Traversing directory: %s", root)
+                for filename in files:
+                    if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+                        image_path = os.path.join(root, filename)
+                        logging.info("Processing image: %s", image_path)
+                        try:
+                            # Process image and get product info
+                            product_info = await process_single_image(image_path, batch_dir, instruction)
+                            
+                            if product_info and product_info['image_path'] not in existing_images:
+                                await insert_product_info(conn, product_info)
+                                logging.info("Successfully processed and moved image: %s", filename)
+                            else:
+                                logging.info("Image already exists or processing failed: %s", filename)
+                        except Exception as e:
+                            logging.error("Error processing image %s: %s", filename, e)
 
-        # Walk through the uploads directory recursively
-        for root, dirs, files in os.walk(UPLOADS_DIR):
-            logging.info("Traversing directory: %s", root)
-            for filename in files:
-                if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
-                    image_path = os.path.join(root, filename)
-                    logging.info("Processing image: %s", image_path)
-                    try:
-                        # Process image and get product info
-                        product_info = process_single_image(image_path, batch_dir, instruction)
-                        
-                        if product_info and product_info['image_path'] not in existing_images:
-                            insert_product_info(cursor, product_info)
-                            conn.commit()
-                            logging.info("Successfully processed and moved image: %s", filename)
-                        else:
-                            logging.info("Image already exists or processing failed: %s", filename)
-                    except Exception as e:
-                        logging.error("Error processing image %s: %s", filename, e)
-                        conn.rollback()
-
-        conn.close()
+        await pool.close()
     except Exception as e:
         logging.error("Error in process_uploaded_images: %s", e)
-        if 'conn' in locals():
-            conn.close()
 
-def process_single_image(image_path: str, batch_dir: str, instruction: str) -> Dict[str, Any]:
+async def process_single_image(image_path: str, batch_dir: str, instruction: str) -> Dict[str, Any]:
     """Process a single image and return product information."""
     with Image.open(image_path) as img:
         if img.mode == 'RGBA':
@@ -160,14 +148,14 @@ def process_single_image(image_path: str, batch_dir: str, instruction: str) -> D
             base64_encoded_image = base64.b64encode(resized_image_file.read()).decode("utf-8")
 
         # Analyze image
-        product_info = analyze_image(base64_encoded_image, instruction)
+        product_info = await analyze_image(base64_encoded_image, instruction)
         if product_info:
             product_info['image_path'] = new_image_path
             return product_info
         return None
 
 @retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(6))
-def analyze_image(base64_image: str, instruction: str) -> Dict[str, Any]:
+async def analyze_image(base64_image: str, instruction: str) -> Dict[str, Any]:
     """Analyze an image using OpenAI's GPT-4 model and return product features."""
     headers = {
         "Content-Type": "application/json",
@@ -229,14 +217,14 @@ def analyze_image(base64_image: str, instruction: str) -> Dict[str, Any]:
         logging.error("Error in analyze_image: %s", e)
         return None
 
-def insert_product_info(cursor: psycopg2.extensions.cursor, product_info: Dict[str, Any]) -> None:
+async def insert_product_info(conn: asyncpg.Connection, product_info: Dict[str, Any]) -> None:
     """Insert product information into the PostgreSQL database."""
     try:
-        cursor.execute('''
+        await conn.execute('''
             INSERT INTO products
             (name, description, image_url, category, material, color, dimensions, origin_source, import_cost, retail_price, key_tags)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ''', (
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ''', 
             product_info['name'],
             product_info['description'] if isinstance(product_info['description'], str) else '. '.join(product_info['description']),
             product_info['image_path'],
@@ -245,31 +233,35 @@ def insert_product_info(cursor: psycopg2.extensions.cursor, product_info: Dict[s
             product_info['color'],
             product_info['dimensions'],
             product_info['origin_source'],
-            product_info['import_cost'] if product_info['import_cost'] != 'null' else None,
-            product_info['retail_price'] if product_info['retail_price'] != 'null' else None,
+            None if product_info['import_cost'] == 'null' else float(product_info['import_cost']),
+            None if product_info['retail_price'] == 'null' else float(product_info['retail_price']),
             product_info['key_tags'] if isinstance(product_info['key_tags'], str) else ', '.join(product_info['key_tags'])
-        ))
+        )
     except Exception as e:
         logging.error("Error inserting product info: %s", e)
         raise
 
-def main() -> None:
-    """Main function to initialize the database and process images."""
+async def main_async() -> None:
+    """Async main function to initialize the database and process images."""
     parser = argparse.ArgumentParser(description='Process uploaded images.')
     parser.add_argument('--process-images', action='store_true', help='Process uploaded images.')
     parser.add_argument('--instruction', type=str, default="You are an assistant that helps catalog and describe products for inventory.", help='Custom instruction for image analysis.')
     args = parser.parse_args()
 
     logging.info("Starting main function")
-    initialize_database()
+    await initialize_database()
 
     if args.process_images:
         logging.info("Processing images flag detected")
-        process_uploaded_images(args.instruction)
+        await process_uploaded_images(args.instruction)
     else:
         logging.warning("No valid command-line argument provided. Use --process-images to process uploaded images.")
 
     logging.info("Main function completed")
+
+def main():
+    """Entry point that runs the async main function."""
+    asyncio.run(main_async())
 
 if __name__ == "__main__":
     main()
