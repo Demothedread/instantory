@@ -22,45 +22,31 @@ function App() {
     try {
       const response = await fetch('${process.env.PUBLIC_BACKEND_URL}/api/inventory');
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`); 
-      }
-      const data = await response.json(); 
-      const inventoryData = Array.isArray(data) ? data : [data]; 
-      console.log('Received inventory data:', inventoryData);
-      setInventory(inventoryData); 
-    } catch (error) {
-      console.error('Error fetching inventory:', error);
-      setError('Failed to fetch inventory. Please try again later.'); 
-      setInventory([]); 
-    } finally {
-      setLoading(false); 
-    }
-  };
-
-  const handleProcessImages = async (formData) => {
-    setLoading(true);
-    try {
-      const response = await fetch('${process.env.PUBLIC_BACKEND_URL}/process-images', {
-        method: 'POST',
-        headers: { 
-          'Accept': 'application/json, image/jpeg, image/png, image/jpg'
-        }, 
-        body: formData,
-        mode: 'cors',
-      });
-      if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = await response.json(); 
-      console.log('Processing result:', data);
-      if (data.status === 'success') {
-        fetchInventory(); 
-      } else {
-        throw new Error(data.message || 'Processing failed');
+  
+      const data = await response.json();
+  
+      if (!data || typeof data !== 'object') {
+        throw new Error("Invalid response format");
       }
+  
+      const inventoryData = Array.isArray(data) ? data : [data];
+  
+      console.log('Received inventory data:', inventoryData);
+      setInventory(inventoryData);
     } catch (error) {
-      console.error('Error processing images:', error);
-      setError('Failed to process images. Please try again later.');
+      console.error('Error fetching inventory:', error);
+      let errorMessage = 'Failed to fetch inventory. Please try again later.';
+      
+      if (error.message.includes('NetworkError')) {
+        errorMessage = 'Network error. Please check your connection.';
+      } else if (error.message.includes('Invalid response format')) {
+        errorMessage = 'Unexpected data format received from the server.';
+      }
+      
+      setError(errorMessage);
+      setInventory([]);
     } finally {
       setLoading(false);
     }
