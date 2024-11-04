@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Link, Routes } from 'react-router-dom';
 import InventoryTable from './components/InventoryTable';
 import ImageList from './components/ImageList';
 import ProcessImagesButton from './components/ProcessImagesButton';
+import config from './config';
 import './App.css';
 
 function App() {
@@ -20,7 +21,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('{os.env.PUBLIC_BACKEND_URL}/api/inventory');
+      const response = await fetch(`${config.apiUrl}/api/inventory`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -53,10 +54,39 @@ function App() {
     }
   };
 
+  const handleProcessImages = async (files) => {
+    try {
+      const formData = new FormData();
+      for (let file of files) {
+        formData.append('images', file);
+      }
+
+      const response = await fetch(`${config.apiUrl}/process-images`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.status === 'success') {
+        await fetchInventory(); // Refresh inventory after processing
+        return { success: true, message: result.message };
+      } else {
+        throw new Error(result.message || 'Failed to process images');
+      }
+    } catch (error) {
+      console.error('Error processing images:', error);
+      return { success: false, message: error.message };
+    }
+  };
+
   const handleResetInventory = async () => {
     if (window.confirm('Are you sure you want to reset the current inventory? This will delete all entries and images.')) {
       try {
-        const response = await fetch('${os.env.PUBLIC_BACKEND_URL}/api/inventory/reset', {
+        const response = await fetch(`${config.apiUrl}/api/inventory/reset`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -84,7 +114,7 @@ function App() {
     }
 
     try {
-      const response = await fetch('${os.env.PUBLIC_BACKEND_URL}/api/inventory/reset', {
+      const response = await fetch(`${config.apiUrl}/api/inventory/reset`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

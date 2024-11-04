@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import config from '../config';
 import './ProcessImagesButton.css';
 
 function ProcessImagesButton({ onProcess }) {
@@ -52,7 +53,7 @@ function ProcessImagesButton({ onProcess }) {
     formData.append('instruction', instruction);
 
     try {
-      const response = await axios.post('${process.env.PUBLIC_BACKEND_URL}/process-images', formData, {
+      const response = await axios.post(`${config.apiUrl}/process-images`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

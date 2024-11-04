@@ -1,5 +1,4 @@
 import os
-import sqlite3
 import base64
 import json
 import requests
@@ -13,9 +12,10 @@ from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 from PIL import Image
 from io import BytesIO
-from backend.config import DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR  
 import psycopg2
 from psycopg2 import sql, OperationalError
+import urllib.parse as urlparse
+from backend.config import DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR
 
 # Load environment variables
 load_dotenv()
@@ -23,17 +23,41 @@ load_dotenv()
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def get_db_connection():
+    """Get PostgreSQL database connection from environment variables or URL."""
+    database_url = os.getenv('DATABASE_URL')
+    if database_url:
+        # Parse the URL
+        url = urlparse.urlparse(database_url)
+        dbname = url.path[1:]
+        user = url.username
+        password = url.password
+        host = url.hostname
+        port = url.port
+
+        return psycopg2.connect(
+            dbname=dbname,
+            user=user,
+            password=password,
+            host=host,
+            port=port,
+            sslmode='require'  # Required for Render PostgreSQL
+        )
+    else:
+        # Fallback to individual environment variables
+        return psycopg2.connect(
+            dbname=os.getenv('DB_NAME'),
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            host=os.getenv('DB_HOST'),
+            port=os.getenv('DB_PORT'),
+            sslmode='require'  # Required for Render PostgreSQL
+        )
+
 def initialize_database() -> None:
     """Initialize the database and create the products table if it doesn't exist."""
     try:
-        # Connect to PostgreSQL
-        with sqlite3.connect(
-            dbname= os.env.(DB_NAME),
-            user= os.env.(DB_USER),
-            password= os.env.(DB_PASSWORD),
-            host= os.env.(DB_HOST),
-            port=os.env.(DB_PORT))
-        as conn:
+        with get_db_connection() as conn:
             cursor = conn.cursor()
 
             # Create the products table if it doesn't exist
@@ -74,7 +98,9 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 def process_uploaded_images(instruction: str) -> None:
     """Process uploaded images recursively, create a new directory, and save the processed images."""
     logging.info("Starting to process uploaded images")
-    with sqlite3.connect(DB_NAME) as conn:
+    
+    try:
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         # Retrieve existing image URLs from the database to avoid duplicates
@@ -95,44 +121,50 @@ def process_uploaded_images(instruction: str) -> None:
                     image_path = os.path.join(root, filename)
                     logging.info("Processing image: %s", image_path)
                     try:
-                        # Open the image file
-                        with Image.open(image_path) as img:
-                            # Convert RGBA to RGB if necessary
-                            if img.mode == 'RGBA':
-                                img = img.convert('RGB')
-                            
-                            # Calculate the scaling factor to keep max dimension at 512 pixels
-                            max_size = (512, 512)
-                            img.thumbnail(max_size, Image.Resampling.LANCZOS)
-
-                            # Save the resized image in the batch directory with .jpg extension
-                            new_filename = os.path.splitext(filename)[0] + '.jpg'
-                            new_image_path = os.path.join(batch_dir, new_filename)
-                            img.save(new_image_path, "JPEG", quality=85)
-
-                            # Convert resized image to base64
-                            with open(new_image_path, "rb") as resized_image_file:
-                                base64_encoded_image = base64.b64encode(resized_image_file.read()).decode("utf-8")
-
-                            logging.info("Moved image to new directory: %s", new_image_path)
-
-                            # Check if the image already exists in the database 
-                            if new_image_path not in existing_images:
-                                product_info = analyze_image(base64_encoded_image, instruction)
-                                if product_info:
-                                    try:
-                                        insert_product_info(cursor, product_info, new_image_path)
-                                        conn.commit()
-                                        logging.info("Successfully processed and moved image: %s", filename)
-                                    except (sqlite3.Error) as e:
-                                        logging.error("Error inserting product info for %s: %s", filename, e)
-                                        conn.rollback()
-                                else:
-                                    logging.error("Failed to analyze image: %s", filename)
-                            else:
-                                logging.info("Image already exists in database: %s", filename)
+                        # Process image and get product info
+                        product_info = process_single_image(image_path, batch_dir, instruction)
+                        
+                        if product_info and product_info['image_path'] not in existing_images:
+                            insert_product_info(cursor, product_info)
+                            conn.commit()
+                            logging.info("Successfully processed and moved image: %s", filename)
+                        else:
+                            logging.info("Image already exists or processing failed: %s", filename)
                     except Exception as e:
                         logging.error("Error processing image %s: %s", filename, e)
+                        conn.rollback()
+
+        conn.close()
+    except Exception as e:
+        logging.error("Error in process_uploaded_images: %s", e)
+        if 'conn' in locals():
+            conn.close()
+
+def process_single_image(image_path: str, batch_dir: str, instruction: str) -> Dict[str, Any]:
+    """Process a single image and return product information."""
+    with Image.open(image_path) as img:
+        if img.mode == 'RGBA':
+            img = img.convert('RGB')
+        
+        # Calculate the scaling factor to keep max dimension at 512 pixels
+        max_size = (512, 512)
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+        # Save the resized image in the batch directory with .jpg extension
+        new_filename = os.path.splitext(os.path.basename(image_path))[0] + '.jpg'
+        new_image_path = os.path.join(batch_dir, new_filename)
+        img.save(new_image_path, "JPEG", quality=85)
+
+        # Convert resized image to base64
+        with open(new_image_path, "rb") as resized_image_file:
+            base64_encoded_image = base64.b64encode(resized_image_file.read()).decode("utf-8")
+
+        # Analyze image
+        product_info = analyze_image(base64_encoded_image, instruction)
+        if product_info:
+            product_info['image_path'] = new_image_path
+            return product_info
+        return None
 
 @retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(6))
 def analyze_image(base64_image: str, instruction: str) -> Dict[str, Any]:
@@ -182,12 +214,9 @@ def analyze_image(base64_image: str, instruction: str) -> Dict[str, Any]:
     }
 
     try:
-        logging.debug("Sending request to OpenAI API")
         response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=30)
         response.raise_for_status()
-        logging.debug("OpenAI API response status: %s", response.status_code)
         response_text = response.json()['choices'][0]['message']['content'].strip()
-        logging.debug("OpenAI API response text: %s", response_text)
 
         # Remove any markdown formatting if present
         if response_text.startswith("```json"):
@@ -196,70 +225,33 @@ def analyze_image(base64_image: str, instruction: str) -> Dict[str, Any]:
             response_text = response_text[3:-3]
 
         return json.loads(response_text)
-    except requests.exceptions.RequestException as e:
-        logging.error("Request failed: %s", e)
-        return {}
-    except json.JSONDecodeError as e:
-        logging.error("Failed to decode JSON response: %s", e)
-        logging.error("Response text: %s", response_text)
-        return {}
-    except KeyError as e:
-        logging.error("Unexpected response structure: %s", e)
-        return {}
+    except Exception as e:
+        logging.error("Error in analyze_image: %s", e)
+        return None
 
-def insert_product_info(cursor: sqlite3.Cursor, product_info: Dict[str, Any], img_path: str) -> None:
-    """
-    Insert product information into the products table.
-
-    Args:
-        cursor: SQLite cursor object.
-        product_info (dict): Dictionary containing product details.
-        img_path (str): Path to the image file.
-
-    Raises:
-        KeyError: If any required field is missing in product_info.
-    """
-    required_keys = [
-        'name', 'description', 'category', 'material',
-        'color', 'dimensions', 'origin_source', 'import_cost', 'retail_price', 'key_tags'
-    ]
-
-    # Check for missing keys
-    missing_keys = [key for key in required_keys if key not in product_info]
-    if missing_keys:
-        raise KeyError(f"Missing required fields: {', '.join(missing_keys)}")
-
-    # Convert description list to string if necessary
-    description = product_info['description']
-    if isinstance(description, list):
-        description = '. '.join(description)
-
-    # Convert key_tags list to string if necessary
-    key_tags = product_info['key_tags']
-    if isinstance(key_tags, list):
-        key_tags = ', '.join(key_tags)
-
+def insert_product_info(cursor: psycopg2.extensions.cursor, product_info: Dict[str, Any]) -> None:
+    """Insert product information into the PostgreSQL database."""
     try:
         cursor.execute('''
             INSERT INTO products
             (name, description, image_url, category, material, color, dimensions, origin_source, import_cost, retail_price, key_tags)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ''', (
             product_info['name'],
-            description,
-            img_path,
+            product_info['description'] if isinstance(product_info['description'], str) else '. '.join(product_info['description']),
+            product_info['image_path'],
             product_info['category'],
             product_info['material'],
             product_info['color'],
             product_info['dimensions'],
             product_info['origin_source'],
-            product_info['import_cost'] if product_info['import_cost'] is not None else None,
-            product_info['retail_price'] if product_info['retail_price'] is not None else None,
-            key_tags
+            product_info['import_cost'] if product_info['import_cost'] != 'null' else None,
+            product_info['retail_price'] if product_info['retail_price'] != 'null' else None,
+            product_info['key_tags'] if isinstance(product_info['key_tags'], str) else ', '.join(product_info['key_tags'])
         ))
-        logging.info("Successfully inserted product info for image: %s", img_path)
-    except sqlite3.Error as e:
-        logging.error("Failed to insert product info into database: %s", e)
+    except Exception as e:
+        logging.error("Error inserting product info: %s", e)
+        raise
 
 def main() -> None:
     """Main function to initialize the database and process images."""

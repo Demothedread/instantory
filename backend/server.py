@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
-import sqlite3
+import psycopg2
+from psycopg2 import sql
 import subprocess
 import logging
 import os
@@ -8,7 +9,8 @@ import shutil
 from datetime import datetime
 import pandas as pd
 from whitenoise import WhiteNoise
-from config import DB_NAME, DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR
+import urllib.parse as urlparse
+from config import DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR
 
 app = Flask(__name__)
 # Configure static directory relative to the backend folder
@@ -18,7 +20,7 @@ os.makedirs(static_dir, exist_ok=True)
 app.wsgi_app = WhiteNoise(app.wsgi_app, root=static_dir)
 
 # Enable CORS for all routes with proper configuration
-CORS_ORIGIN = os.environ.get('CORS_ORIGIN', '*')  # Updated to allow Webflow origin
+CORS_ORIGIN = os.environ.get('CORS_ORIGIN', 'https://instantory.vercel.app')
 CORS(app, resources={
     r"/*": {
         "origins": [CORS_ORIGIN],
@@ -30,7 +32,36 @@ CORS(app, resources={
 logging.basicConfig(level=logging.DEBUG)
 
 # Define User_Instructions with a default value
-User_Instructions =os.environ.get("USER_INSTRUCTIONS", "Catalog, categorize and Describe the item.")
+User_Instructions = os.environ.get("USER_INSTRUCTIONS", "Catalog, categorize and Describe the item.")
+
+def get_db_connection():
+    """Get PostgreSQL database connection from environment variables or URL."""
+    database_url = os.getenv('DATABASE_URL')
+    if database_url:
+        # Parse the URL
+        url = urlparse.urlparse(database_url)
+        dbname = url.path[1:]
+        user = url.username
+        password = url.password
+        host = url.hostname
+        port = url.port
+
+        return psycopg2.connect(
+            dbname=dbname,
+            user=user,
+            password=password,
+            host=host,
+            port=port
+        )
+    else:
+        # Fallback to individual environment variables
+        return psycopg2.connect(
+            dbname=os.getenv('DB_NAME'),
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            host=os.getenv('DB_HOST'),
+            port=os.getenv('DB_PORT')
+        )
 
 def maintain_inventory_folders(max_folders=10):
     """Keep only the latest N folders in the inventory directory."""
@@ -64,10 +95,11 @@ def convert_to_relative_path(absolute_path):
 @app.route('/api/inventory', methods=['GET'])
 def get_inventory():
     try:
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM products")
         rows = cursor.fetchall()
+        cursor.close()
         conn.close()
 
         inventory = []
@@ -89,7 +121,7 @@ def get_inventory():
 
         app.logger.info("Fetched %d items from the database", len(inventory))
         return jsonify(inventory)
-    except sqlite3.Error as e:
+    except Exception as e:
         app.logger.error("Database error: %s", e)
         return jsonify({"error": "Internal Server Error"}), 500
 
@@ -163,15 +195,17 @@ def reset_inventory():
         table_uploads_dir = os.path.join(UPLOADS_DIR, f'{table_name}_images')
         os.makedirs(table_uploads_dir, exist_ok=True)
         
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         cursor = conn.cursor()
         
         # Drop existing table if it exists
-        cursor.execute(f"DROP TABLE IF EXISTS {table_name}")
+        cursor.execute(
+            sql.SQL("DROP TABLE IF EXISTS {}").format(sql.Identifier(table_name))
+        )
         
-        cursor.execute(f'''
-            CREATE TABLE {table_name} (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cursor.execute(sql.SQL('''
+            CREATE TABLE {} (
+                id SERIAL PRIMARY KEY,
                 name TEXT,
                 description TEXT,
                 image_url TEXT UNIQUE,
@@ -184,9 +218,10 @@ def reset_inventory():
                 retail_price REAL,
                 key_tags TEXT
             )
-        ''')
+        ''').format(sql.Identifier(table_name)))
         
         conn.commit()
+        cursor.close()
         conn.close()
         
         # Clear inventory images
@@ -199,9 +234,6 @@ def reset_inventory():
             'message': f'Inventory reset successful. New table "{table_name}" created.'
         })
         
-    except sqlite3.Error as e:
-        app.logger.error("Database error during reset: %s", e)
-        return jsonify({'status': 'error', 'message': str(e)}), 500
     except Exception as e:
         app.logger.error("Error during inventory reset: %s", e)
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -213,7 +245,7 @@ def allowed_file(filename):
 @app.route('/export-inventory', methods=['GET'])
 def export_inventory():
     try:
-        conn = sqlite3.connect(DB_NAME)
+        conn = get_db_connection()
         df = pd.read_sql_query("SELECT * FROM products", conn)
         conn.close()
 
@@ -224,7 +256,7 @@ def export_inventory():
         df.to_csv(export_path, index=False)
 
         return jsonify({'status': 'success', 'message': f'Inventory exported to {export_path}'})
-    except sqlite3.Error as e:
+    except Exception as e:
         app.logger.error("Database error: %s", e)
         return jsonify({"error": "Internal Server Error"}), 500
 
@@ -263,11 +295,11 @@ if __name__ == '__main__':
     os.makedirs(EXPORTS_DIR, exist_ok=True)
     
     # Initialize database
-    conn = sqlite3.connect(DB_NAME)
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             name TEXT,
             description TEXT,
             image_url TEXT UNIQUE,
@@ -282,6 +314,7 @@ if __name__ == '__main__':
         )
     ''')
     conn.commit()
+    cursor.close()
     conn.close()
     
     # Get port from environment variable with a default of 10000
