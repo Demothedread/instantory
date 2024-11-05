@@ -1,5 +1,6 @@
 from quart import Quart, jsonify, request, send_file
 from quart_cors import cors
+from starlette.staticfiles import StaticFiles
 import asyncpg
 import subprocess
 import logging
@@ -8,40 +9,25 @@ import shutil
 from datetime import datetime
 import csv
 import io
-from whitenoise import WhiteNoise
 import urllib.parse as urlparse
 import asyncio
 from config import DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR
 
 app = Quart(__name__)
 
-# Set default CORS origin
-default_cors_origin = 'https://instantory.vercel.app'
+# Configure CORS properly
+CORS_ORIGIN = os.environ.get('CORS_ORIGIN', 'https://instantory.vercel.app')
+app = cors(app, 
+          allow_origins=[CORS_ORIGIN],
+          allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+          allow_headers=["Content-Type", "Authorization", "Accept"],
+          allow_credentials=True,
+          max_age=3600)
 
-# Get CORS origin from environment variable or fallback to default
-CORS_ORIGIN = os.environ.get('CORS_ORIGIN', default_cors_origin)
-
-# Define allowed methods, headers, and other CORS settings
-allowed_methods = ["GET", "POST", "OPTIONS", "PUT", "DELETE"]
-allowed_headers = ["Content-Type", "Authorization", "Accept"]
-allow_credentials = True
-max_age = 5000
-
-# Apply CORS to the app with defined settings
-app = cors(
-    app,
-    allow_origin=[CORS_ORIGIN],
-    allow_methods=allowed_methods,
-    allow_headers=allowed_headers,
-    allow_credentials=allow_credentials,
-    max_age=max_age
-)
-
-# Configure static directory relative to the backend folder
+# Configure static directory with Starlette's StaticFiles
 static_dir = os.path.join(os.path.dirname(__file__), 'static')
 os.makedirs(static_dir, exist_ok=True)
-# Add whitenoise for static file serving in production
-app.asgi_app = WhiteNoise(app.asgi_app, root=static_dir)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 logging.basicConfig(level=logging.DEBUG)
 
