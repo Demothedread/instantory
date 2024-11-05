@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Masonry from 'react-masonry-css';
+import config from '../config';
 import './ImageList.css';
 
 function ImageList({ inventory = [] }) {
@@ -96,7 +97,7 @@ function ImageList({ inventory = [] }) {
             <div key={index} className="image-item" onClick={() => handleImageClick(item)}>
               {!imageError[index] ? (
                 <img 
-                  src={`${process.env.PUBLIC_BACKEND_URL}/images/${encodeURIComponent(item.image_url)}`}
+                  src={`${config.apiUrl}/images/${encodeURIComponent(item.image_url)}`}
                   alt={item.name || 'Product'}
                   onError={() => handleImageError(index)}
                 />
@@ -118,7 +119,7 @@ function ImageList({ inventory = [] }) {
             <span className="close" onClick={closeModal}>&times;</span>
             <h2>{selectedItem.name || 'Unnamed Product'}</h2>
             <img 
-              src={`${process.env.PUBLIC_BACKEND_URL}/images/${encodeURIComponent(selectedItem.image_url)}`}
+              src={`${config.apiUrl}/images/${encodeURIComponent(selectedItem.image_url)}`}
               alt={selectedItem.name || 'Product'}
               style={{maxWidth: '100%', height: 'auto'}}
               onError={(e) => {
