@@ -15,14 +15,27 @@ from config import DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORT
 
 app = Quart(__name__)
 
-# Configure CORS properly
-CORS_ORIGIN = os.environ.get('CORS_ORIGIN', 'https://instantory.vercel.app')
-app = cors(app, 
-          allow_origins=[CORS_ORIGIN],  # Changed from allow_origin to allow_origins
-          allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
-          allow_headers=["Content-Type", "Authorization", "Accept"],
-          allow_credentials=True,
-          max_age=3600)
+# Set default CORS origin
+default_cors_origin = 'https://instantory.vercel.app'
+
+# Get CORS origin from environment variable or fallback to default
+CORS_ORIGIN = os.environ.get('CORS_ORIGIN', default_cors_origin)
+
+# Define allowed methods, headers, and other CORS settings
+allowed_methods = ["GET", "POST", "OPTIONS", "PUT", "DELETE"]
+allowed_headers = ["Content-Type", "Authorization", "Accept"]
+allow_credentials = True
+max_age = 5000
+
+# Apply CORS to the app with defined settings
+app = cors(
+    app,
+    allow_origin=[CORS_ORIGIN],
+    allow_methods=allowed_methods,
+    allow_headers=allowed_headers,
+    allow_credentials=allow_credentials,
+    max_age=max_age
+)
 
 # Configure static directory relative to the backend folder
 static_dir = os.path.join(os.path.dirname(__file__), 'static')
