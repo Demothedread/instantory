@@ -1,6 +1,8 @@
 import os
 import base64
 import json
+import asyncio
+import asyncpg
 import requests
 import logging
 import openai
@@ -12,8 +14,6 @@ from typing import Dict, Any, Optional
 from dotenv import load_dotenv
 from PIL import Image
 from io import BytesIO
-import asyncpg
-import asyncio
 import urllib.parse as urlparse
 from backend.config import DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR
 
@@ -22,6 +22,9 @@ load_dotenv()
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Set your OpenAI API key
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 async def get_db_pool():
     """Get PostgreSQL connection pool from environment variables or URL."""
@@ -84,9 +87,6 @@ async def initialize_database() -> None:
         await pool.close()
     except Exception as e:
         logging.error("Error initializing database: %s", e)
-
-# Set your OpenAI API key
-openai.api_key = os.getenv('OPENAI_API_KEY')
 
 async def process_uploaded_images(instruction: str) -> None:
     """Process uploaded images recursively, create a new directory, and save the processed images."""
@@ -220,6 +220,21 @@ async def analyze_image(base64_image: str, instruction: str) -> Dict[str, Any]:
 async def insert_product_info(conn: asyncpg.Connection, product_info: Dict[str, Any]) -> None:
     """Insert product information into the PostgreSQL database."""
     try:
+        # Safe conversion of price fields
+        import_cost = product_info.get('import_cost')
+        retail_price = product_info.get('retail_price')
+        
+        # Convert to float only if not null/None and is a valid number
+        try:
+            import_cost = float(import_cost) if import_cost not in (None, 'null') else None
+        except (ValueError, TypeError):
+            import_cost = None
+            
+        try:
+            retail_price = float(retail_price) if retail_price not in (None, 'null') else None
+        except (ValueError, TypeError):
+            retail_price = None
+
         await conn.execute('''
             INSERT INTO products
             (name, description, image_url, category, material, color, dimensions, origin_source, import_cost, retail_price, key_tags)
@@ -233,8 +248,8 @@ async def insert_product_info(conn: asyncpg.Connection, product_info: Dict[str, 
             product_info['color'],
             product_info['dimensions'],
             product_info['origin_source'],
-            None if product_info['import_cost'] == 'null' else float(product_info['import_cost']),
-            None if product_info['retail_price'] == 'null' else float(product_info['retail_price']),
+            import_cost,
+            retail_price,
             product_info['key_tags'] if isinstance(product_info['key_tags'], str) else ', '.join(product_info['key_tags'])
         )
     except Exception as e:
