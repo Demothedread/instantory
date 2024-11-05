@@ -18,11 +18,12 @@ app = Quart(__name__)
 # Configure CORS properly
 CORS_ORIGIN = os.environ.get('CORS_ORIGIN', 'https://instantory.vercel.app')
 app = cors(app, 
-          allow_origins=[CORS_ORIGIN],
+          allow_origin=[CORS_ORIGIN],
           allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
           allow_headers=["Content-Type", "Authorization", "Accept"],
           allow_credentials=True,
-          max_age=3600)
+          max_age=5000
+)
 
 # Configure static directory with Starlette's StaticFiles
 static_dir = os.path.join(os.path.dirname(__file__), 'static')
