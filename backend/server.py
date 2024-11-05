@@ -18,7 +18,7 @@ app = Quart(__name__)
 # Configure CORS properly
 CORS_ORIGIN = os.environ.get('CORS_ORIGIN', 'https://instantory.vercel.app')
 app = cors(app, 
-          allow_origin=[CORS_ORIGIN],
+          allow_origins=[CORS_ORIGIN],  # Changed from allow_origin to allow_origins
           allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
           allow_headers=["Content-Type", "Authorization", "Accept"],
           allow_credentials=True,
