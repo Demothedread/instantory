@@ -1,13 +1,16 @@
 const config = {
   // Development API URL
   development: {
-    apiUrl: 'http://localhost:5000'
+    apiUrl: process.env.REACT_APP_BACKEND_URL || 'http://localhost:10000'
   },
-  // Production API URL - update this with your Render backend URL
+  // Production API URL
   production: {
     apiUrl: process.env.REACT_APP_BACKEND_URL || 'https://instantory-api.onrender.com'
   }
 };
 
+// Ensure we're using the correct environment
 const environment = process.env.NODE_ENV || 'development';
+console.log(`Running in ${environment} mode with API URL: ${config[environment].apiUrl}`);
+
 export default config[environment];
