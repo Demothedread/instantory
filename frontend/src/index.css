@@ -3,12 +3,12 @@ body {
   font-family: 'Degular Mono', 'Playfair Display', serif; /* Elegant serif font for body */
   font-weight: 400;
   background-color: #1c1c1c; /* Dark background for the body */
-  color: #D4AF37; /* golden champagney text */
-  outline-color:
+  color: #cea316; /* golden champagney text */
+  outline-color: #e8e8e8; /* Light outline color for focus */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-family: 'source-code-pro', 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace; /* Monospace font for code */
 }
