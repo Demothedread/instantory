@@ -6,7 +6,7 @@ services:
     startCommand: hypercorn server:app --bind 0.0.0.0:$PORT
     envVars:
       - key: FLASK_ENV
-        value: production
+        value: ${FLASK_ENV}
       - key: FLASK_APP
         value: server.py
       - key: PORT
@@ -14,12 +14,12 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0  # Updated to match the environment
       - key: CORS_ORIGIN
-        value: "https://instantory.vercel.app"  # Add CORS_ORIGIN env var
+        value: ${CORS_ORIGIN}  # Add CORS_ORIGIN env var
       - key: DATABASE_URL
         fromDatabase:
           name: instantory-db
           property: connectionString
 databases:
-  - name: instantory-db
-    databaseName: instantory-db
+  - name: instantory_sql
+    databaseName: instantory_sql
     plan: free
