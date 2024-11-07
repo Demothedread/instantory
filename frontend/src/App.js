@@ -3,46 +3,69 @@ import { BrowserRouter as Router, Route, Link, Routes } from 'react-router-dom';
 import InventoryTable from './components/InventoryTable';
 import ImageList from './components/ImageList';
 import ProcessImagesButton from './components/ProcessImagesButton';
+import DocumentsTable from './components/DocumentsTable';
 import config from './config';
 import './App.css';
 
 function App() {
   const [inventory, setInventory] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newTableName, setNewTableName] = useState('');
   const [showNewTableDialog, setShowNewTableDialog] = useState(false);
 
   useEffect(() => {
-    fetchInventory();
+    fetchData();
   }, []);
 
-  const fetchInventory = async () => {
+  const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${config.apiUrl}/api/inventory`, {
+      // Fetch inventory data
+      const invResponse = await fetch(`${config.apiUrl}/api/inventory`, {
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
         }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!invResponse.ok) {
+        throw new Error(`HTTP error! status: ${invResponse.status}`);
       }
 
-      const data = await response.json();
-      if (!data || typeof data !== 'object') {
-        throw new Error("Invalid response format");
+      const invData = await invResponse.json();
+      if (!invData || typeof invData !== 'object') {
+        throw new Error("Invalid inventory response format");
       }
 
-      const inventoryData = Array.isArray(data) ? data : [data];
-      console.log('Received inventory data:', inventoryData);
+      const inventoryData = Array.isArray(invData) ? invData : [invData];
       setInventory(inventoryData);
+
+      // Fetch documents data
+      const docResponse = await fetch(`${config.apiUrl}/api/documents`, {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+
+      if (!docResponse.ok) {
+        throw new Error(`HTTP error! status: ${docResponse.status}`);
+      }
+
+      const docData = await docResponse.json();
+      if (!docData || typeof docData !== 'object') {
+        throw new Error("Invalid documents response format");
+      }
+
+      const documentsData = Array.isArray(docData) ? docData : [docData];
+      setDocuments(documentsData);
+
     } catch (error) {
-      console.error('Error fetching inventory:', error);
-      let errorMessage = 'Failed to fetch inventory. Please try again later.';
+      console.error('Error fetching data:', error);
+      let errorMessage = 'Failed to fetch data. Please try again later.';
 
       if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
         errorMessage = 'Network error. Please check your connection and ensure the backend server is running.';
@@ -52,13 +75,14 @@ function App() {
 
       setError(errorMessage);
       setInventory([]);
+      setDocuments([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleProcessImages = async () => {
-    await fetchInventory();
+  const handleProcessFiles = async () => {
+    await fetchData();
   };
 
   const handleResetInventory = async () => {
@@ -78,11 +102,36 @@ function App() {
           throw new Error('Failed to reset inventory');
         }
         
-        await fetchInventory();
+        await fetchData();
         alert('Inventory reset successful!');
       } catch (error) {
         console.error('Error resetting inventory:', error);
         setError('Failed to reset inventory. Please try again later.');
+      }
+    }
+  };
+
+  const handleResetDocuments = async () => {
+    if (window.confirm('Are you sure you want to reset the documents? This will delete all document entries.')) {
+      try {
+        const response = await fetch(`${config.apiUrl}/api/documents/reset`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to reset documents');
+        }
+        
+        await fetchData();
+        alert('Documents reset successful!');
+      } catch (error) {
+        console.error('Error resetting documents:', error);
+        setError('Failed to reset documents. Please try again later.');
       }
     }
   };
@@ -108,7 +157,7 @@ function App() {
         throw new Error('Failed to create new table');
       }
       
-      await fetchInventory();
+      await fetchData();
       setShowNewTableDialog(false);
       setNewTableName('');
       alert('New inventory table created successfully!');
@@ -118,32 +167,33 @@ function App() {
     }
   };
 
-  const handleExport = (format) => {
-    if (inventory.length === 0) {
+  const handleExport = (format, type = 'inventory') => {
+    const data = type === 'inventory' ? inventory : documents;
+    if (data.length === 0) {
       alert('No data to export');
       return;
     }
 
-    let data;
+    let exportData;
     let filename;
     let mimeType;
 
     switch (format) {
       case 'csv':
-        data = convertToCSV(inventory);
-        filename = 'inventory.csv';
+        exportData = convertToCSV(data);
+        filename = `${type}.csv`;
         mimeType = 'text/csv';
         break;
       case 'xls':
-        data = convertToXLS(inventory);
-        filename = 'inventory.xls';
+        exportData = convertToXLS(data);
+        filename = `${type}.xls`;
         mimeType = 'application/vnd.ms-excel';
         break;
       default:
         return;
     }
 
-    const blob = new Blob([data], { type: mimeType });
+    const blob = new Blob([exportData], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -162,15 +212,11 @@ function App() {
     );
     
     const csvRows = [];
-    
-    // Add headers
     csvRows.push(headers.join(','));
     
-    // Add data rows
     data.forEach(item => {
       const values = headers.map(header => {
         const value = item[header];
-        // Handle special cases (null, undefined, strings with commas)
         if (value == null) return '';
         if (typeof value === 'string' && value.includes(',')) {
           return `"${value}"`;
@@ -191,13 +237,11 @@ function App() {
     );
     
     let xlsContent = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
-    xlsContent += '<head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Inventory</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>';
+    xlsContent += '<head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Sheet1</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>';
     xlsContent += '<body><table>';
     
-    // Add headers
     xlsContent += '<tr>' + headers.map(header => `<th>${header}</th>`).join('') + '</tr>';
     
-    // Add data rows
     data.forEach(item => {
       xlsContent += '<tr>';
       headers.forEach(header => {
@@ -216,17 +260,26 @@ function App() {
       <div className="content-center">
         <h1>The Power Sorcerer's</h1>
         <h2>Inventory Management System</h2>
-        <ProcessImagesButton onProcess={handleProcessImages} />
+        <ProcessImagesButton onProcess={handleProcessFiles} />
         <div className="App">
           <div style={{ textAlign: 'center', margin: '10px 0' }}>
-            <button onClick={() => handleExport('csv')} style={{ backgroundColor: '#4CAF50' }}>
-              Export as CSV
+            <button onClick={() => handleExport('csv', 'inventory')} style={{ backgroundColor: '#4CAF50' }}>
+              Export Inventory as CSV
             </button>
-            <button onClick={() => handleExport('xls')} style={{ backgroundColor: '#2196F3', marginLeft: '10px' }}>
-              Export as XLS
+            <button onClick={() => handleExport('xls', 'inventory')} style={{ backgroundColor: '#2196F3', marginLeft: '10px' }}>
+              Export Inventory as XLS
+            </button>
+            <button onClick={() => handleExport('csv', 'documents')} style={{ backgroundColor: '#4CAF50', marginLeft: '10px' }}>
+              Export Documents as CSV
+            </button>
+            <button onClick={() => handleExport('xls', 'documents')} style={{ backgroundColor: '#2196F3', marginLeft: '10px' }}>
+              Export Documents as XLS
             </button>
             <button onClick={handleResetInventory} style={{ marginLeft: '20px', backgroundColor: '#ff4444' }}>
               Reset Inventory
+            </button>
+            <button onClick={handleResetDocuments} style={{ marginLeft: '10px', backgroundColor: '#ff4444' }}>
+              Reset Documents
             </button>
             <button onClick={() => setShowNewTableDialog(true)} style={{ marginLeft: '10px', backgroundColor: '#44ff44' }}>
               New Inventory Table
@@ -268,6 +321,9 @@ function App() {
               <li>
                 <Link to="/images">Image Grid</Link>
               </li>
+              <li>
+                <Link to="/documents">Documents</Link>
+              </li>
             </ul>
           </nav>
           {error && <div className="error-message">{error}</div>}
@@ -291,6 +347,16 @@ function App() {
                     <div>Loading images...</div>
                   ) : (
                     <ImageList inventory={inventory} />
+                  )
+                } 
+              />
+              <Route 
+                path="/documents" 
+                element={
+                  loading ? (
+                    <div>Loading documents...</div>
+                  ) : (
+                    <DocumentsTable documents={documents} />
                   )
                 } 
               />
