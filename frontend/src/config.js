@@ -1,7 +1,7 @@
 const config = {
   // Development API URL
   development: {
-    apiUrl: process.env.REACT_APP_BACKEND_URL || 'http://localhost:10000'
+    apiUrl: process.env.REACT_APP_BACKEND_URL_DEV || 'http://localhost:10000'
   },
   // Production API URL
   production: {
