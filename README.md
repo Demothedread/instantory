@@ -1,139 +1,147 @@
+# Instantory - Inventory Management System
 
-Instantory is a modern, AI-powered inventory management system that helps businesses catalog and manage their products efficiently. It features automatic image processing, smart categorization, and flexible data management capabilities.
+A full-stack inventory management system with AI-powered image and document analysis.
 
-## Features
+## Project Structure
 
-- 🤖 AI-powered product categorization and description
-- 📸 Automatic image processing and organization
-- 📊 Multiple inventory table support
-- 📤 Export data in multiple formats (CSV, XML, SQL)
-- 🔄 Automatic folder maintenance
-- 🔒 Secure file handling
-- 📱 Responsive web interface
+```
+instantory/
+├── backend/              # Python/Quart backend
+│   ├── server.py        # Main server file
+│   ├── config.py        # Configuration
+│   └── requirements.txt # Python dependencies
+├── frontend/            # React frontend
+│   ├── src/            # React source code
+│   └── package.json    # Node.js dependencies
+└── data/               # Data storage
+    ├── images/         # Image storage
+    └── exports/        # Export files
+```
 
 ## Prerequisites
 
-- Python 3.8+
-- Node.js 14+
-- SQLite3
+- Python 3.11+
+- Node.js 18+
+- PostgreSQL database
+- OpenAI API key
 
-## Installation
+## Local Development
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/instantory.git
-cd instantory
-```
+### Backend Setup
 
-2. Set up the Python virtual environment:
+1. Create and activate virtual environment:
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Unix
+.\venv\Scripts\activate   # Windows
+```
+
+2. Install dependencies:
+```bash
+cd backend
 pip install -r requirements.txt
 ```
 
-3. Install frontend dependencies:
+3. Copy `.env.example` to `.env` and configure:
+```bash
+cp .env.example .env
+```
+
+4. Run the server:
+```bash
+hypercorn server:app --bind 0.0.0.0:10000 --reload
+```
+
+### Frontend Setup
+
+1. Install dependencies:
 ```bash
 cd frontend
 npm install
 ```
 
-## Configuration
-
-1. Create necessary directories:
-```bash
-mkdir -p data/images/{inventory,uploads} data/exports
-```
-
-2. Configure environment variables (optional):
+2. Copy `.env.example` to `.env` and configure:
 ```bash
 cp .env.example .env
-# Edit .env with your settings
 ```
 
-## Running the Application
-
-1. Start the backend server:
+3. Run the development server:
 ```bash
-cd backend
-python server.py
-```
-
-2. Start the frontend development server:
-```bash
-cd frontend
 npm start
 ```
 
-3. Access the application at `http://localhost:5000`or else set your web service address as ${process.env.PUBLIC_BACKEND_URL}
-
 ## Deployment
 
-### Option 1: Deploy to Heroku (Free Tier)
+### Backend Deployment (Render)
 
-1. Create a Heroku account
-2. Install Heroku CLI
-3. Deploy using:
-```bash
-heroku create instantory-app
-git push heroku main
-```
-
-### Option 2: Deploy to Vercel (Free Tier)
-
-1. Create a Vercel account
-2. Install Vercel CLI
-3. Deploy using:
-```bash
-vercel
-```
-
-### Option 3: Deploy to Netlify (Free Tier)
-
-1. Create a Netlify account
+1. Create a new Web Service on Render
 2. Connect your GitHub repository
-3. Configure build settings:
-   - Build command: `cd frontend && npm run build`
-   - Publish directory: `frontend/build`
+3. Configure the following:
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `hypercorn server:app --bind 0.0.0.0:$PORT --access-log -`
+   - Environment Variables: Copy from `.env.example`
 
-## Integration with Personal Website
+### Frontend Deployment (Vercel)
 
-### Method 1: Subdomain (Recommended)
-1. Create a CNAME record in your domain's DNS settings:
-   ```
-   inventory.yourdomain.com -> your-deployment-url
-   ```
+1. Create a new project on Vercel
+2. Connect your GitHub repository
+3. Configure the following:
+   - Framework Preset: Create React App
+   - Build Command: `npm run build`
+   - Output Directory: `build`
+   - Environment Variables: Copy from `.env.example`
 
-### Method 2: Path-based Routing
-1. Add a reverse proxy rule to your web server:
-   ```nginx
-   location /inventory {
-       proxy_pass https://your-deployment-url;
-   }
-   ```
+### Environment Variables
 
-## API Documentation
+#### Backend (.env)
+- `FLASK_ENV`: Set to 'production' for deployment
+- `FLASK_APP`: Main application file
+- `DATABASE_URL`: PostgreSQL connection URL from Render
+- `PORT`: Application port (set by Render)
+- `CORS_ORIGIN`: Frontend URL (Vercel)
+- `OPENAI_API_KEY`: Your OpenAI API key
+- `PUBLIC_BACKEND_URL`: Backend URL (Render)
 
-### Endpoints
+#### Frontend (.env)
+- `REACT_APP_BACKEND_URL`: Backend API URL (Render)
+- `NODE_ENV`: Set to 'production' for deployment
 
-- `GET /api/inventory` - Get all inventory items
-- `POST /process-images` - Process and categorize new images
-- `POST /api/inventory/reset` - Reset or create new inventory table
-- `GET /export-inventory` - Export inventory data
-- `GET /images/<filename>` - Serve inventory images
+## Database Setup
 
-## Contributing
+The application uses PostgreSQL. The database schema will be automatically created on first run. Make sure to set up a PostgreSQL database on Render and configure the `DATABASE_URL` environment variable.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+## Features
 
-## License
+- AI-powered image analysis using OpenAI's GPT-4 Vision
+- Document processing and analysis
+- Inventory management with categorization
+- Export functionality
+- CORS-enabled API endpoints
+- Secure file handling
+- Error logging and monitoring
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Security Notes
+
+- Never commit `.env` files
+- Keep your OpenAI API key secure
+- Enable CORS only for trusted domains
+- Use SSL/TLS in production (handled by Render/Vercel)
+
+## Error Handling
+
+The application includes comprehensive error handling:
+- API endpoint error responses
+- File processing error logging
+- Database connection error handling
+- Image processing error recovery
+- OpenAI API error retries
+
+## Monitoring
+
+- Application logs available in Render dashboard
+- Frontend performance monitoring in Vercel
+- Database monitoring in Render PostgreSQL dashboard
 
 ## Support
 
-For support, email support@yourdomain.com or open an issue in the GitHub repository.
+For issues and feature requests, please create an issue in the GitHub repository.
