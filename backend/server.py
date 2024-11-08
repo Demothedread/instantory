@@ -28,7 +28,7 @@ if os.environ.get('PUBLIC_BACKEND_URL'):
 # Apply CORS configuration
 app = cors(
     app,
-    allow_origins=CORS_ORIGINS,  # Fixed: allow_origins instead of allow_origin
+    allow_origin=CORS_ORIGINS,  # Fixed: allow_origin instead of allow_origins
     allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
     allow_headers=["Content-Type", "Authorization", "Accept"],
     allow_credentials=True,
@@ -354,4 +354,4 @@ async def startup():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port)

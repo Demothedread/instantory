@@ -3,14 +3,14 @@ services:
     name: instantory-api
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: hypercorn server:app --bind 0.0.0.0:$PORT
+    startCommand: hypercorn server:app --bind 0.0.0.0:$PORT --access-log -
     envVars:
       - key: FLASK_ENV
         value: production
       - key: FLASK_APP
         value: server.py
       - key: PORT
-        value: "10000"
+        sync: false  # Allow Render to set the port
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: CORS_ORIGIN
@@ -19,9 +19,10 @@ services:
         value: https://instantory-api.onrender.com
       - key: DATABASE_URL
         fromDatabase:
-          name: instantory_db
+          name: instantory_sql
           property: connectionString
+
 databases:
-  - name: instantory_db
-    databaseName: instantory_db
+  - name: instantory_sql
+    databaseName: instantory_sql
     plan: free
