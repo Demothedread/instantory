@@ -171,7 +171,7 @@ async def analyze_document(text: str) -> Dict[str, Any]:
     try:
         # First pass: Extract structure and key sections
         structure_response = await openai.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4",
             messages=[
                 {"role": "system", "content": """
                 Analyze this document and identify:
@@ -191,7 +191,7 @@ async def analyze_document(text: str) -> Dict[str, Any]:
         
         # Second pass: Detailed analysis
         analysis_response = await openai.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4",
             messages=[
                 {"role": "system", "content": """
                 Based on the document sections provided, analyze and provide a JSON object with:
@@ -329,7 +329,7 @@ async def analyze_image(base64_image: str, instruction: str) -> Dict[str, Any]:
     """Analyze an image using OpenAI's GPT-4 Vision model."""
     try:
         response = await openai.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4-vision-preview",
             messages=[
                 {
                     "role": "system",
