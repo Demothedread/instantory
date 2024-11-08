@@ -4,7 +4,6 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -20,23 +19,23 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-myvenv/
 
 # Node
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-backend/railway.json
-backend/package.json
-backend.package-lock.json
-# Database
-*.sqlite3
-
-# Environment variables
-.env
 .env.local
-.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
 
 # IDE
 .idea/
@@ -53,10 +52,8 @@ backend.package-lock.json
 ehthumbs.db
 Thumbs.db
 
-# Application specific
-data/images/inventory/*
-data/images/uploads/*
-data/exports/*
-!data/images/inventory/.gitkeep
-!data/images/uploads/.gitkeep
-!data/exports/.gitkeep
+# Project specific
+data/images/
+data/exports/
+data/uploads/
+*.log
