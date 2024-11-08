@@ -171,7 +171,7 @@ async def analyze_document(text: str) -> Dict[str, Any]:
     try:
         # First pass: Extract structure and key sections
         structure_response = await openai.chat.completions.create(
-            model="gpt-4o',
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": """
                 Analyze this document and identify:
