@@ -24,20 +24,30 @@ openai_client = AsyncOpenAI(
 app = Quart(__name__)
 
 # Configure CORS for production deployment
-CORS_ORIGINS = [
+CORS_ORIGIN = [
     'https://instantory.vercel.app',  # Frontend
     'https://instantory-api.onrender.com'  # Backend
+    'http://localhost:3000',  # Local development
+    'postgresql://instantory_sql_user:zvenSm9Mp3QPg1SHRNtTo3wKVd9lDh6g@dpg-csirn6dsvqrc73eioqs0-a/instantory_sql',
+    'postgresql://instantory_sql_user:zvenSm9Mp3QPg1SHRNtTo3wKVd9lDh6g@dpg-csirn6dsvqrc73eioqs0-a.oregon-postgres.render.com/instantory_sql'
 ]
 
 if os.environ.get('CORS_ORIGIN'):
-    CORS_ORIGINS.append(os.environ.get('CORS_ORIGIN'))
+    CORS_ORIGIN.append(os.environ.get('CORS_ORIGIN'))
 if os.environ.get('PUBLIC_BACKEND_URL'):
-    CORS_ORIGINS.append(os.environ.get('PUBLIC_BACKEND_URL'))
+    CORS_ORIGIN.append(os.environ.get('PUBLIC_BACKEND_URL'))
+if os.environ.get('REACT_APP_BACKEND_URL'):
+    CORS_ORIGIN.append(os.environ.get('REACT_APP_BACKEND_URL'))
+if os.environ.get('PORT'):
+    CORS_ORIGIN.append(f"XXXXXXXXXXXXXXXX:{os.environ.get('PORT')}")
+if os.environ.get('DB_PORT'):
+    CORS_ORIGIN.append(f"XXXXXXXXXXXXXXXX:{os.environ.get('DB_PORT')}")
+)
 
 # Apply CORS configuration
 app = cors(
     app,
-    allow_origin=CORS_ORIGINS,
+    allow_origin=CORS_ORIGIN,
     allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
     allow_headers=["Content-Type", "Authorization", "Accept"],
     allow_credentials=True,
@@ -66,7 +76,7 @@ async def create_embedding(text: str) -> List[float]:
 async def after_request(response):
     """Add CORS headers to all responses."""
     origin = request.headers.get('Origin')
-    if origin and origin in CORS_ORIGINS:
+    if origin and origin in CORS_ORIGIN:
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,Accept'
         response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
@@ -78,7 +88,7 @@ async def handle_cors_preflight():
     """Handle CORS preflight requests."""
     response = await app.make_default_options_response()
     origin = request.headers.get('Origin')
-    if origin and origin in CORS_ORIGINS:
+    if origin and origin in CORS_ORIGIN:
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,Accept'
         response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
