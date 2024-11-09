@@ -10,7 +10,7 @@ const config = {
 };
 
 // Ensure we're using the correct environment
-const environment = process.env.NODE_ENV || 'development';
+const environment = process.env.NODE_ENV || 'production';
 console.log(`Running in ${environment} mode with API URL: ${config[environment].apiUrl}`);
 
 export default config[environment];
