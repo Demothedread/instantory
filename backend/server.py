@@ -1,3 +1,5 @@
+# Add these imports at the top with existing imports
+from typing import List
 from quart import Quart, jsonify, request, send_file
 from quart_cors import cors
 import asyncpg
@@ -11,6 +13,13 @@ import io
 import urllib.parse as urlparse
 import asyncio
 from config import DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR
+from openai import AsyncOpenAI
+
+# Add this after the existing imports but before app initialization
+openai_client = AsyncOpenAI(
+    api_key=os.getenv('OPENAI_API_KEY'),
+    timeout=60.0
+)
 
 app = Quart(__name__)
 
@@ -28,7 +37,7 @@ if os.environ.get('PUBLIC_BACKEND_URL'):
 # Apply CORS configuration
 app = cors(
     app,
-    allow_origin=CORS_ORIGINS,  # Fixed: allow_origin instead of allow_origins
+    allow_origin=CORS_ORIGINS,
     allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
     allow_headers=["Content-Type", "Authorization", "Accept"],
     allow_credentials=True,
@@ -39,6 +48,19 @@ logging.basicConfig(level=logging.DEBUG)
 
 # Define User_Instructions with a default value
 User_Instructions = os.environ.get("USER_INSTRUCTIONS", "Catalog, categorize and Describe the item.")
+
+# Add these new functions for vector search
+async def create_embedding(text: str) -> List[float]:
+    """Create an embedding for the given text using OpenAI's API."""
+    try:
+        response = await openai_client.embeddings.create(
+            model="text-embedding-ada-002",
+            input=text
+        )
+        return response.data[0].embedding
+    except Exception as e:
+        logging.error(f"Error creating embedding: {e}")
+        return None
 
 @app.after_request
 async def after_request(response):
@@ -202,6 +224,94 @@ def allowed_file(filename):
     allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx', 'txt', 'rtf'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
+async def add_vector_support():
+    """Add vector support to documents table if needed."""
+    try:
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            # First create the extension if it doesn't exist
+            await conn.execute('CREATE EXTENSION IF NOT EXISTS vector')
+            
+            # Create documents table with vector support if it doesn't exist
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS documents (
+                    id SERIAL PRIMARY KEY,
+                    title TEXT,
+                    author TEXT,
+                    journal_publisher TEXT,
+                    publication_year INTEGER,
+                    page_length INTEGER,
+                    word_count INTEGER,
+                    thesis TEXT,
+                    issue TEXT,
+                    summary TEXT,
+                    category TEXT,
+                    field TEXT,
+                    influences TEXT,
+                    hashtags TEXT,
+                    file_path TEXT UNIQUE,
+                    file_type TEXT,
+                    content_embedding vector(1536),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+        await pool.close()
+    except Exception as e:
+        logging.error(f"Error adding vector support: {e}")
+        raise
+
+# Add this new route for document search
+@app.route('/api/documents/search', methods=['POST', 'OPTIONS'])
+async def search_documents():
+    """Search documents using vector similarity."""
+    if request.method == 'OPTIONS':
+        return await handle_cors_preflight()
+
+    try:
+        data = await request.get_json()
+        query = data.get('query')
+        
+        if not query:
+            return jsonify({"error": "Search query is required"}), 400
+
+        # Create embedding for the search query
+        query_embedding = await create_embedding(query)
+        if not query_embedding:
+            return jsonify({"error": "Failed to create search embedding"}), 500
+
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            # Perform the vector similarity search
+            results = await conn.fetch('''
+                SELECT 
+                    id, title, summary, category, field,
+                    1 - (content_embedding <=> $1::vector) as similarity
+                FROM documents
+                WHERE content_embedding IS NOT NULL
+                ORDER BY content_embedding <=> $1::vector
+                LIMIT 5
+            ''', query_embedding)
+
+            # Format the results
+            search_results = []
+            for row in results:
+                search_results.append({
+                    'id': row['id'],
+                    'title': row['title'],
+                    'summary': row['summary'],
+                    'category': row['category'],
+                    'field': row['field'],
+                    'similarity': float(row['similarity'])
+                })
+
+        await pool.close()
+        return jsonify({"results": search_results})
+
+    except Exception as e:
+        logging.error(f"Error searching documents: {e}")
+        return jsonify({"error": "Internal Server Error"}), 500
+
+# [Keep all existing routes and functions here]
 @app.route('/export-inventory', methods=['GET', 'OPTIONS'])
 async def export_inventory():
     if request.method == 'OPTIONS':
@@ -351,6 +461,7 @@ async def startup():
     os.makedirs(EXPORTS_DIR, exist_ok=True)
     
     await initialize_database()
+    await add_vector_support()  # Add vector support during startup
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))

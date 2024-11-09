@@ -1,4 +1,4 @@
-# Instantory - Inventory Management System
+                  # Instantory - Inventory Management System
 
 A full-stack inventory management system with AI-powered image and document analysis.
 
@@ -38,23 +38,27 @@ source venv/bin/activate  # Unix
 
 2. Install dependencies:
 ```bash
-cd backend
 pip install -r requirements.txt
 ```
 
-3. Copy `.env.example` to `.env` and configure:
+2. Set up PostgreSQL database:
+- Run the initialization script:
 ```bash
-cp .env.example .env
+psql -d your_database_name -f backend/init.sql
 ```
 
-4. Run the server:
+3. Configure environment variables:
+- Copy `.env.example` to `.env`
+- Update with your settings
+
+## Development
+
+1. Start the backend:
 ```bash
-hypercorn server:app --bind 0.0.0.0:10000 --reload
+python -m hypercorn backend/server:app --reload
 ```
 
-### Frontend Setup
-
-1. Install dependencies:
+2. Start the frontend:
 ```bash
 cd frontend
 npm install
@@ -72,11 +76,11 @@ npm start
 
 ## Deployment
 
-### Backend Deployment (Render)
+### Backend (Render)
 
-1. Create a new Web Service on Render
-2. Connect your GitHub repository
-3. Configure the following:
+1. Connect your GitHub repository
+2. Create a new Web Service
+3. Use the following settings:
    - Build Command: `pip install -r requirements.txt`
    - Start Command: `hypercorn server:app --bind 0.0.0.0:$PORT --access-log -`
    - Environment Variables: Copy from `.env.example`
@@ -109,17 +113,31 @@ npm start
 ## Database Setup
 
 The application uses PostgreSQL. The database schema will be automatically created on first run. Make sure to set up a PostgreSQL database on Render and configure the `DATABASE_URL` environment variable.
+### Document Search
+```
+POST /api/documents/search
+Content-Type: application/json
 
-## Features
+{
+    "query": "your search query"
+}
+```
 
-- AI-powered image analysis using OpenAI's GPT-4 Vision
-- Document processing and analysis
-- Inventory management with categorization
-- Export functionality
-- CORS-enabled API endpoints
-- Secure file handling
-- Error logging and monitoring
-
+Response:
+```json
+{
+    "results": [
+        {
+            "id": 1,
+            "title": "Document Title",
+            "summary": "Document Summary",
+            "category": "Category",
+            "field": "Field",
+            "similarity": 0.95
+        }
+    ]
+}
+```
 ## Security Notes
 
 - Never commit `.env` files
@@ -145,3 +163,7 @@ The application includes comprehensive error handling:
 ## Support
 
 For issues and feature requests, please create an issue in the GitHub repository.
+
+## License
+
+See LICENSE file for details.
