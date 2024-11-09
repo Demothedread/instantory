@@ -168,12 +168,19 @@ def extract_text_from_file(file_path: str) -> str:
 @retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(6))
 async def analyze_document(text: str) -> Dict[str, Any]:
     """Analyze document text using OpenAI's GPT-4 model."""
+    first_2500 = text[:2500]           # First 2500 characters
+    last_2500 = text[-2500:]           # Last 2500 characters
+
+    # Combine them into a single content for your request
+    content = first_2500 + last_2500
+
     try:
         # First pass: Extract structure and key sections
         structure_response = await openai.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": """
+                {"role": "system", "content": 
+                """
                 Analyze this document and identify:
                 1. Table of contents (if present)
                 2. Reference tables/bibliography
@@ -183,8 +190,9 @@ async def analyze_document(text: str) -> Dict[str, Any]:
                 
                 Return a JSON object with these sections.
                 """},
-                {"role": "user", "content": text[:8000]}  # First 8000 chars for structure
-            ]
+                {"role": "user", "content": content}  # First 8000 chars for structure
+            ],
+            use_async=True
         )
         
         structure_data = json.loads(structure_response.choices[0].message.content)
