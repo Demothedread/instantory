@@ -23,26 +23,27 @@ openai_client = AsyncOpenAI(
 
 app = Quart(__name__)
 
-# Configure CORS for production deployment
-CORS_ORIGIN = [
-    'https://instantory.vercel.app',  # Frontend
-    'https://instantory-api.onrender.com'  # Backend
-    'http://localhost:3000',  # Local development
-    'postgresql://instantory_sql_user:zvenSm9Mp3QPg1SHRNtTo3wKVd9lDh6g@dpg-csirn6dsvqrc73eioqs0-a/instantory_sql',
-    'postgresql://instantory_sql_user:zvenSm9Mp3QPg1SHRNtTo3wKVd9lDh6g@dpg-csirn6dsvqrc73eioqs0-a.oregon-postgres.render.com/instantory_sql'
-]
+def configure_cors_origins():
+    CORS_ORIGIN = [
+        'https://instantory.vercel.app',
+        'https://instantory-api.onrender.com',
+        'http://localhost:3000',
+        'postgresql://instantory_sql_user:.../instantory_sql',
+        'postgresql://instantory_sql_user:.../instantory_sql'
+    ]
 
-if os.environ.get('CORS_ORIGIN'):
-    CORS_ORIGIN.append(os.environ.get('CORS_ORIGIN'))
-if os.environ.get('PUBLIC_BACKEND_URL'):
-    CORS_ORIGIN.append(os.environ.get('PUBLIC_BACKEND_URL'))
-if os.environ.get('REACT_APP_BACKEND_URL'):
-    CORS_ORIGIN.append(os.environ.get('REACT_APP_BACKEND_URL'))
-if os.environ.get('PORT'):
-    CORS_ORIGIN.append(f"XXXXXXXXXXXXXXXX:{os.environ.get('PORT')}")
-if os.environ.get('DB_PORT'):
-    CORS_ORIGIN.append(f"XXXXXXXXXXXXXXXX:{os.environ.get('DB_PORT')}")
-)
+    env_vars = ['CORS_ORIGIN', 'PUBLIC_BACKEND_URL', 'REACT_APP_BACKEND_URL', 'PORT', 'DB_PORT']
+    for var in env_vars:
+        if os.environ.get(var):
+            value = os.environ.get(var)
+            if var in ['PORT', 'DB_PORT']:
+                CORS_ORIGIN.append(f"XXXXXXXXXXXXXXXX:{value}")
+            else:
+                CORS_ORIGIN.append(value)
+
+    return CORS_ORIGIN
+
+CORS_ORIGIN = configure_cors_origins()
 
 # Apply CORS configuration
 app = cors(
@@ -100,7 +101,6 @@ async def get_db_pool():
     database_url = os.getenv('DATABASE_URL')
     if not database_url:
         raise ValueError("DATABASE_URL environment variable is required")
-    
     url = urlparse.urlparse(database_url)
     return await asyncpg.create_pool(
         user=url.username,
