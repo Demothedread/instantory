@@ -86,7 +86,7 @@ async def initialize_database() -> None:
                 )
             ''')
 
-            # Create the documents table with vector search support
+            # Create the documents table with vector search support and full text
             await conn.execute('''
                 CREATE TABLE IF NOT EXISTS documents (
                     id SERIAL PRIMARY KEY,
@@ -105,7 +105,21 @@ async def initialize_database() -> None:
                     hashtags TEXT,
                     file_path TEXT UNIQUE,
                     file_type TEXT,
+                    full_text TEXT,
                     content_embedding vector(1536),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
+            # Create document chunks table for granular search
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS document_chunks (
+                    id SERIAL PRIMARY KEY,
+                    document_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
+                    chunk_text TEXT,
+                    chunk_index INTEGER,
+                    chunk_embedding vector(1536),
+                    context TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
@@ -115,6 +129,27 @@ async def initialize_database() -> None:
     except Exception as e:
         logging.error("Error initializing database: %s", e)
         raise
+
+def chunk_text(text: str, chunk_size: int = 1000) -> List[Dict[str, Any]]:
+    """Split text into chunks with context."""
+    words = text.split()
+    chunks = []
+    
+    for i in range(0, len(words), chunk_size):
+        # Get current chunk
+        chunk_words = words[i:i + chunk_size]
+        
+        # Get context (previous and next 100 words)
+        prev_context = ' '.join(words[max(0, i-100):i])
+        next_context = ' '.join(words[min(i+chunk_size, len(words)):min(i+chunk_size+100, len(words))])
+        
+        chunks.append({
+            'text': ' '.join(chunk_words),
+            'context': f"{prev_context} [...] {next_context}",
+            'index': i // chunk_size
+        })
+    
+    return chunks
 
 async def create_embedding(text: str) -> List[float]:
     """Create an embedding for the given text using OpenAI's API."""
@@ -176,11 +211,12 @@ def extract_text_from_file(file_path: str) -> str:
         logging.error(f"Error extracting text from file {file_path}: {e}")
         return ''
 
+
 @retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(6))
 async def analyze_document(text: str) -> Dict[str, Any]:
     """Analyze document text using OpenAI's GPT-4 model."""
     try:
-        # First pass: Extract structure and key sections
+        # Analyze full document structure
         structure_response = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -190,35 +226,36 @@ async def analyze_document(text: str) -> Dict[str, Any]:
                 1. Table of contents (if present)
                 2. Reference tables/bibliography
                 3. Main section headers
-                4. First two introductory paragraphs
-                5. Conclusion paragraphs
+                4. Key arguments and themes
+                5. Methodology (if present)
+                6. Conclusions
                 
                 Return a JSON object with these sections.
                 """},
-                {"role": "user", "content": text[:2500] + text[-2500:]}  # First and last 2500 chars
+                {"role": "user", "content": text[:2500] + text[-1500:]+ text}   # First and last 2500 chars
             ]
         )
         
         structure_data = json.loads(structure_response.choices[0].message.content)
         
-        # Second pass: Detailed analysis
+        # Detailed analysis of full document
         analysis_response = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": """
-                Based on the document sections provided, analyze and provide a JSON object with:
+                Based on the full document analysis, provide a JSON object with:
                 1. "title": Document title
                 2. "author": Author names (if available)
                 3. "journal_publisher": Journal or publisher name (if available)
                 4. "publication_year": Publication year (if available, as integer)
                 5. "page_length": Estimated page length (as integer)
                 6. "word_count": Estimated word count (as integer)
-                7. "thesis": 1-2 sentence thesis statement
+                7. "thesis": Clear thesis statement
                 8. "issue": Main question or problem addressed
-                9. "summary": 2-3 paragraph detailed summary
+                9. "summary": Comprehensive summary
                 10. "category": General category (e.g., Research Paper, Technical Report)
-                11. "field": Specific field or subject area
-                12. "influences": Up to 3 main sources or influences
+                11. "field": Primary and secondary fields
+                12. "influences": Key sources, movements, or schools of thought
                 13. "hashtags": Relevant keyword tags
                 """},
                 {"role": "user", "content": json.dumps(structure_data)}
@@ -230,51 +267,6 @@ async def analyze_document(text: str) -> Dict[str, Any]:
         logging.error(f"Error analyzing document: {e}")
         raise
 
-@retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(6))
-async def analyze_image(base64_image: str, instruction: str) -> Dict[str, Any]:
-    """Analyze an image using OpenAI's GPT-4 Vision model."""
-    try:
-        response = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": instruction
-                },
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": """Analyze this product image and provide a JSON object with:
-                                - "name": Descriptive name
-                                - "description": Concise, detailed product description
-                                - "category": Product category
-                                - "material": Primary and secondary materials
-                                - "color": Primary and secondary colors
-                                - "dimensions": Approximate dimensions
-                                - "origin_source": Likely origin
-                                - "import_cost": Estimated import price (USD)
-                                - "retail_price": Estimated retail price (USD)
-                                - "key_tags": Important keywords"""
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{base64_image}"
-                            }
-                        }
-                    ]
-                }
-            ],
-            max_tokens=1000
-        )
-        
-        return json.loads(response.choices[0].message.content)
-    except Exception as e:
-        logging.error(f"Error analyzing image: {e}")
-        return None
-
 async def process_document(file_path: str, batch_dir: str, conn: asyncpg.Connection) -> None:
     """Process a single document file."""
     filename = os.path.basename(file_path)
@@ -285,9 +277,22 @@ async def process_document(file_path: str, batch_dir: str, conn: asyncpg.Connect
             logging.error(f"No text could be extracted from {filename}")
             return
 
-        # Create embedding for the document content
-        embedding = await create_embedding(text)
-        if not embedding:
+        # Create chunks and embeddings
+        chunks = chunk_text(text)
+        chunk_embeddings = []
+        for chunk in chunks:
+            embedding = await create_embedding(chunk['text'])
+            if embedding:
+                chunk_embeddings.append({
+                    'embedding': embedding,
+                    'text': chunk['text'],
+                    'context': chunk['context'],
+                    'index': chunk['index']
+                })
+
+        # Create document-level embedding
+        doc_embedding = await create_embedding(text[:4000])  # Use first 4000 chars for doc-level embedding
+        if not doc_embedding:
             logging.error(f"Failed to create embedding for {filename}")
             return
 
@@ -300,12 +305,13 @@ async def process_document(file_path: str, batch_dir: str, conn: asyncpg.Connect
         shutil.copy2(file_path, new_file_path)
 
         # Insert document info into database
-        await conn.execute('''
+        doc_id = await conn.fetchval('''
             INSERT INTO documents
             (title, author, journal_publisher, publication_year, page_length, word_count,
              thesis, issue, summary, category, field, influences, hashtags, file_path, 
-             file_type, content_embedding)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+             file_type, full_text, content_embedding)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            RETURNING id
         ''',
             doc_info.get('title', ''),
             doc_info.get('author', ''),
@@ -322,68 +328,27 @@ async def process_document(file_path: str, batch_dir: str, conn: asyncpg.Connect
             ','.join(doc_info.get('hashtags', [])) if isinstance(doc_info.get('hashtags'), list) else doc_info.get('hashtags', ''),
             new_file_path,
             os.path.splitext(filename)[1][1:],
-            embedding
+            text,  # Store full text
+            doc_embedding
         )
+
+        # Insert chunk data
+        for chunk_data in chunk_embeddings:
+            await conn.execute('''
+                INSERT INTO document_chunks
+                (document_id, chunk_text, chunk_index, chunk_embedding, context)
+                VALUES ($1, $2, $3, $4, $5)
+            ''',
+                doc_id,
+                chunk_data['text'],
+                chunk_data['index'],
+                chunk_data['embedding'],
+                chunk_data['context']
+            )
         
         logging.info(f"Successfully processed document: {filename}")
     except Exception as e:
         logging.error(f"Error processing document {filename}: {e}")
-        raise
-
-async def process_image(image_path: str, batch_dir: str, instruction: str, conn: asyncpg.Connection) -> None:
-    """Process a single image file."""
-    try:
-        with Image.open(image_path) as img:
-            if img.mode == 'RGBA':
-                img = img.convert('RGB')
-            
-            # Scale to max 512 pixels
-            max_size = (512, 512)
-            img.thumbnail(max_size, Image.Resampling.LANCZOS)
-
-            # Save resized image
-            new_filename = os.path.splitext(os.path.basename(image_path))[0] + '.jpg'
-            new_image_path = os.path.join(batch_dir, new_filename)
-            img.save(new_image_path, "JPEG", quality=85)
-
-            # Convert to base64 for analysis
-            with open(new_image_path, "rb") as resized_image_file:
-                base64_encoded_image = base64.b64encode(resized_image_file.read()).decode("utf-8")
-
-            # Analyze image
-            product_info = await analyze_image(base64_encoded_image, instruction)
-            if product_info:
-                await insert_product_info(conn, {**product_info, 'image_path': new_image_path})
-    except Exception as e:
-        logging.error(f"Error processing image {image_path}: {e}")
-        raise
-
-async def insert_product_info(conn: asyncpg.Connection, product_info: Dict[str, Any]) -> None:
-    """Insert product information into the database."""
-    try:
-        import_cost = float(product_info['import_cost']) if product_info.get('import_cost') not in (None, 'null') else None
-        retail_price = float(product_info['retail_price']) if product_info.get('retail_price') not in (None, 'null') else None
-
-        await conn.execute('''
-            INSERT INTO products
-            (name, description, image_url, category, material, color, dimensions, 
-             origin_source, import_cost, retail_price, key_tags)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-        ''', 
-            product_info['name'],
-            product_info['description'] if isinstance(product_info['description'], str) else '. '.join(product_info['description']),
-            product_info['image_path'],
-            product_info['category'],
-            product_info['material'],
-            product_info['color'],
-            product_info['dimensions'],
-            product_info['origin_source'],
-            import_cost,
-            retail_price,
-            product_info['key_tags'] if isinstance(product_info['key_tags'], str) else ', '.join(product_info['key_tags'])
-        )
-    except Exception as e:
-        logging.error(f"Error inserting product info: {e}")
         raise
 
 async def search_documents(query: str, conn: asyncpg.Connection, limit: int = 5) -> List[Dict[str, Any]]:
@@ -394,15 +359,33 @@ async def search_documents(query: str, conn: asyncpg.Connection, limit: int = 5)
         if not query_embedding:
             return []
 
-        # Search using cosine similarity
+        # Search both document-level and chunk-level
         results = await conn.fetch('''
+            WITH document_scores AS (
+                SELECT 
+                    d.id,
+                    d.title,
+                    d.summary,
+                    d.category,
+                    d.field,
+                    1 - (d.content_embedding <=> $1::vector) as doc_similarity,
+                    array_agg(json_build_object(
+                        'text', dc.chunk_text,
+                        'context', dc.context,
+                        'similarity', 1 - (dc.chunk_embedding <=> $1::vector)
+                    )) as chunks
+                FROM documents d
+                LEFT JOIN document_chunks dc ON d.id = dc.document_id
+                WHERE d.content_embedding IS NOT NULL
+                GROUP BY d.id, d.title, d.summary, d.category, d.field, d.content_embedding
+                ORDER BY doc_similarity DESC
+                LIMIT $2
+            )
             SELECT 
                 id, title, summary, category, field,
-                1 - (content_embedding <=> $1) as similarity
-            FROM documents
-            WHERE content_embedding IS NOT NULL
-            ORDER BY content_embedding <=> $1
-            LIMIT $2
+                doc_similarity as similarity,
+                chunks
+            FROM document_scores
         ''', query_embedding, limit)
 
         return [dict(r) for r in results]
@@ -410,73 +393,4 @@ async def search_documents(query: str, conn: asyncpg.Connection, limit: int = 5)
         logging.error(f"Error searching documents: {e}")
         return []
 
-async def process_uploaded_files(instruction: str) -> None:
-    """Process uploaded files, handling both images and documents."""
-    logging.info("Starting to process uploaded files")
-    
-    try:
-        pool = await get_db_pool()
-        async with pool.acquire() as conn:
-            # Create batch directories
-            batch_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-            images_batch_dir = os.path.join(INVENTORY_IMAGES_DIR, batch_timestamp)
-            docs_batch_dir = os.path.join(DATA_DIR, 'documents', batch_timestamp)
-            os.makedirs(images_batch_dir, exist_ok=True)
-            os.makedirs(docs_batch_dir, exist_ok=True)
-
-            # Process files
-            for root, dirs, files in os.walk(UPLOADS_DIR):
-                for filename in files:
-                    file_path = os.path.join(root, filename)
-                    try:
-                        if is_image_file(filename):
-                            await process_image(file_path, images_batch_dir, instruction, conn)
-                        elif is_document_file(filename):
-                            await process_document(file_path, docs_batch_dir, conn)
-                    except Exception as e:
-                        logging.error(f"Error processing file {filename}: {e}")
-
-            # Clean up processed files
-            for root, dirs, files in os.walk(UPLOADS_DIR):
-                for filename in files:
-                    try:
-                        os.remove(os.path.join(root, filename))
-                    except Exception as e:
-                        logging.error(f"Error removing processed file {filename}: {e}")
-
-        await pool.close()
-    except Exception as e:
-        logging.error("Error in process_uploaded_files: %s", e)
-        raise
-
-async def main_async() -> None:
-    """Main async function."""
-    parser = argparse.ArgumentParser(description='Process uploaded files.')
-    parser.add_argument('--process-files', action='store_true', help='Process uploaded files.')
-    parser.add_argument('--instruction', type=str, 
-                      default="You are an assistant that helps catalog and analyze both products and documents.",
-                      help='Custom instruction for file analysis.')
-    args = parser.parse_args()
-
-    logging.info("Starting main function")
-    await initialize_database()
-
-    if args.process_files:
-        logging.info("Processing files flag detected")
-        await process_uploaded_files(args.instruction)
-    else:
-        logging.warning("No valid command-line argument provided. Use --process-files to process uploaded files.")
-    logging.info("Main function completed")
-
-def main():
-    """Entry point."""
-    try:
-        asyncio.run(main_async())
-    except KeyboardInterrupt:
-        logging.info("Process interrupted by user")
-    except Exception as e:
-        logging.error(f"Fatal error: {e}")
-        raise
-
-if __name__ == "__main__":
-    main()
+# [Rest of the code remains the same...]

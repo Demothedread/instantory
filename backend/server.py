@@ -165,6 +165,53 @@ def convert_to_relative_path(absolute_path: Optional[str]) -> Optional[str]:
         return path_parts[1]
     return absolute_path
 
+@app.route('/api/documents', methods=['GET', 'OPTIONS'])
+async def get_documents():
+    if request.method == 'OPTIONS':
+        return await handle_cors_preflight()
+
+    try:
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT id, title, author, journal_publisher, publication_year,
+                       page_length, word_count, thesis, issue, summary,
+                       category, field, influences, hashtags, file_path,
+                       file_type, created_at
+                FROM documents
+                ORDER BY created_at DESC
+            """)
+
+        documents = []
+        for row in rows:
+            documents.append({
+                'id': row['id'],
+                'title': row['title'],
+                'author': row['author'],
+                'journal_publisher': row['journal_publisher'],
+                'publication_year': row['publication_year'],
+                'page_length': row['page_length'],
+                'word_count': row['word_count'],
+                'thesis': row['thesis'],
+                'issue': row['issue'],
+                'summary': row['summary'],
+                'category': row['category'],
+                'field': row['field'],
+                'influences': row['influences'],
+                'hashtags': row['hashtags'],
+                'file_path': row['file_path'],
+                'file_type': row['file_type'],
+                'created_at': row['created_at'].isoformat() if row['created_at'] else None
+            })
+
+        await pool.close()
+        app.logger.info("Fetched %d documents from the database", len(documents))
+        return jsonify(documents)
+    except Exception as e:
+        app.logger.error("Database error: %s", e)
+        return jsonify({"error": "Internal Server Error"}), 500
+
+
 @app.route('/api/inventory', methods=['GET', 'OPTIONS'])
 async def get_inventory():
     if request.method == 'OPTIONS':
@@ -197,7 +244,9 @@ async def get_inventory():
         return jsonify(inventory)
     except Exception as e:
         app.logger.error("Database error: %s", e)
-        return jsonify({"error": "Internal Server Error"}), 500
+        return jsonify({"error": "Internal Server Error"}), 500   
+                                 
+################################
 
 @app.route('/process-files', methods=['POST', 'OPTIONS'])
 async def process_files():
@@ -308,10 +357,25 @@ async def add_vector_support() -> None:
                     hashtags TEXT,
                     file_path TEXT UNIQUE,
                     file_type TEXT,
+                    full_text TEXT,
                     content_embedding vector(1536),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
+
+            # Create document chunks table for granular search
+            await conn.execute('''
+                CREATE TABLE IF NOT EXISTS document_chunks (
+                    id SERIAL PRIMARY KEY,
+                    document_id INTEGER REFERENCES documents(id) ON DELETE CASCADE,
+                    chunk_text TEXT,
+                    chunk_index INTEGER,
+                    chunk_embedding vector(1536),
+                    context TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+
         await pool.close()
     except Exception as e:
         logging.error(f"Error adding vector support: {e}")
@@ -337,16 +401,34 @@ async def search_documents():
 
         pool = await get_db_pool()
         async with pool.acquire() as conn:
-            # Perform the vector similarity search
+            # Search both document-level and chunk-level matches
             results = await conn.fetch('''
+                WITH document_scores AS (
+                    SELECT 
+                        d.id,
+                        d.title,
+                        d.summary,
+                        d.category,
+                        d.field,
+                        1 - (d.content_embedding <=> $1::vector) as doc_similarity,
+                        array_agg(json_build_object(
+                            'text', dc.chunk_text,
+                            'context', dc.context,
+                            'similarity', 1 - (dc.chunk_embedding <=> $1::vector)
+                        )) as chunks
+                    FROM documents d
+                    LEFT JOIN document_chunks dc ON d.id = dc.document_id
+                    WHERE d.content_embedding IS NOT NULL
+                    GROUP BY d.id, d.title, d.summary, d.category, d.field, d.content_embedding
+                    ORDER BY doc_similarity DESC
+                    LIMIT $2
+                )
                 SELECT 
                     id, title, summary, category, field,
-                    1 - (content_embedding <=> $1::vector) as similarity
-                FROM documents
-                WHERE content_embedding IS NOT NULL
-                ORDER BY content_embedding <=> $1::vector
-                LIMIT 5
-            ''', query_embedding)
+                    doc_similarity as similarity,
+                    chunks
+                FROM document_scores
+            ''', query_embedding, 5)
 
             # Format the results
             search_results = []
@@ -357,7 +439,8 @@ async def search_documents():
                     'summary': row['summary'],
                     'category': row['category'],
                     'field': row['field'],
-                    'similarity': float(row['similarity'])
+                    'similarity': float(row['similarity']),
+                    'relevant_chunks': row['chunks']
                 })
 
         await pool.close()
