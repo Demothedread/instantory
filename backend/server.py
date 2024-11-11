@@ -12,8 +12,13 @@ import csv
 import io
 import urllib.parse as urlparse
 import asyncio
+from dotenv import load_dotenv
 from config import DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR
 from openai import AsyncOpenAI
+
+# Load environment variables
+load_dotenv()
+load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 # Add this after the existing imports but before app initialization
 openai_client = AsyncOpenAI(
@@ -24,35 +29,45 @@ openai_client = AsyncOpenAI(
 app = Quart(__name__)
 
 def configure_cors_origins():
+    database_url = os.environ.get('DATABASE_URL', os.getenv('DATABASE_URL'))
+    if database_url:
+        parsed_url = urlparse.urlparse(database_url)
+        db_host = parsed_url.hostname
+    else:
+        db_host = 'dpg-csirn6dsvqrc73eioqs0-a.oregon-postgres.render.com'
+
     CORS_ORIGIN = [
         'https://instantory.vercel.app',
         'https://instantory-api.onrender.com',
+        'https://instantory-backend.onrender.com',
+        f'https://{db_host}',
         'http://localhost:3000',
-        'postgresql://instantory_sql_user:.../instantory_sql',
-        'postgresql://instantory_sql_user:.../instantory_sql'
+        'http://127.0.0.1:3000',
+        'http://localhost:5000',
+        'http://127.0.0.1:5000'
     ]
 
-    env_vars = ['CORS_ORIGIN', 'PUBLIC_BACKEND_URL', 'REACT_APP_BACKEND_URL', 'PORT', 'DB_PORT']
+    # Add any environment-specific origins
+    env_vars = ['CORS_ORIGIN', 'PUBLIC_BACKEND_URL', 'REACT_APP_BACKEND_URL']
     for var in env_vars:
         if os.environ.get(var):
             value = os.environ.get(var)
-            if var in ['PORT', 'DB_PORT']:
-                CORS_ORIGIN.append(f"XXXXXXXXXXXXXXXX:{value}")
-            else:
+            if value not in CORS_ORIGIN:
                 CORS_ORIGIN.append(value)
 
     return CORS_ORIGIN
 
 CORS_ORIGIN = configure_cors_origins()
 
-# Apply CORS configuration
+# Apply CORS configuration with expanded settings for production
 app = cors(
     app,
     allow_origin=CORS_ORIGIN,
-    allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE"],
-    allow_headers=["Content-Type", "Authorization", "Accept"],
+    allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE", "PATCH"],
+    allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With", "Access-Control-Allow-Headers"],
     allow_credentials=True,
-    max_age=5000
+    max_age=86400,
+    expose_headers=["Content-Length", "X-Request-ID", "Access-Control-Allow-Origin"]
 )
 
 logging.basicConfig(level=logging.DEBUG)
@@ -60,7 +75,40 @@ logging.basicConfig(level=logging.DEBUG)
 # Define User_Instructions with a default value
 User_Instructions = os.environ.get("USER_INSTRUCTIONS", "Catalog, categorize and Describe the item.")
 
-# Add these new functions for vector search
+async def get_db_pool():
+    """Get PostgreSQL connection pool from environment variables or URL."""
+    try:
+        # Get database configuration from environment variables
+        database_url = os.environ.get('DATABASE_URL')
+        if not database_url:
+            database_url = os.getenv('DATABASE_URL')
+            if not database_url:
+                raise ValueError("DATABASE_URL environment variable is required")
+
+        # Parse the database URL
+        parsed = urlparse.urlparse(database_url)
+        
+        # Create the connection pool with proper SSL configuration for Render
+        pool = await asyncpg.create_pool(
+            user=os.environ.get('DB_USER', parsed.username),
+            password=parsed.password,
+            database=os.environ.get('DB_NAME', parsed.path[1:] if parsed.path else 'instantory_sql'),
+            host=os.environ.get('DB_HOST', parsed.hostname),
+            port=int(os.environ.get('DB_PORT', parsed.port or 5432)),
+            ssl='require',  # Required for Render PostgreSQL
+            command_timeout=100,
+            min_size=1,
+            max_size=10
+        )
+        
+        # Test the connection
+        async with pool.acquire() as conn:
+            await conn.execute('SELECT 1')
+        return pool
+    except Exception as e:
+        logging.error(f"Database connection error: {e}")
+        raise e
+
 async def create_embedding(text: str) -> List[float]:
     """Create an embedding for the given text using OpenAI's API."""
     try:
@@ -79,9 +127,11 @@ async def after_request(response):
     origin = request.headers.get('Origin')
     if origin and origin in CORS_ORIGIN:
         response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,Accept'
-        response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin, X-Requested-With'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, PUT, POST, DELETE, OPTIONS, PATCH'
         response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Max-Age'] = '86400'
+        response.headers['Access-Control-Expose-Headers'] = 'Content-Length, X-Request-ID'
     return response
 
 @app.route('/cors-preflight', methods=['OPTIONS'])
@@ -96,20 +146,6 @@ async def handle_cors_preflight():
         response.headers['Access-Control-Allow-Credentials'] = 'true'
     return response
 
-async def get_db_pool():
-    """Get PostgreSQL connection pool from environment variables or URL."""
-    database_url = os.getenv('DATABASE_URL')
-    if not database_url:
-        raise ValueError("DATABASE_URL environment variable is required")
-    url = urlparse.urlparse(database_url)
-    return await asyncpg.create_pool(
-        user=url.username,
-        password=url.password,
-        database=url.path[1:],
-        host=url.hostname,
-        port=url.port,
-        ssl='require'  # Required for Render PostgreSQL
-    )
 
 def convert_to_relative_path(absolute_path):
     """Convert absolute image path to relative path."""
@@ -435,7 +471,6 @@ async def reset_inventory():
     except Exception as e:
         app.logger.error("Error during inventory reset: %s", e)
         return jsonify({'status': 'error', 'message': str(e)}), 500
-
 async def initialize_database():
     """Initialize the database and create required tables."""
     try:

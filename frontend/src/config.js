@@ -1,11 +1,25 @@
 const config = {
   // Development API URL
   development: {
-    apiUrl: process.env.REACT_APP_BACKEND_URL_DEV || 'http://localhost:10000'
+    apiUrl: process.env.REACT_APP_BACKEND_URL_DEV || 'http://localhost:10000',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Origin': window.location.origin,
+      'Access-Control-Allow-Credentials': 'true'
+    },
+    credentials: 'include'
   },
   // Production API URL
   production: {
-    apiUrl: process.env.REACT_APP_BACKEND_URL || 'https://instantory-api.onrender.com'
+    apiUrl: process.env.REACT_APP_BACKEND_URL || 'https://instantory-api.onrender.com',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Origin': window.location.origin,
+      'Access-Control-Allow-Credentials': 'true'
+    },
+    credentials: 'include'
   }
 };
 

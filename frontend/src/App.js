@@ -25,9 +25,12 @@ function App() {
     try {
       // Fetch inventory data
       const invResponse = await fetch(`${config.apiUrl}/api/inventory`, {
+        method: 'GET',
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Origin': window.location.origin
         }
       });
 
@@ -45,9 +48,12 @@ function App() {
 
       // Fetch documents data
       const docResponse = await fetch(`${config.apiUrl}/api/documents`, {
+        method: 'GET',
         credentials: 'include',
         headers: {
           'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Origin': window.location.origin
         }
       });
 
@@ -94,6 +100,7 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
+            'Origin': window.location.origin
           },
           body: JSON.stringify({ table_name: 'products' }),
         });
@@ -120,6 +127,7 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
+            'Origin': window.location.origin
           }
         });
         
@@ -149,6 +157,7 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Origin': window.location.origin
         },
         body: JSON.stringify({ table_name: newTableName.trim() }),
       });
@@ -167,92 +176,35 @@ function App() {
     }
   };
 
-  const handleExport = (format, type = 'inventory') => {
-    const data = type === 'inventory' ? inventory : documents;
-    if (data.length === 0) {
-      alert('No data to export');
-      return;
-    }
-
-    let exportData;
-    let filename;
-    let mimeType;
-
-    switch (format) {
-      case 'csv':
-        exportData = convertToCSV(data);
-        filename = `${type}.csv`;
-        mimeType = 'text/csv';
-        break;
-      case 'xls':
-        exportData = convertToXLS(data);
-        filename = `${type}.xls`;
-        mimeType = 'application/vnd.ms-excel';
-        break;
-      default:
-        return;
-    }
-
-    const blob = new Blob([exportData], { type: mimeType });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const convertToCSV = (data) => {
-    if (data.length === 0) return '';
-    
-    const headers = Object.keys(data[0]).filter(key => 
-      !key.includes('_url') && !key.includes('id')
-    );
-    
-    const csvRows = [];
-    csvRows.push(headers.join(','));
-    
-    data.forEach(item => {
-      const values = headers.map(header => {
-        const value = item[header];
-        if (value == null) return '';
-        if (typeof value === 'string' && value.includes(',')) {
-          return `"${value}"`;
+  const handleExport = async (format, type = 'inventory') => {
+    try {
+      const response = await fetch(`${config.apiUrl}/export-${type}?format=${format}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Origin': window.location.origin
         }
-        return value;
       });
-      csvRows.push(values.join(','));
-    });
-    
-    return csvRows.join('\n');
-  };
 
-  const convertToXLS = (data) => {
-    if (data.length === 0) return '';
-    
-    const headers = Object.keys(data[0]).filter(key => 
-      !key.includes('_url') && !key.includes('id')
-    );
-    
-    let xlsContent = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
-    xlsContent += '<head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Sheet1</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>';
-    xlsContent += '<body><table>';
-    
-    xlsContent += '<tr>' + headers.map(header => `<th>${header}</th>`).join('') + '</tr>';
-    
-    data.forEach(item => {
-      xlsContent += '<tr>';
-      headers.forEach(header => {
-        const value = item[header] ?? '';
-        xlsContent += `<td>${value}</td>`;
-      });
-      xlsContent += '</tr>';
-    });
-    
-    xlsContent += '</table></body></html>';
-    return xlsContent;
+      if (!response.ok) {
+        throw new Error(`Failed to export ${type}`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${type}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(`Error exporting ${type}:`, error);
+      setError(`Failed to export ${type}. Please try again later.`);
+    }
   };
 
   return (

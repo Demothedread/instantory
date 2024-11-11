@@ -21,8 +21,25 @@ services:
         fromDatabase:
           name: instantory_sql
           property: connectionString
+      - key: DB_NAME
+        value: instantory_sql
+      - key: DB_USER
+        value: instantory_sql_user
+      - key: DB_HOST
+        value: dpg-csirn6dsvqrc73eioqs0-a.oregon-postgres.render.com
+      - key: DB_PORT
+        value: "5432"
+      - key: OPENAI_API_KEY
+        sync: false  # Sensitive value, should be set in Render dashboard
+      - key: CLAUDE_API_KEY
+        sync: false  # Sensitive value, should be set in Render dashboard
+      - key: CORS_ENABLED
+        value: "true"
+      - key: ALLOW_CREDENTIALS
+        value: "true"
 
 databases:
   - name: instantory_sql
     databaseName: instantory_sql
     plan: free
+    ipAllowList: []  # Allow all IPs for development

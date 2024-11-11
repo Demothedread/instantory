@@ -4,21 +4,40 @@
     {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "build" }
-    },
-    {
-      "src": "backend/server.py",
-      "use": "@vercel/python"
+      "config": {
+        "distDir": "build"
+      }
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "backend/server.py"
+      "src": "/static/(.*)",
+      "headers": { "cache-control": "s-maxage=31536000, immutable" },
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/manifest.json"
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/$1"
+      "headers": { 
+        "cache-control": "s-maxage=0",
+        "Access-Control-Allow-Origin": "https://instantory-api.onrender.com",
+        "Access-Control-Allow-Methods": "GET,PUT,POST,DELETE,OPTIONS,PATCH",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization,Accept,Origin,X-Requested-With",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400",
+        "Access-Control-Expose-Headers": "Content-Length,X-Request-ID"
+      },
+      "dest": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "REACT_APP_BACKEND_URL": "https://instantory-api.onrender.com"
+  }
 }
