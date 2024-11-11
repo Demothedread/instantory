@@ -14,7 +14,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: CORS_ORIGIN
-        value: https://instantory.vercel.app
+        value: https://instantory.vercel.app,https://instantory-dhj0hu4yd-demothedreads-projects.vercel.app
       - key: PUBLIC_BACKEND_URL
         value: https://instantory-api.onrender.com
       - key: DATABASE_URL
@@ -37,6 +37,8 @@ services:
         value: "true"
       - key: ALLOW_CREDENTIALS
         value: "true"
+      - key: VERCEL_URL
+        value: instantory-dhj0hu4yd-demothedreads-projects.vercel.app
 
 databases:
   - name: instantory_sql
