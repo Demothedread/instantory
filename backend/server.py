@@ -1,5 +1,5 @@
 # Add these imports at the top with existing imports
-from typing import List
+from typing import List, Dict, Any, Optional
 from quart import Quart, jsonify, request, send_file
 from quart_cors import cors
 import asyncpg
@@ -28,7 +28,7 @@ openai_client = AsyncOpenAI(
 
 app = Quart(__name__)
 
-def configure_cors_origins():
+def configure_cors_origins() -> List[str]:
     database_url = os.environ.get('DATABASE_URL', os.getenv('DATABASE_URL'))
     if database_url:
         parsed_url = urlparse.urlparse(database_url)
@@ -40,6 +40,7 @@ def configure_cors_origins():
         'https://instantory.vercel.app',
         'https://instantory-api.onrender.com',
         'https://instantory-backend.onrender.com',
+        'https://instantory-dhj0hu4yd-demothedreads-projects.vercel.app',  # Added Vercel preview URL
         f'https://{db_host}',
         'http://localhost:3000',
         'http://127.0.0.1:3000',
@@ -48,12 +49,19 @@ def configure_cors_origins():
     ]
 
     # Add any environment-specific origins
-    env_vars = ['CORS_ORIGIN', 'PUBLIC_BACKEND_URL', 'REACT_APP_BACKEND_URL']
+    env_vars = ['CORS_ORIGIN', 'PUBLIC_BACKEND_URL', 'REACT_APP_BACKEND_URL', 'VERCEL_URL']
     for var in env_vars:
         if os.environ.get(var):
             value = os.environ.get(var)
-            if value not in CORS_ORIGIN:
-                CORS_ORIGIN.append(value)
+            if value and value.startswith('http'):
+                if value not in CORS_ORIGIN:
+                    CORS_ORIGIN.append(value)
+            else:
+                # Handle Vercel deployment URLs
+                if var == 'VERCEL_URL' and value:
+                    https_url = f'https://{value}'
+                    if https_url not in CORS_ORIGIN:
+                        CORS_ORIGIN.append(https_url)
 
     return CORS_ORIGIN
 
@@ -75,7 +83,7 @@ logging.basicConfig(level=logging.DEBUG)
 # Define User_Instructions with a default value
 User_Instructions = os.environ.get("USER_INSTRUCTIONS", "Catalog, categorize and Describe the item.")
 
-async def get_db_pool():
+async def get_db_pool() -> asyncpg.Pool:
     """Get PostgreSQL connection pool from environment variables or URL."""
     try:
         # Get database configuration from environment variables
@@ -109,7 +117,7 @@ async def get_db_pool():
         logging.error(f"Database connection error: {e}")
         raise e
 
-async def create_embedding(text: str) -> List[float]:
+async def create_embedding(text: str) -> Optional[List[float]]:
     """Create an embedding for the given text using OpenAI's API."""
     try:
         response = await openai_client.embeddings.create(
@@ -141,13 +149,13 @@ async def handle_cors_preflight():
     origin = request.headers.get('Origin')
     if origin and origin in CORS_ORIGIN:
         response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,Accept'
-        response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,Accept,Origin,X-Requested-With'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS,PATCH'
         response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Max-Age'] = '86400'
     return response
 
-
-def convert_to_relative_path(absolute_path):
+def convert_to_relative_path(absolute_path: Optional[str]) -> Optional[str]:
     """Convert absolute image path to relative path."""
     if not absolute_path:
         return None
@@ -157,8 +165,11 @@ def convert_to_relative_path(absolute_path):
         return path_parts[1]
     return absolute_path
 
-@app.route('/api/inventory', methods=['GET'])
+@app.route('/api/inventory', methods=['GET', 'OPTIONS'])
 async def get_inventory():
+    if request.method == 'OPTIONS':
+        return await handle_cors_preflight()
+
     try:
         pool = await get_db_pool()
         async with pool.acquire() as conn:
@@ -245,7 +256,7 @@ async def process_files():
         app.logger.error("Unexpected error: %s", e)
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-def maintain_inventory_folders(max_folders=10):
+def maintain_inventory_folders(max_folders: int = 10) -> bool:
     """Keep only the latest N folders in the inventory directory."""
     try:
         folders = [f for f in os.listdir(INVENTORY_IMAGES_DIR) 
@@ -261,16 +272,16 @@ def maintain_inventory_folders(max_folders=10):
         return False
     return True
 
-def check_file_exists(filename):
+def check_file_exists(filename: str) -> bool:
     """Check if a file with the same name exists in uploads directory."""
     return os.path.exists(os.path.join(UPLOADS_DIR, filename))
 
-def allowed_file(filename):
+def allowed_file(filename: str) -> bool:
     """Check if the file extension is allowed."""
     allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx', 'txt', 'rtf'}
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
-async def add_vector_support():
+async def add_vector_support() -> None:
     """Add vector support to documents table if needed."""
     try:
         pool = await get_db_pool()
@@ -306,7 +317,6 @@ async def add_vector_support():
         logging.error(f"Error adding vector support: {e}")
         raise
 
-# Add this new route for document search
 @app.route('/api/documents/search', methods=['POST', 'OPTIONS'])
 async def search_documents():
     """Search documents using vector similarity."""
@@ -357,7 +367,6 @@ async def search_documents():
         logging.error(f"Error searching documents: {e}")
         return jsonify({"error": "Internal Server Error"}), 500
 
-# [Keep all existing routes and functions here]
 @app.route('/export-inventory', methods=['GET', 'OPTIONS'])
 async def export_inventory():
     if request.method == 'OPTIONS':
@@ -471,7 +480,8 @@ async def reset_inventory():
     except Exception as e:
         app.logger.error("Error during inventory reset: %s", e)
         return jsonify({'status': 'error', 'message': str(e)}), 500
-async def initialize_database():
+
+async def initialize_database() -> None:
     """Initialize the database and create required tables."""
     try:
         pool = await get_db_pool()
