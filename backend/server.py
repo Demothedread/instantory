@@ -34,7 +34,97 @@ def configure_cors_origins() -> List[str]:
         parsed_url = urlparse.urlparse(database_url)
         db_host = parsed_url.hostname
     else:
-        db_host = 'dpg-csirn6dsvqrc73eioqs0-a.oregon-postgres.render.com'
+        db_host = os.environ.get('DB_HOST', 'localhost')
+    vercel_url = os.environ.get('VERCEL_URL')
+    if vercel_url:
+        if not vercel_url.startswith('https://'):
+            vercel_url = f'https://{vercel_url}'
+
+    return [
+        vercel_url,
+        'https://instantory.vercel.app',
+        'https://instantory-api.onrender.com',
+        'https://instantory-backend.onrender.com',
+        'https://instantory-dhj0hu4yd-demothedreads-projects.vercel.app',  # Added Vercel preview URL
+        f'https://{db_host}',
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:5000',
+        'http://127.0.0.1:5000'
+    ]
+
+app = cors(app, allow_origin=configure_cors_origins())
+
+# Rest of your code...
+
+# Add this function to your code
+async def generate_image_description(image_path: str) -> str:
+    try:
+        response = await openai_client.chat.completions.create(
+            model="gpt-4-vision-preview",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Describe this image in detail."},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64.b64encode(open(image_path, 'rb').read()).decode()}"
+                            },
+                        },
+                    ],
+                }
+            ],
+            max_tokens=300,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        logging.error(f"Error generating image description: {e}")
+        return ""
+
+# Modify the add_item function to include image description
+@app.route('/api/add_item', methods=['POST'])
+async def add_item():
+    data = await request.form
+    item_name = data.get('item_name')
+    quantity = data.get('quantity')
+    price = data.get('price')
+    category = data.get('category')
+    image = request.files.get('image')
+
+    if not item_name or not quantity or not price or not category:
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    try:
+        quantity = int(quantity)
+        price = float(price)
+    except ValueError:
+        return jsonify({'error': 'Invalid quantity or price'}), 400
+
+    if image:
+        image_path = os.path.join(INVENTORY_IMAGES_DIR, image.filename)
+        image.save(image_path)
+        image_description = await generate_image_description(image_path)
+    else:
+        image_path = None
+        image_description = ""
+
+    try:
+        async with app.db_pool.acquire() as connection:
+            await connection.execute(
+                'INSERT INTO inventory (item_name, quantity, price, category, image_path, image_description) VALUES ($1, $2, $3, $4, $5, $6)',
+                item_name, quantity, price, category, image_path, image_description
+            )
+        return jsonify({'message': 'Item added successfully'}), 201
+    except Exception as e:
+        logging.error(f"Error adding item: {e}")
+        return jsonify({'error': 'Failed to add item'}), 500
+
+# Rest of your code...
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
     CORS_ORIGIN = [
         'https://instantory.vercel.app',
@@ -58,10 +148,8 @@ def configure_cors_origins() -> List[str]:
                     CORS_ORIGIN.append(value)
             else:
                 # Handle Vercel deployment URLs
-                if var == 'VERCEL_URL' and value:
-                    https_url = f'https://{value}'
-                    if https_url not in CORS_ORIGIN:
-                        CORS_ORIGIN.append(https_url)
+                if var == 'VERCEL_URL' not in CORS_ORIGIN:
+                        CORS_ORIGIN.append('VERCEL_URL')
 
     return CORS_ORIGIN
 

@@ -2,7 +2,7 @@ services:
   - type: web
     name: instantory-api
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: cd backend && pip install -r requirements.txt
     startCommand: hypercorn server:app --bind 0.0.0.0:$PORT --access-log -
     envVars:
       - key: FLASK_ENV
@@ -38,7 +38,7 @@ services:
       - key: ALLOW_CREDENTIALS
         value: "true"
       - key: VERCEL_URL
-        value: instantory-dhj0hu4yd-demothedreads-projects.vercel.app
+        value: "https://instantory-6pl2dnzgn-demothedreads-projects.vercel.app"
 
 databases:
   - name: instantory_sql
