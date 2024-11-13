@@ -7,6 +7,7 @@ from datetime import datetime
 import shutil
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 import argparse
+import asyncpg
 from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
 from PIL import Image
@@ -25,25 +26,6 @@ client = AsyncOpenAI(
     api_key=os.getenv('OPENAI_API_KEY'),
     timeout=60.0  # Increased timeout for production environment
 )
-
-# Import optional dependencies with error handling
-try:
-    import asyncpg
-except ImportError:
-    logging.error("asyncpg not found. Please install with: pip install asyncpg")
-    raise
-
-try:
-    import PyPDF2
-except ImportError:
-    logging.error("PyPDF2 not found. Please install with: pip install PyPDF2")
-    raise
-
-try:
-    from docx import Document as DocxDocument
-except ImportError:
-    logging.error("python-docx not found. Please install with: pip install python-docx")
-    raise
 
 async def get_db_pool():
     """Get PostgreSQL connection pool from environment variables or URL."""
@@ -162,55 +144,6 @@ async def create_embedding(text: str) -> List[float]:
     except Exception as e:
         logging.error(f"Error creating embedding: {e}")
         return None
-
-def is_image_file(filename: str) -> bool:
-    """Check if the file is an image based on extension."""
-    image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
-    return os.path.splitext(filename.lower())[1] in image_extensions
-
-def is_document_file(filename: str) -> bool:
-    """Check if the file is a document based on extension."""
-    doc_extensions = {'.pdf', '.doc', '.docx', '.txt', '.rtf'}
-    return os.path.splitext(filename.lower())[1] in doc_extensions
-
-def extract_text_from_pdf(file_path: str) -> str:
-    """Extract text from a PDF file."""
-    try:
-        with open(file_path, 'rb') as file:
-            reader = PyPDF2.PdfReader(file)
-            text = ''
-            for page in reader.pages:
-                text += page.extract_text() + '\n'
-        return text
-    except Exception as e:
-        logging.error(f"Error extracting text from PDF {file_path}: {e}")
-        return ''
-
-def extract_text_from_docx(file_path: str) -> str:
-    """Extract text from a DOCX file."""
-    try:
-        doc = DocxDocument(file_path)
-        return '\n'.join([paragraph.text for paragraph in doc.paragraphs])
-    except Exception as e:
-        logging.error(f"Error extracting text from DOCX {file_path}: {e}")
-        return ''
-
-def extract_text_from_file(file_path: str) -> str:
-    """Extract text from various document formats."""
-    ext = os.path.splitext(file_path.lower())[1]
-    try:
-        if ext == '.pdf':
-            return extract_text_from_pdf(file_path)
-        elif ext == '.docx':
-            return extract_text_from_docx(file_path)
-        elif ext in ['.txt', '.rtf']:
-            with open(file_path, 'r', encoding='utf-8') as file:
-                return file.read()
-        return ''
-    except Exception as e:
-        logging.error(f"Error extracting text from file {file_path}: {e}")
-        return ''
-
 
 @retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(6))
 async def analyze_document(text: str) -> Dict[str, Any]:
@@ -393,4 +326,146 @@ async def search_documents(query: str, conn: asyncpg.Connection, limit: int = 5)
         logging.error(f"Error searching documents: {e}")
         return []
 
-# [Rest of the code remains the same...]
+async def process_uploaded_images(instruction: str, conn: asyncpg.Connection) -> None:
+    """Process uploaded images recursively, create a new directory, and save the processed images."""
+    logging.info("Starting to process uploaded images")
+    try:
+        # Retrieve existing image URLs from the database to avoid duplicates
+        existing_images = {row['image_url'] for row in await conn.fetch("SELECT image_url FROM products")}
+        
+        # Create a new directory for this batch of processed images
+        batch_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        batch_dir = os.path.join(INVENTORY_IMAGES_DIR, batch_timestamp)
+        os.makedirs(batch_dir, exist_ok=True)
+        logging.info("Created batch directory: %s", batch_dir)
+
+        # Walk through the uploads directory recursively
+        for root, dirs, files in os.walk(UPLOADS_DIR):
+            logging.info("Traversing directory: %s", root)
+            for filename in files:
+                if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+                    image_path = os.path.join(root, filename)
+                    logging.info("Processing image: %s", image_path)
+                    try:
+                        # Open and process the image file
+                        with Image.open(image_path) as img:
+                            if img.mode == 'RGBA':
+                                img = img.convert('RGB')
+                            
+                            # Resize the image
+                            max_size = (512, 512)
+                            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+
+                            # Save the resized image in the batch directory
+                            new_filename = os.path.splitext(filename)[0] + '.jpg'
+                            new_image_path = os.path.join(batch_dir, new_filename)
+                            img.save(new_image_path, "JPEG", quality=85)
+
+                            # Convert resized image to base64
+                            with open(new_image_path, "rb") as resized_image_file:
+                                base64_encoded_image = base64.b64encode(resized_image_file.read()).decode("utf-8")
+
+                            logging.info("Moved image to new directory: %s", new_image_path)
+
+                            # Check if the image already exists in the database
+                            if new_image_path not in existing_images:
+                                product_info = await analyze_image(base64_encoded_image, instruction)
+                                if product_info:
+                                    await insert_product_info(conn, product_info, new_image_path)
+                                    logging.info("Successfully processed and moved image: %s", filename)
+                                else:
+                                    logging.error("Failed to analyze image: %s", filename)
+                            else:
+                                logging.info("Image already exists in database: %s", filename)
+                    except Exception as e:
+                        logging.error("Error processing image %s: %s", filename, e)
+    except Exception as e:
+        logging.error("Error processing uploaded images: %s", e)
+        raise
+
+@retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(6))
+async def analyze_image(base64_image: str, instruction: str) -> Dict[str, Any]:
+    """Analyze an image using OpenAI's GPT-4 model and return product features."""
+    try:
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": instruction
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": (
+                                "Given an image of a product we sell, analyze the item and generate a JSON output with the following fields: "
+                                "- \"name\": A descriptive name. "
+                                "- \"description\": A concise and detailed product description in bullet point formatted as a markdown list. "
+                                "- \"category\": One of [\"Beads\", \"Stools\", \"Bowls\", \"Fans\", \"Totebags\", \"Home Decor\"] most applicable to the product, or else \"Other\". "
+                                "- \"material\": Primary materials. "
+                                "- \"color\": Main colors. "
+                                "- \"dimensions\": Approximate dimensions. "
+                                "- \"origin_source\": Likely origin based on style. "
+                                "- \"import_cost\": Best estimated import price in USD or 'null'. "
+                                "- \"retail_price\": Best estimated retail price in USD or 'null'. "
+                                "- \"key_tags\": Important keywords/phrases for product discovery."
+                                "Provide only the JSON output without any markdown formatting."
+                            )
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}",
+                                "detail": "high"
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_tokens=700
+        )
+        
+        response_text = response.choices[0].message.content.strip()
+        return json.loads(response_text)
+    except Exception as e:
+        logging.error("Error analyzing image: %s", e)
+        return {}
+
+async def insert_product_info(conn: asyncpg.Connection, product_info: Dict[str, Any], image_path: str) -> None:
+    """Insert product information into the database."""
+    try:
+        import_cost = float(product_info['import_cost']) if product_info.get('import_cost') not in (None, 'null') else None
+        retail_price = float(product_info['retail_price']) if product_info.get('retail_price') not in (None, 'null') else None
+
+        await conn.execute('''
+            INSERT INTO products
+            (name, description, image_url, category, material, color, dimensions, 
+             origin_source, import_cost, retail_price, key_tags)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ''', 
+            product_info['name'],
+            product_info['description'] if isinstance(product_info['description'], str) else '. '.join(product_info['description']),
+            image_path,
+            product_info['category'],
+            product_info['material'],
+            product_info['color'],
+            product_info['dimensions'],
+            product_info['origin_source'],
+            import_cost,
+            retail_price,
+            product_info['key_tags'] if isinstance(product_info['key_tags'], str) else ', '.join(product_info['key_tags'])
+        )
+    except Exception as e:
+        logging.error("Error inserting product info: %s", e)
+        raise
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Process files and images.')
+    parser.add_argument('--process-files', action='store_true', help='Process files in the uploads directory')
+    parser.add_argument('--instruction', type=str, default="Catalog, categorize and Describe the item.", help='Instruction for processing')
+    args = parser.parse_args()
+
+    if args.process_files:
+        asyncio.run(process_uploaded_images(args.instruction))

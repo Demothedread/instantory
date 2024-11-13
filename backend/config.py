@@ -1,10 +1,12 @@
 import os
+from pathlib import Path
 
-# Set BASE_DIR to the root project directory (one level up from backend)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_NAME = os.path.join(BASE_DIR, 'database.sqlite3')
+# Base directories
+BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = os.path.join(BASE_DIR, 'data')
-UPLOADS_DIR = os.path.join(DATA_DIR, 'images', 'uploads')
+
+# Specific data directories
+UPLOADS_DIR = os.path.join(DATA_DIR, 'uploads')
 INVENTORY_IMAGES_DIR = os.path.join(DATA_DIR, 'images', 'inventory')
 TEMP_DIR = os.path.join(DATA_DIR, 'temp')
 EXPORTS_DIR = os.path.join(DATA_DIR, 'exports')
