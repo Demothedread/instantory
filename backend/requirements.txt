@@ -1,5 +1,5 @@
 quart>=0.18,<0.19
-werkzeug>=2.3,<3.0
+werkzeug>=2.3
 hypercorn>=0.14,<1.0
 quart-cors>=0.6,<0.7
 asyncpg>=0.28,<1.0

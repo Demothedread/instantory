@@ -10,7 +10,7 @@ services:
       - key: FLASK_APP
         value: server.py
       - key: PORT
-        sync: false  # Allow Render to set the port
+        sync: true  # Allow Render to set the port
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: CORS_ORIGIN
@@ -19,7 +19,7 @@ services:
         value: https://instantory-api.onrender.com
       - key: DATABASE_URL
         fromDatabase:
-          name: instantory_sql
+          name: 
           property: connectionString
       - key: DB_NAME
         value: instantory_sql
