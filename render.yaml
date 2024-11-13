@@ -10,7 +10,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: PORT
-        sync: true  # Let Render manage the port
+        value: "10000"
 
       # Database configuration (managed by Render)
       - key: DATABASE_URL
