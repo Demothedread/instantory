@@ -14,3 +14,6 @@ EXPORTS_DIR = os.path.join(DATA_DIR, 'exports')
 # Create directories if they don't exist
 for directory in [DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR]:
     os.makedirs(directory, exist_ok=True)
+    
+# Additional configuration
+PROVIDE_AUTOMATIC_OPTIONS = True  # Add this line

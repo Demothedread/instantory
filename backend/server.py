@@ -48,39 +48,37 @@ logger = logging.getLogger(__name__)
 
 # Initialize app
 app = Quart(__name__)
+app.config.from_object('config')
 app.db_pool = None  # Initialize db_pool attribute
 
 def configure_cors_origins() -> List[str]:
     """Configure CORS origins from environment variables and defaults."""
-    database_url = os.environ.get('DATABASE_URL', os.getenv('DATABASE_URL'))
+    database_url = os.environ.get('DATABASE_URL')
     db_host = urlparse.urlparse(database_url).hostname if database_url else os.environ.get('DB_HOST', 'localhost')
     vercel_url = os.environ.get('VERCEL_URL')
-    if vercel_url and not vercel_url.startswith('https://'):
-        vercel_url = f'https://{vercel_url}'
 
+    # Default origins
     origins = [
         vercel_url,
         'https://instantory.vercel.app',
         'https://instantory-api.onrender.com',
         'https://instantory-backend.onrender.com',
         'https://instantory-dhj0hu4yd-demothedreads-projects.vercel.app',
-        f'https://{db_host}',
+        f'https://{db_host}' if db_host else None,
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:5000',
         'http://127.0.0.1:5000'
     ]
-    
+
     # Add environment-specific origins
-    for var in ['CORS_ORIGIN', 'PUBLIC_BACKEND_URL', 'REACT_APP_BACKEND_URL', 'VERCEL_URL']:
+    for var in ['CORS_ORIGIN', 'PUBLIC_BACKEND_URL', 'REACT_APP_BACKEND_URL']:
         value = os.environ.get(var)
         if value:
-            if value.startswith('http'):
-                origins.append(value)
-            elif var == 'VERCEL_URL':
-                origins.append(f'https://{value}')
+            # Always ensure HTTPS for Vercel URL or any HTTPS URL
+            origins.append(value if value.startswith('https') else f'http://{value}')
 
-    return list(set(filter(None, origins)))  # Remove duplicates and None values
+    return list(filter(None, set(origins)))  # Remove duplicates and None values
 
 # Configure CORS
 app = cors(
@@ -210,7 +208,7 @@ async def process_files():
         return jsonify({'status': 'success', 'message': 'Files processed successfully.'})
     except IOError as e:
         logger.error("File system error: %s", str(e))
-        return jsonify({'status': 'error', 'message': 'File system error'}), 500
+        return jsonify({'status': 'error', 'message': 'File system error'}, 500)
     except Exception as e:
         logger.error("Error processing files: %s", str(e))
         return jsonify({'status': 'error', 'message': str(e)}), 500
