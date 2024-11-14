@@ -31,7 +31,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
 # Import config after environment variables are loaded
 try:
-    from config import UPLOADS_DIR, INVENTORY_IMAGES_DIR, EXPORTS_DIR
+    from config import UPLOADS_DIR, INVENTORY_IMAGES_DIR, EXPORTS_DIR, DATA_DIR
 except ImportError:
     # Fallback to direct import if relative import fails
     import config
