@@ -1,7 +1,7 @@
 .App {
   text-align: center;
   background-color: #7286a3;
-  background-image: 'https://imgur.com/onzIQBR';
+  background-image: url('https://imgur.com/onzIQBR');
   background-size: cover;
   background-position: center;
   opacity: 0.6;
@@ -31,7 +31,7 @@ h1 {
   margin-bottom: 20px;
   font-family: 'Degular Mono', serif;
   color: transparent;
-  background-image: url(https://imgur.com/FC0o22N);
+  background-image: url('https://imgur.com/FC0o22N');
   background-size: cover;
   -webkit-background-clip: text;
   display: inline-block;
@@ -61,7 +61,8 @@ h2 {
   padding: 10px 20px;
   background-color: #21dcdc;
   /* Teal background */
-  border: 2px solid hsl(54, 85%, 82%);
+  border: 3px solid hsl(212, 12%, 54%);
+  color: hsl(54, 75%, 47%);
   /* Gold border */
   border-radius: 5px;
   /* Slightly rounded corners */
@@ -72,6 +73,8 @@ h2 {
 .nav-links li:hover {
   background-color: #0d6c54;
   /* Darker teal on hover */
+  color: #e0e78b;
+  /* Gold text on hover */
   transform: scale(1.2);
   /* Slightly enlarge on hover */
 }
@@ -139,7 +142,7 @@ button {
 
 button:hover {
   background-color: #e1fdbf51;
-  background-image: url(https://imgur.com/X4w9hRq);
+  background-image: url('https://imgur.com/X4w9hRq');
   color: #000000;
   text-transform: uppercase;
   text-align: center;
@@ -156,7 +159,7 @@ button:hover {
 /* Main content area */
 .App>div {
   background-color: #fefbfb;
-  background-image: url(https://imgur.com/kcDVTc3);
+  background-image: url('https://imgur.com/kcDVTc3');
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
@@ -174,7 +177,7 @@ button:hover {
   margin: 20px 0;
   padding: 20px;
   background-color: #355c53;
-  background-image: url(https://imgur.com/b4vslR6);
+  background-image: url('https://imgur.com/b4vslR6.png');
     border-radius: 8px;
 }
 
@@ -184,7 +187,8 @@ button:hover {
   height: 100%;
   width: 50;
   color: rgb(59, 49, 91);
-  text-shadow: hsl(from rgb(0, 0, 0) 5px 5px 10px) font-weight: bold;
+  text-shadow: hsl(from rgb(0, 0, 0) 5px 5px 10px); 
+  font-weight: bold;
   padding: 15px 20px;
   border: none;
   border-radius: 5px;
