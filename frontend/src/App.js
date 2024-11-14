@@ -24,50 +24,58 @@ function App() {
     setError(null);
     try {
       // Fetch inventory data
-      const invResponse = await fetch(`${config.apiUrl}/api/inventory`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Origin': window.location.origin
+      try {
+        const invResponse = await fetch(`${config.apiUrl}/api/inventory`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Origin': window.location.origin
+          }
+        });
+
+        if (invResponse.ok) {
+          const invData = await invResponse.json();
+          if (invData && typeof invData === 'object') {
+            const inventoryData = Array.isArray(invData) ? invData : [invData];
+            setInventory(inventoryData);
+          }
+        } else {
+          console.log('No inventory data available');
+          setInventory([]);
         }
-      });
-
-      if (!invResponse.ok) {
-        throw new Error(`HTTP error! status: ${invResponse.status}`);
+      } catch (invError) {
+        console.log('Error fetching inventory:', invError);
+        setInventory([]);
       }
-
-      const invData = await invResponse.json();
-      if (!invData || typeof invData !== 'object') {
-        throw new Error("Invalid inventory response format");
-      }
-
-      const inventoryData = Array.isArray(invData) ? invData : [invData];
-      setInventory(inventoryData);
 
       // Fetch documents data
-      const docResponse = await fetch(`${config.apiUrl}/api/documents`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Origin': window.location.origin
+      try {
+        const docResponse = await fetch(`${config.apiUrl}/api/documents`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Origin': window.location.origin
+          }
+        });
+
+        if (docResponse.ok) {
+          const docData = await docResponse.json();
+          if (docData && typeof docData === 'object') {
+            const documentsData = Array.isArray(docData) ? docData : [docData];
+            setDocuments(documentsData);
+          }
+        } else {
+          console.log('No documents data available');
+          setDocuments([]);
         }
-      });
-
-      if (!docResponse.ok) {
-        throw new Error(`HTTP error! status: ${docResponse.status}`);
+      } catch (docError) {
+        console.log('Error fetching documents:', docError);
+        setDocuments([]);
       }
-
-      const docData = await docResponse.json();
-      if (!docData || typeof docData !== 'object') {
-        throw new Error("Invalid documents response format");
-      }
-
-      const documentsData = Array.isArray(docData) ? docData : [docData];
-      setDocuments(documentsData);
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -75,13 +83,9 @@ function App() {
 
       if (error.message.includes('NetworkError') || error.message.includes('Failed to fetch')) {
         errorMessage = 'Network error. Please check your connection and ensure the backend server is running.';
-      } else if (error.message.includes('Invalid response format')) {
-        errorMessage = 'Unexpected data format received from the server.';
       }
 
       setError(errorMessage);
-      setInventory([]);
-      setDocuments([]);
     } finally {
       setLoading(false);
     }

@@ -53,42 +53,68 @@ app.db_pool = None  # Initialize db_pool attribute
 
 def configure_cors_origins() -> List[str]:
     """Configure CORS origins from environment variables and defaults."""
-    database_url = os.environ.get('DATABASE_URL')
-    db_host = urlparse.urlparse(database_url).hostname if database_url else os.environ.get('DB_HOST', 'localhost')
-    vercel_url = os.environ.get('VERCEL_URL')
-
     # Default origins
-    origins = [
-        vercel_url,
+    origins = {
         'https://instantory.vercel.app',
         'https://instantory-api.onrender.com',
         'https://instantory-backend.onrender.com',
         'https://instantory-dhj0hu4yd-demothedreads-projects.vercel.app',
-        f'https://{db_host}' if db_host else None,
+        'https://instantory-6pl2dnzgn-demothedreads-projects.vercel.app',
         'http://localhost:3000',
         'http://127.0.0.1:3000',
-        'http://localhost:5000',
-        'http://127.0.0.1:5000'
-    ]
+        'http://localhost:10000',
+        'http://127.0.0.1:10000'
+    }
 
-    # Add environment-specific origins
-    for var in ['CORS_ORIGIN', 'PUBLIC_BACKEND_URL', 'REACT_APP_BACKEND_URL']:
-        value = os.environ.get(var)
-        if value:
-            # Always ensure HTTPS for Vercel URL or any HTTPS URL
-            origins.append(value if value.startswith('https') else f'http://{value}')
+    # Add Vercel URL if available
+    vercel_url = os.environ.get('VERCEL_URL')
+    if vercel_url:
+        if not vercel_url.startswith('http'):
+            vercel_url = f'https://{vercel_url}'
+        origins.add(vercel_url)
 
-    return list(filter(None, set(origins)))  # Remove duplicates and None values
+    # Add CORS_ORIGIN URLs
+    cors_origins = os.environ.get('CORS_ORIGIN', '').split(',')
+    origins.update(origin.strip() for origin in cors_origins if origin.strip())
 
-# Configure CORS
+    # Add public backend URL
+    public_backend = os.environ.get('PUBLIC_BACKEND_URL')
+    if public_backend:
+        origins.add(public_backend)
+
+
+    # Add frontend URL if available
+    frontend_url = os.environ.get('FRONTEND_URL')
+    if frontend_url:
+        origins.add(frontend_url)
+
+    # Add any additional origins from environment variables
+    additional_origins = os.environ.get('ADDITIONAL_ALLOWED_ORIGINS')
+    if additional_origins:
+        origins.add([origin.strip() for origin in additional_origins.split(',')])
+
+    # Remove duplicates and empty strings
+    return list(set(filter(None, origins)))
+
+# Configure CORS with specific settings
 app = cors(
     app,
-    allow_origin=configure_cors_origins(),
+    allow_origin= configure_cors_origins(),
     allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE", "PATCH"],
     allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
     allow_credentials=True,
-    max_age=86400
+    max_age=86400,
+    expose_headers=["Content-Type", "Authorization"]
 )
+
+@app.after_request
+async def after_request(response):
+    """Add CORS headers to all responses."""
+    origin = request.headers.get('Origin')
+    if origin and origin in configure_cors_origins():
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
 
 @app.route('/api/documents', methods=['GET'])
 async def get_documents():
@@ -180,30 +206,43 @@ async def process_files():
     """Process uploaded files."""
     try:
         files = await request.files
-        uploaded_files = []
+        uploaded_files = {'images': [], 'documents': []}
         
         for file in files.getlist('files'):
-            if file and allowed_file(file.filename):
-                if os.path.exists(os.path.join(UPLOADS_DIR, file.filename)):
-                    return jsonify({
-                        'status': 'error',
-                        'message': f'File {file.filename} already exists'
-                    }), 400
-                
-                filename = os.path.join(UPLOADS_DIR, file.filename)
-                await file.save(filename)
-                uploaded_files.append(filename)
-            else:
+            if not file or not allowed_file(file.filename):
                 return jsonify({'status': 'error', 'message': 'Invalid file type'}), 400
 
-        if not uploaded_files:
+            # Determine file type
+            ext = os.path.splitext(file.filename)[1].lower()
+            file_type = 'images' if ext in {'.png', '.jpg', '.jpeg', '.gif', '.webp'} else 'documents'
+            
+            if os.path.exists(os.path.join(UPLOADS_DIR, file.filename)):
+                return jsonify({
+                    'status': 'error',
+                    'message': f'File {file.filename} already exists'
+                }), 400
+            
+            filename = os.path.join(UPLOADS_DIR, file.filename)
+            await file.save(filename)
+            uploaded_files[file_type].append(filename)
+
+        if not uploaded_files['images'] and not uploaded_files['documents']:
             return jsonify({'status': 'error', 'message': 'No valid files uploaded'}), 400
 
         form = await request.form
         instruction = form.get('instruction', os.getenv("USER_INSTRUCTIONS", "Catalog, categorize and Describe the item."))
         
         async with app.db_pool.acquire() as conn:
-            await process_uploaded_images(instruction, conn)
+            # Process images if any
+            if uploaded_files['images']:
+                await process_uploaded_images(instruction, conn)
+            
+            # Process documents if any
+            if uploaded_files['documents']:
+                batch_dir = os.path.join(DATA_DIR, 'documents', datetime.now().strftime("%Y%m%d-%H%M%S"))
+                os.makedirs(batch_dir, exist_ok=True)
+                for doc_path in uploaded_files['documents']:
+                    await process_document(doc_path, batch_dir, conn)
             
         return jsonify({'status': 'success', 'message': 'Files processed successfully.'})
     except IOError as e:
