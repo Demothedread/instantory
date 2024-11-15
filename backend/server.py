@@ -276,17 +276,13 @@ async def export_inventory():
 
         output = io.StringIO()
         writer = csv.writer(output)
-        headers = ['id', 'name', 'description', 'image_url', 'category', 
-                  'material', 'color', 'dimensions', 'origin_source', 
-                  'import_cost', 'retail_price', 'key_tags']
-        
+        headers = ['id', 'name', 'description', 'image_url', 'category', 'material', 'color', 'dimensions', 'origin_source','import_cost', 'retail_price', 'key_tags']
         writer.writerow(headers)
         for row in rows:
             writer.writerow([row[header] for header in headers])
 
         os.makedirs(EXPORTS_DIR, exist_ok=True)
-        export_path = os.path.join(EXPORTS_DIR, 
-                                 f'inventory_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv')
+        export_path = os.path.join(EXPORTS_DIR, f'inventory_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv')
         
         with open(export_path, 'w', encoding='utf-8', newline='') as f:
             f.write(output.getvalue())
@@ -316,7 +312,18 @@ async def serve_image(filename):
         ext = os.path.splitext(filename)[1].lower()
         mime_type = mime_types.get(ext, 'image/jpeg')
 
+        # First try to find the image in the inventory directory
         image_path = os.path.join(INVENTORY_IMAGES_DIR, filename)
+        
+        # If the image doesn't exist, use the placeholder
+        if not os.path.exists(image_path):
+            placeholder_path = os.path.join(os.path.dirname(__file__), 'static', 'placeholder.png')
+            if os.path.exists(placeholder_path):
+                return await send_file(placeholder_path, mimetype='image/png')
+            # If placeholder doesn't exist, return 404
+            logger.error("Image not found and no placeholder available: %s", filename)
+            return jsonify({"error": "Image not found"}), 404
+
         if not os.path.abspath(image_path).startswith(os.path.abspath(INVENTORY_IMAGES_DIR)):
             return jsonify({"error": "Invalid path"}), 400
 
