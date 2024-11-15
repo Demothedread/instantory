@@ -8,12 +8,15 @@ import shutil
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 import argparse
 import asyncpg
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 from dotenv import load_dotenv
 from PIL import Image
 import urllib.parse as urlparse
 from openai import AsyncOpenAI
 from backend.config import DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR, EXPORTS_DIR
+import PyPDF2
+from docx import Document
+import re
 
 # Load environment variables
 load_dotenv()
@@ -111,6 +114,77 @@ async def initialize_database() -> None:
     except Exception as e:
         logging.error("Error initializing database: %s", e)
         raise
+
+def extract_text_from_file(file_path: str) -> str:
+    """
+    Extract text from various file types (PDF, DOCX, TXT) with special attention to structure.
+    Returns the processed text with focus on TOC, section headings, and key parts.
+    """
+    try:
+        file_ext = os.path.splitext(file_path)[1].lower()
+        full_text = ""
+        toc_sections = []
+        
+        # Extract text based on file type
+        if file_ext == '.pdf':
+            with open(file_path, 'rb') as file:
+                pdf_reader = PyPDF2.PdfReader(file)
+                full_text = ""
+                # First pass: collect all text and identify potential TOC
+                for page_num in range(len(pdf_reader.pages)):
+                    page_text = pdf_reader.pages[page_num].extract_text()
+                    full_text += page_text
+                    # Look for table of contents patterns
+                    if page_num < 5:  # Usually TOC is in first few pages
+                        if re.search(r'(?i)(contents|table\s+of\s+contents)', page_text):
+                            toc_sections.extend(re.findall(r'^.*?[\d]+$', page_text, re.MULTILINE))
+                
+        elif file_ext == '.docx':
+            doc = Document(file_path)
+            full_text = ""
+            # Process paragraphs with attention to headings
+            for para in doc.paragraphs:
+                if para.style.name.startswith('Heading'):
+                    toc_sections.append(para.text)
+                full_text += para.text + "\n"
+                
+        elif file_ext == '.txt':
+            with open(file_path, 'r', encoding='utf-8') as file:
+                full_text = file.read()
+                # Look for potential section headers in text files
+                lines = full_text.split('\n')
+                for i, line in enumerate(lines):
+                    # Identify likely headers (all caps, numbered sections, etc.)
+                    if (line.isupper() and len(line) > 3) or \
+                       re.match(r'^\s*\d+\.\s+[A-Z]', line) or \
+                       re.match(r'^Chapter\s+\d+', line, re.IGNORECASE):
+                        toc_sections.append(line)
+        
+        else:
+            raise ValueError(f"Unsupported file type: {file_ext}")
+        
+        # Process the extracted text
+        # Get first and last 1000 characters
+        intro = full_text[:1000]
+        conclusion = full_text[-1000:]
+        
+        # Find context around section headings
+        processed_text = intro + "\n\n"
+        
+        # Extract context around each section heading
+        for section in toc_sections:
+            section_pattern = re.escape(section.strip())
+            match = re.search(f"(.{{0,300}}{section_pattern}.{{0,300}})", full_text)
+            if match:
+                processed_text += f"\n\n{match.group(1)}\n\n"
+        
+        processed_text += "\n\n" + conclusion
+        
+        return processed_text
+        
+    except Exception as e:
+        logging.error(f"Error extracting text from file {file_path}: {e}")
+        return ""
 
 def chunk_text(text: str, chunk_size: int = 1000) -> List[Dict[str, Any]]:
     """Split text into chunks with context."""
@@ -467,5 +541,13 @@ if __name__ == '__main__':
     parser.add_argument('--instruction', type=str, default="Catalog, categorize and Describe the item.", help='Instruction for processing')
     args = parser.parse_args()
 
+    async def main():
+        if args.process_files:
+            # Get database connection pool
+            pool = await get_db_pool()
+            async with pool.acquire() as conn:
+                await process_uploaded_images(args.instruction, conn)
+            await pool.close()
+
     if args.process_files:
-        asyncio.run(process_uploaded_images(args.instruction))
+        asyncio.run(main())
