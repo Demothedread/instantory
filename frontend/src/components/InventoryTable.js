@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import config from '../config';
 import './InventoryTable.css';
 
 function InventoryTable({ inventory }) {
@@ -24,7 +25,6 @@ function InventoryTable({ inventory }) {
     setSearchTerm(term);
   };
 
-  // Check if inventory is an array and not empty
   if (!Array.isArray(inventory) || inventory.length === 0) {
     return (
       <div>
@@ -50,14 +50,12 @@ function InventoryTable({ inventory }) {
     const aValue = a?.[sortColumn];
     const bValue = b?.[sortColumn];
     
-    // Handle numeric values for proper sorting
     if (sortColumn === 'import_cost' || sortColumn === 'retail_price') {
       return sortDirection === 'asc' 
         ? Number(aValue || 0) - Number(bValue || 0)
         : Number(bValue || 0) - Number(aValue || 0);
     }
     
-    // Handle string values
     const aStr = String(aValue || '').toLowerCase();
     const bStr = String(bValue || '').toLowerCase();
     if (aStr < bStr) return sortDirection === 'asc' ? -1 : 1;
@@ -138,10 +136,14 @@ function InventoryTable({ inventory }) {
                   <td className="image-cell">
                     {item?.image_url && (
                       <img 
-                        src={`${process.env.PUBLIC_BACKEND_URL}/images/${encodeURIComponent(item.image_url)}`} 
+                        src={`${config.apiUrl}/images/${encodeURIComponent(item.image_url)}`} 
                         alt={item?.name || 'Product'} 
                         style={{width: '100px', height: 'auto'}}
                         className="inventory-image"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = `${config.apiUrl}/images/placeholder.png`;
+                        }}
                       />
                     )}
                   </td>

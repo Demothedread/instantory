@@ -1,14 +1,136 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap');
+
+@import url("https://use.typekit.net/rfh6pul.css");
+
+:root {
+  --primary-gold: #ffd700;
+  --secondary-gold: #c0a080;
+  --dark-bg: #1a1a1a;
+  --darker-bg: #0f0f0f;
+  --text-light: #e0c9a6;
+  --text-dark: #2c2c2c;
+  --accent-color: #b8860b;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
-  font-family: 'Degular Mono', 'Playfair Display', serif; /* Elegant serif font for body */
-  font-weight: 400;
-  background-color: #1c1c1c; /* Dark background for the body */
-  color: #cea316; /* golden champagney text */
-  outline-color: #e8e8e8; /* Light outline color for focus */
+  font-family: 'Degular Mono','vintage deco demi', 'Playfair Display', serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: var(--darker-bg);
+  color: var(--text-light);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(45deg, rgba(255, 215, 0, 0.05) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 215, 0, 0.05) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 215, 0, 0.05) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 215, 0, 0.05) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  pointer-events: none;
+  z-index: -1;
 }
 
 code {
-  font-family: 'source-code-pro', 'Menlo', 'Monaco', 'Consolas', 'Courier New', monospace; /* Monospace font for code */
+  font-family: 'Degular Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+  background: rgba(255, 215, 0, 0.1);
+  padding: 2px 5px;
+  border-radius: 3px;
+  color: var(--primary-gold);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--dark-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-gold);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color);
+}
+
+::selection {
+  background: rgba(255, 215, 0, 0.3);
+  color: var(--primary-gold);
+}
+
+input, select, textarea {
+  font-family: 'Degular Mono', monospace;
+  background: var(--dark-bg);
+  border: 1px solid var(--primary-gold);
+  color: var(--text-light);
+  padding: 8px 12px;
+  border-radius: 0;
+  transition: all 0.3s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+}
+
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  margin: 20px 0;
+  border: 2px solid var(--primary-gold);
+}
+
+th, td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+th {
+  background: linear-gradient(45deg, var(--dark-bg), var(--darker-bg));
+  color: var(--primary-gold);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+}
+
+tr:hover {
+  background: rgba(255, 215, 0, 0.05);
+}
+
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  th, td {
+    padding: 8px 10px;
+  }
 }
