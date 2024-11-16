@@ -106,15 +106,16 @@ async def initialize_database() -> None:
                     chunk_embedding vector(1536),
                     context TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
+                )'''
+                               )
 
             logging.info("Database initialized successfully.")
+            
         await pool.close()
+    
     except Exception as e:
         logging.error("Error initializing database: %s", e)
         raise
-
 def extract_text_from_file(file_path: str) -> str:
     """
     Extract text from various file types (PDF, DOCX, TXT) with special attention to structure.
@@ -127,18 +128,57 @@ def extract_text_from_file(file_path: str) -> str:
         
         # Extract text based on file type
         if file_ext == '.pdf':
-            with open(file_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                full_text = ""
-                # First pass: collect all text and identify potential TOC
-                for page_num in range(len(pdf_reader.pages)):
-                    page_text = pdf_reader.pages[page_num].extract_text()
-                    full_text += page_text
-                    # Look for table of contents patterns
-                    if page_num < 5:  # Usually TOC is in first few pages
-                        if re.search(r'(?i)(contents|table\s+of\s+contents)', page_text):
-                            toc_sections.extend(re.findall(r'^.*?[\d]+$', page_text, re.MULTILINE))
-                
+            try:
+                with open(file_path, 'rb') as file:
+                    pdf_reader = PyPDF2.PdfReader(file)
+                    if len(pdf_reader.pages) == 0:
+                        logging.error(f"PDF file {file_path} has no pages")
+                        return ""
+                        
+                    # First pass: collect all text and identify potential TOC
+                    for page_num in range(len(pdf_reader.pages)):
+                        try:
+                            page = pdf_reader.pages[page_num]
+                            if page is None:
+                                continue
+                            
+                            page_text = page.extract_text()
+                            if not page_text:
+                                continue
+                                
+                            full_text += page_text + "\n"
+                            
+                            # Look for table of contents patterns
+                            if page_num < 5:  # Usually TOC is in first few pages
+                                if re.search(r'(?i)(contents|table\s+of\s+contents)', page_text):
+                                    toc_sections.extend(re.findall(r'^.*?[\d]+$', page_text, re.MULTILINE))
+                        except Exception as e:
+                            logging.error(f"Error extracting text from page {page_num} of {file_path}: {str(e)}")
+                            continue
+                    
+                    # Second pass: extract text with attention to TOC sections
+                    for section in toc_sections:
+                        section_text = ""
+                        section_found = False
+                        for page in pdf_reader.pages:
+                            page_text = page.extract_text()
+                            if section in page_text:
+                                section_found = True
+                            if section_found:
+                                section_text += page_text + "\n"
+                            if section_found and re.search(r'^.*?[\d]+$', page_text, re.MULTILINE):
+                                break  # Next section found, stop appending text
+                        full_text += section_text + "\n"
+
+                    return full_text
+                        
+            except FileNotFoundError:
+                logging.error(f"File not found: {file_path}")
+                return ""
+            except PyPDF2.errors.PdfReadError:
+                logging.error(f"Error reading PDF file: {file_path}")  
+                return ""
+                    
         elif file_ext == '.docx':
             doc = Document(file_path)
             full_text = ""
@@ -147,7 +187,7 @@ def extract_text_from_file(file_path: str) -> str:
                 if para.style.name.startswith('Heading'):
                     toc_sections.append(para.text)
                 full_text += para.text + "\n"
-                
+                        
         elif file_ext == '.txt':
             with open(file_path, 'r', encoding='utf-8') as file:
                 full_text = file.read()
@@ -156,13 +196,13 @@ def extract_text_from_file(file_path: str) -> str:
                 for i, line in enumerate(lines):
                     # Identify likely headers (all caps, numbered sections, etc.)
                     if (line.isupper() and len(line) > 3) or \
-                       re.match(r'^\s*\d+\.\s+[A-Z]', line) or \
-                       re.match(r'^Chapter\s+\d+', line, re.IGNORECASE):
+                    re.match(r'^\s*\d+\.\s+[A-Z]', line) or \
+                    re.match(r'^Chapter\s+\d+', line, re.IGNORECASE):
                         toc_sections.append(line)
-        
+
         else:
             raise ValueError(f"Unsupported file type: {file_ext}")
-        
+                
         # Process the extracted text
         # Get first and last 1000 characters
         intro = full_text[:1000]
@@ -181,9 +221,9 @@ def extract_text_from_file(file_path: str) -> str:
         processed_text += "\n\n" + conclusion
         
         return processed_text
-        
+                        
     except Exception as e:
-        logging.error(f"Error extracting text from file {file_path}: {e}")
+        logging.error(f"Error reading PDF file {file_path}: {str(e)}")
         return ""
 
 def chunk_text(text: str, chunk_size: int = 1000) -> List[Dict[str, Any]]:

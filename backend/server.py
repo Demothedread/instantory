@@ -25,19 +25,38 @@ from main import (
     search_documents
 )
 
-# Load environment variables
-load_dotenv()
-load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
-# Import config after environment variables are loaded
+# Load environment variables from .env if it exists
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path)
+else:
+    print("Warning: .env file not found. Attempting to load configuration from config.py.")
+
+# Try to import configuration from config file
 try:
     from config import UPLOADS_DIR, INVENTORY_IMAGES_DIR, EXPORTS_DIR, DATA_DIR
 except ImportError:
-    # Fallback to direct import if relative import fails
-    import config
-    UPLOADS_DIR = config.UPLOADS_DIR
-    INVENTORY_IMAGES_DIR = config.INVENTORY_IMAGES_DIR
-    EXPORTS_DIR = config.EXPORTS_DIR
+    print("Warning: Unable to import config.py. Falling back to environment variables.")
+    
+    # Fallbacks for environment variables
+    UPLOADS_DIR = os.environ.get('UPLOADS_DIR', './uploads')  # Default to './uploads' if not set
+    INVENTORY_IMAGES_DIR = os.environ.get('INVENTORY_IMAGES_DIR', './inventory_images')
+    EXPORTS_DIR = os.environ.get('EXPORTS_DIR', './exports')
+    DATA_DIR = os.environ.get('DATA_DIR', './data')
+else:
+    # If config is successfully loaded, ensure defaults are in place
+    UPLOADS_DIR = UPLOADS_DIR or './uploads'
+    INVENTORY_IMAGES_DIR = INVENTORY_IMAGES_DIR or './inventory_images'
+    EXPORTS_DIR = EXPORTS_DIR or './exports'
+    DATA_DIR = DATA_DIR or './data'
+
+print(f"Using the following directories:\n"
+      f"Uploads Directory: {UPLOADS_DIR}\n"
+      f"Inventory Images Directory: {INVENTORY_IMAGES_DIR}\n"
+      f"Exports Directory: {EXPORTS_DIR}\n"
+      f"Data Directory: {DATA_DIR}")
 
 # Configure logging
 logging.basicConfig(
