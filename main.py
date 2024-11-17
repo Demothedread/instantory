@@ -24,11 +24,19 @@ load_dotenv()
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Initialize AsyncOpenAI client with proper configuration
+# Attempt to get the API key from the environment
+api_key = os.getenv('OPENAI_API_KEY')
+# Check if the API key is set
+if api_key is None:
+    # Handle the case where the API key is not set
+    raise ValueError("API key not found. Please set the OPENAI_API_KEY environment variable.")
+
+#Initialize AsyncOpenAI client
 client = AsyncOpenAI(
-    api_key=os.getenv('OPENAI_API_KEY'),
+    api_key=api_key,
     timeout=60.0  # Increased timeout for production environment
 )
+
 
 async def get_db_pool():
     """Get PostgreSQL connection pool from environment variables or URL."""
@@ -110,16 +118,19 @@ async def initialize_database() -> None:
                                )
 
             logging.info("Database initialized successfully.")
-            
+
         await pool.close()
     
     except Exception as e:
         logging.error("Error initializing database: %s", e)
         raise
-def extract_text_from_file(file_path: str) -> str:
+
+
+def extract_text_for_analysis(file_path: str) -> Tuple[str, str]:
     """
-    Extract text from various file types (PDF, DOCX, TXT) with special attention to structure.
-    Returns the processed text with focus on TOC, section headings, and key parts.
+    Extract limited text for GPT analysis and full text for embeddings.
+    Returns tuple of (analysis_text, full_text).
+    Analysis text is limited to ~4000 tokens, full text is complete document.
     """
     try:
         file_ext = os.path.splitext(file_path)[1].lower()
@@ -133,98 +144,118 @@ def extract_text_from_file(file_path: str) -> str:
                     pdf_reader = PyPDF2.PdfReader(file)
                     if len(pdf_reader.pages) == 0:
                         logging.error(f"PDF file {file_path} has no pages")
-                        return ""
-                        
-                    # First pass: collect all text and identify potential TOC
+                        return "", ""
+                    
+                    # Extract full text first
                     for page_num in range(len(pdf_reader.pages)):
                         try:
                             page = pdf_reader.pages[page_num]
                             if page is None:
                                 continue
-                            
                             page_text = page.extract_text()
-                            if not page_text:
-                                continue
-                                
-                            full_text += page_text + "\n"
-                            
-                            # Look for table of contents patterns
-                            if page_num < 5:  # Usually TOC is in first few pages
-                                if re.search(r'(?i)(contents|table\s+of\s+contents)', page_text):
-                                    toc_sections.extend(re.findall(r'^.*?[\d]+$', page_text, re.MULTILINE))
+                            if page_text:
+                                full_text += page_text + "\n"
+                                # Collect TOC sections from early pages
+                                if page_num < 5:
+                                    if re.search(r'(?i)(contents|table\s+of\s+contents)', page_text):
+                                        toc_sections.extend(re.findall(r'^.*?[\d]+$', page_text, re.MULTILINE))
                         except Exception as e:
-                            logging.error(f"Error extracting text from page {page_num} of {file_path}: {str(e)}")
+                            logging.error(f"Error extracting text from page {page_num}: {str(e)}")
                             continue
                     
-                    # Second pass: extract text with attention to TOC sections
-                    for section in toc_sections:
-                        section_text = ""
-                        section_found = False
-                        for page in pdf_reader.pages:
-                            page_text = page.extract_text()
-                            if section in page_text:
-                                section_found = True
-                            if section_found:
-                                section_text += page_text + "\n"
-                            if section_found and re.search(r'^.*?[\d]+$', page_text, re.MULTILINE):
-                                break  # Next section found, stop appending text
-                        full_text += section_text + "\n"
-
-                    return full_text
-                        
-            except FileNotFoundError:
-                logging.error(f"File not found: {file_path}")
-                return ""
-            except PyPDF2.errors.PdfReadError:
-                logging.error(f"Error reading PDF file: {file_path}")  
-                return ""
+            except Exception as e:
+                logging.error(f"Error reading PDF: {str(e)}")
+                return "", ""
                     
         elif file_ext == '.docx':
-            doc = Document(file_path)
-            full_text = ""
-            # Process paragraphs with attention to headings
-            for para in doc.paragraphs:
-                if para.style.name.startswith('Heading'):
-                    toc_sections.append(para.text)
-                full_text += para.text + "\n"
+            try:
+                doc = Document(file_path)
+                for para in doc.paragraphs:
+                    if para.style.name.startswith('Heading'):
+                        toc_sections.append(para.text)
+                    full_text += para.text + "\n"
+            except Exception as e:
+                logging.error(f"Error reading DOCX: {str(e)}")
+                return "", ""
                         
         elif file_ext == '.txt':
-            with open(file_path, 'r', encoding='utf-8') as file:
-                full_text = file.read()
-                # Look for potential section headers in text files
-                lines = full_text.split('\n')
-                for i, line in enumerate(lines):
-                    # Identify likely headers (all caps, numbered sections, etc.)
-                    if (line.isupper() and len(line) > 3) or \
-                    re.match(r'^\s*\d+\.\s+[A-Z]', line) or \
-                    re.match(r'^Chapter\s+\d+', line, re.IGNORECASE):
-                        toc_sections.append(line)
-
+            try:
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    full_text = file.read()
+                    lines = full_text.split('\n')
+                    for line in lines:
+                        if (line.isupper() and len(line) > 3) or \
+                        re.match(r'^\s*\d+\.\s+[A-Z]', line) or \
+                        re.match(r'^Chapter\s+\d+', line, re.IGNORECASE):
+                            toc_sections.append(line)
+            except Exception as e:
+                logging.error(f"Error reading text file: {str(e)}")
+                return "", ""
         else:
-            raise ValueError(f"Unsupported file type: {file_ext}")
+            logging.error(f"Unsupported file type: {file_ext}")
+            return "", ""
+
+        if not full_text.strip():
+            return "", ""
+
+        # Create analysis text with limited content
+        analysis_parts = []
+        
+        # Add start of main body (600 chars)
+        main_text_start = re.sub(r'\s+', ' ', full_text[:800])
+        analysis_parts.append(main_text_start)
+        
+        # Add end of main body (600 chars)
+        main_text_end = re.sub(r'\s+', ' ', full_text[-800:])
+        analysis_parts.append(main_text_end)
+        
+        # Extract TOC/index/bibliography (250 chars)
+        structural_text = ""
+        toc_match = re.search(r'(?i)table\s+of\s+contents.*?(?=chapter|\d+\.|\n\n)', full_text)
+        if toc_match:
+            structural_text += toc_match.group(0)[:100]
+        
+        index_match = re.search(r'(?i)index.*?(?=\n\n|$)', full_text)
+        if index_match:
+            structural_text += index_match.group(0)[:85]
+            
+        bibliography_match = re.search(r'(?i)(bibliography|references).*?(?=\n\n|$)', full_text)
+        if bibliography_match:
+            structural_text += bibliography_match.group(0)[:95]
+            
+        analysis_parts.append(re.sub(r'\s+', ' ', structural_text))
+        
+        # Extract section transitions (up to 1000 chars total)
+        section_texts = []
+        total_section_chars = 0
+        
+        for i, section in enumerate(toc_sections):
+            if total_section_chars >= 1200:
+                break
                 
-        # Process the extracted text
-        # Get first and last 1000 characters
-        intro = full_text[:1000]
-        conclusion = full_text[-1000:]
-        
-        # Find context around section headings
-        processed_text = intro + "\n\n"
-        
-        # Extract context around each section heading
-        for section in toc_sections:
             section_pattern = re.escape(section.strip())
-            match = re.search(f"(.{{0,300}}{section_pattern}.{{0,300}})", full_text)
+            match = re.search(f"(.{{0,150}}{section_pattern}.{{0,150}})", full_text)
+            
             if match:
-                processed_text += f"\n\n{match.group(1)}\n\n"
+                section_text = match.group(1)
+                # Limit to 2 paragraphs
+                paragraphs = re.split(r'\n\s*\n', section_text)[:2]
+                section_text = ' '.join(paragraphs)
+                
+                chars_to_add = min(150, 1000 - total_section_chars)
+                section_texts.append(section_text[:chars_to_add])
+                total_section_chars += chars_to_add
         
-        processed_text += "\n\n" + conclusion
+        analysis_parts.extend(section_texts)
         
-        return processed_text
+        # Combine parts with clear separation
+        analysis_text = "\n---\n".join(analysis_parts)
+        
+        return analysis_text, full_text
                         
     except Exception as e:
-        logging.error(f"Error reading PDF file {file_path}: {str(e)}")
-        return ""
+        logging.error(f"Error extracting text: {str(e)}")
+        return "", ""
 
 def chunk_text(text: str, chunk_size: int = 1000) -> List[Dict[str, Any]]:
     """Split text into chunks with context."""
@@ -258,74 +289,53 @@ async def create_embedding(text: str) -> List[float]:
     except Exception as e:
         logging.error(f"Error creating embedding: {e}")
         return None
-
 @retry(wait=wait_random_exponential(min=1, max=40), stop=stop_after_attempt(6))
 async def analyze_document(text: str) -> Dict[str, Any]:
-    """Analyze document text using OpenAI's GPT-4 model."""
+    """Analyze document text using OpenAI's GPT-4 model with focus on key metadata."""
     try:
-        # Analyze full document structure
-        structure_response = await client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": 
-                """
-                Analyze this document and identify:
-                1. Table of contents (if present)
-                2. Reference tables/bibliography
-                3. Main section headers
-                4. Key arguments and themes
-                5. Methodology (if present)
-                6. Conclusions
-                
-                Return a JSON object with these sections.
-                """},
-                {"role": "user", "content": text[:2500] + text[-1500:]+ text}   # First and last 2500 chars
-            ]
-        )
-        
-        structure_data = json.loads(structure_response.choices[0].message.content)
-        
-        # Detailed analysis of full document
-        analysis_response = await client.chat.completions.create(
+        response = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": """
-                Based on the full document analysis, provide a JSON object with:
-                1. "title": Document title
-                2. "author": Author names (if available)
-                3. "journal_publisher": Journal or publisher name (if available)
-                4. "publication_year": Publication year (if available, as integer)
-                5. "page_length": Estimated page length (as integer)
-                6. "word_count": Estimated word count (as integer)
-                7. "thesis": Clear thesis statement
-                8. "issue": Main question or problem addressed
-                9. "summary": Comprehensive summary
-                10. "category": General category (e.g., Research Paper, Technical Report)
-                11. "field": Primary and secondary fields
-                12. "influences": Key sources, movements, or schools of thought
-                13. "hashtags": Relevant keyword tags
+                Analyze this document and provide a JSON object with the following fields:
+                1. "title": Document title (required)
+                2. "author": Author names if available (required)
+                3. "category": Document type (e.g., Research Paper, Technical Report) (required)
+                4. "field": Primary field or subject area (required)
+                5. "publication_year": Publication year as integer if available
+                6. "journal_publisher": Journal or publisher name if available
+                7. "thesis": Clear, concise thesis statement (required)
+                8. "issue": Main question or problem addressed (required)
+                9. "summary": Comprehensive summary in 400 characters or less (required)
+                10. "influences": Key sources or schools of thought that influenced this work
+                11. "hashtags": 3-5 relevant keyword tags for categorization
+                
+                Focus on accuracy and conciseness. For required fields, provide best inference if not explicitly stated.
+                Ensure summary is under 400 characters while capturing key points.
                 """},
-                {"role": "user", "content": json.dumps(structure_data)}
-            ]
+                {"role": "user", "content": text}
+            ],
+            max_tokens=1600,
+            temperature=0.2,
         )
         
-        return json.loads(analysis_response.choices[0].message.content)
+        return json.loads(response.choices[0].message.content)
     except Exception as e:
         logging.error(f"Error analyzing document: {e}")
         raise
 
 async def process_document(file_path: str, batch_dir: str, conn: asyncpg.Connection) -> None:
-    """Process a single document file."""
+    """Process a single document file with separate handling for analysis and embeddings."""
     filename = os.path.basename(file_path)
     try:
-        # Extract text from document
-        text = extract_text_from_file(file_path)
-        if not text.strip():
+        # Extract text for both analysis and embeddings
+        analysis_text, full_text = extract_text_for_analysis(file_path)
+        if not analysis_text or not full_text:
             logging.error(f"No text could be extracted from {filename}")
             return
 
-        # Create chunks and embeddings
-        chunks = chunk_text(text)
+        # Create embeddings from full text
+        chunks = chunk_text(full_text)
         chunk_embeddings = []
         for chunk in chunks:
             embedding = await create_embedding(chunk['text'])
@@ -337,14 +347,14 @@ async def process_document(file_path: str, batch_dir: str, conn: asyncpg.Connect
                     'index': chunk['index']
                 })
 
-        # Create document-level embedding
-        doc_embedding = await create_embedding(text[:4000])  # Use first 4000 chars for doc-level embedding
+        # Create document-level embedding from first portion of full text
+        doc_embedding = await create_embedding(full_text[:8000])
         if not doc_embedding:
             logging.error(f"Failed to create embedding for {filename}")
             return
 
-        # Analyze document
-        doc_info = await analyze_document(text)
+        # Analyze document using limited text
+        doc_info = await analyze_document(analysis_text)
         
         # Save document to batch directory
         new_filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{filename}"
@@ -354,28 +364,27 @@ async def process_document(file_path: str, batch_dir: str, conn: asyncpg.Connect
         # Insert document info into database
         doc_id = await conn.fetchval('''
             INSERT INTO documents
-            (title, author, journal_publisher, publication_year, page_length, word_count,
-             thesis, issue, summary, category, field, influences, hashtags, file_path, 
-             file_type, full_text, content_embedding)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+            (title, author, journal_publisher, publication_year, page_length,
+             thesis, issue, summary, category, field, influences, hashtags, 
+             file_path, file_type, full_text, content_embedding)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             RETURNING id
         ''',
             doc_info.get('title', ''),
             doc_info.get('author', ''),
             doc_info.get('journal_publisher', ''),
             doc_info.get('publication_year'),
-            doc_info.get('page_length'),
-            doc_info.get('word_count'),
+            len(full_text.split('\n')),  # Estimate page length
             doc_info.get('thesis', ''),
             doc_info.get('issue', ''),
-            doc_info.get('summary', ''),
+            doc_info.get('summary', '')[:400],  # Ensure summary length
             doc_info.get('category', ''),
             doc_info.get('field', ''),
             ','.join(doc_info.get('influences', [])) if isinstance(doc_info.get('influences'), list) else doc_info.get('influences', ''),
             ','.join(doc_info.get('hashtags', [])) if isinstance(doc_info.get('hashtags'), list) else doc_info.get('hashtags', ''),
             new_file_path,
             os.path.splitext(filename)[1][1:],
-            text,  # Store full text
+            full_text,
             doc_embedding
         )
 
