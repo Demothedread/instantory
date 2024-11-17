@@ -333,6 +333,11 @@ async def process_document(file_path: str, batch_dir: str, conn: asyncpg.Connect
         if not analysis_text or not full_text:
             logging.error(f"No text could be extracted from {filename}")
             return
+        
+        if len(full_text) > 10000:
+            return full_text(:5000) + '...' + full_text(-5000:)
+        else:
+            return full_text
 
         # Create embeddings from full text
         chunks = chunk_text(full_text)
@@ -348,7 +353,7 @@ async def process_document(file_path: str, batch_dir: str, conn: asyncpg.Connect
                 })
 
         # Create document-level embedding from first portion of full text
-        doc_embedding = await create_embedding(full_text[:8000])
+        doc_embedding = await create_embedding(full_text)
         if not doc_embedding:
             logging.error(f"Failed to create embedding for {filename}")
             return
@@ -361,11 +366,16 @@ async def process_document(file_path: str, batch_dir: str, conn: asyncpg.Connect
         new_file_path = os.path.join(batch_dir, new_filename)
         shutil.copy2(file_path, new_file_path)
 
+        # Ensure full_text is available before attempting to insert
+        if full_text is None or full_text == "":
+            logging.error(f'Full text is not available for document: {filename}')
+            return
+    
         # Insert document info into database
         doc_id = await conn.fetchval('''
             INSERT INTO documents
             (title, author, journal_publisher, publication_year, page_length,
-             thesis, issue, summary, category, field, influences, hashtags, 
+             thesis, issue, summary, category, field, influences, hashtags,
              file_path, file_type, full_text, content_embedding)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
             RETURNING id
@@ -384,7 +394,7 @@ async def process_document(file_path: str, batch_dir: str, conn: asyncpg.Connect
             ','.join(doc_info.get('hashtags', [])) if isinstance(doc_info.get('hashtags'), list) else doc_info.get('hashtags', ''),
             new_file_path,
             os.path.splitext(filename)[1][1:],
-            full_text,
+            full_text.strip(),
             doc_embedding
         )
 
@@ -400,7 +410,8 @@ async def process_document(file_path: str, batch_dir: str, conn: asyncpg.Connect
                 chunk_data['index'],
                 chunk_data['embedding'],
                 chunk_data['context']
-            )
+                  )
+            
         
         logging.info(f"Successfully processed document: {filename}")
     except Exception as e:
