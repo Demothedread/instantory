@@ -173,6 +173,7 @@
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin-top: 20px;
 }
 
 .documents-table {
@@ -195,6 +196,9 @@
   cursor: pointer;
   transition: background-color 0.2s;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .documents-table th:hover {
@@ -232,6 +236,27 @@
   text-align: right;
   color: #666;
   font-size: 0.9em;
+}
+
+.download-button {
+  padding: 6px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.download-button:hover {
+  background-color: #0056b3;
+}
+
+.download-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 
 /* Loading state styles */
@@ -283,5 +308,10 @@
 
   .expandable-cell {
     max-width: 200px;
+  }
+
+  .download-button {
+    padding: 4px 8px;
+    font-size: 12px;
   }
 }
