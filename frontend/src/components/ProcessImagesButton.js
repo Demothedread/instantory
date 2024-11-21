@@ -57,6 +57,9 @@ function ProcessImagesButton({ onProcess }) {
         headers: {
           ...config.headers,
           'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json',
+          'Origin': window.location.origin,
+          'Access-Control-Allow-Credentials': 'true'
         },
         withCredentials: true,
         onUploadProgress: (progressEvent) => {
@@ -78,6 +81,7 @@ function ProcessImagesButton({ onProcess }) {
     } catch (error) {
       console.error('Error processing files:', error);
       setErrorMessage(
+        error.response?.data?.error || 
         error.response?.data?.message || 
         error.message || 
         'An error occurred while processing the files. Please try again.'

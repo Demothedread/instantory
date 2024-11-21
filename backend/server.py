@@ -103,11 +103,20 @@ async def handle_options():
     response = jsonify({'status': 'ok'})
     origin = request.headers.get('Origin')
     if origin in configure_cors_origins():
-        response.headers['Access-Control-Allow-Origin'] = origin
-        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin, X-Requested-With'
-        response.headers['Access-Control-Allow-Credentials'] = 'true'
-        response.headers['Access-Control-Max-Age'] = '86400'
+        response.headers.update({
+            'Access-Control-Allow-Origin': origin,
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin, X-Requested-With',
+            'Access-Control-Allow-Credentials': 'true',
+            'Access-Control-Max-Age': '86400',
+            'Access-Control-Expose-Headers': 'Content-Type',
+            'Vary': 'Origin'
+        })
+        
+        # Handle preflight request for multipart/form-data
+        request_headers = request.headers.get('Access-Control-Request-Headers', '').lower()
+        if 'content-type' in request_headers:
+            response.headers['Access-Control-Allow-Headers'] += ', Content-Type'
     return response
 
 @app.route('/api/document-vault', methods=['GET'])
