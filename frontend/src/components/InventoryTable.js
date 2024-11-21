@@ -3,7 +3,7 @@ import config from '../config';
 import './InventoryTable.css';
 
 // Base64 encoded simple gray placeholder image
-const PLACEHOLDER_IMAGE = '';
+const PLACEHOLDER_IMAGE = 'instantory/frontend/src/assets/placeholder.png';
 
 function InventoryTable({ inventory }) {
   const [sortColumn, setSortColumn] = useState(null);
@@ -145,14 +145,14 @@ function InventoryTable({ inventory }) {
                         style={{width: '100px', height: 'auto'}}
                         className="inventory-image"
                         onError={(e) => {
-                          if (!e.target.dataset.fallbackAttempted) {
-                            e.target.dataset.fallbackAttempted = 'true';
+                          if (!e.target.dataset.retried) {
+                            e.target.dataset.retried = true;
                             e.target.src = PLACEHOLDER_IMAGE;
                           }
                         }}
                       />
                     )}
-                  </td>
+                  </td>   
                   <td>{item?.category || ''}</td>
                   <td>{item?.material || ''}</td>
                   <td>{item?.color || ''}</td>

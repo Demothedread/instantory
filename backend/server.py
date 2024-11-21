@@ -392,6 +392,46 @@ async def process_files():
                 except Exception as cleanup_error:
                     logging.error(f"Error cleaning up file {file_path}: {str(cleanup_error)}")
 
+async def get_db_pool():
+    """Get PostgreSQL connection pool from environment variables or URL."""
+    try:
+        database_url = os.getenv('DATABASE_URL')
+        if not database_url:
+            raise ValueError("DATABASE_URL environment variable is required")
+        
+        url = urlparse.urlparse(database_url)
+        
+        # Create connection pool with retries
+        for attempt in range(3):
+            try:
+                pool = await asyncpg.create_pool(
+                    user=url.username,
+                    password=url.password,
+                    database=url.path[1:],
+                    host=url.hostname,
+                    port=url.port,
+                    ssl='require',
+                    min_size=1,
+                    max_size=10,
+                    command_timeout=60,
+                    server_settings={
+                        'client_encoding': 'UTF8'
+                    }
+                )
+                if pool:
+                    return pool
+            except Exception as e:
+                logging.error(f"Database connection attempt {attempt + 1} failed: {str(e)}")
+                if attempt == 2:  # Last attempt
+                    raise
+                await asyncio.sleep(1)  # Wait before retrying
+                continue
+        
+        raise ValueError("Failed to establish database connection after retries")
+    except Exception as e:
+        logging.error(f"Error creating database pool: {str(e)}")
+        raise
+
 
 @app.before_serving
 async def startup():

@@ -136,14 +136,21 @@ def extract_text_for_analysis(file_path: str) -> Tuple[str, str]:
                             page = pdf_reader.pages[page_num]
                             if page is None:
                                 continue
-                            page_text = page.extract_text()
-                            if page_text:
-                                full_text += page_text + "\n"
-                                if page_num < 5:  # Check first 5 pages for TOC
-                                    if re.search(r'(?i)(contents|table\s+of\s+contents)', page_text):
-                                        toc_sections.extend(re.findall(r'^.*?[\d]+$', page_text, re.MULTILINE))
-                        except Exception as e:
-                            logging.error(f"Error extracting text from page {page_num}: {str(e)}")
+                            try:
+                                page_text = page.extract_text()
+                                if page_text:
+                                    # Clean and normalize text
+                                    page_text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]', '', page_text)
+                                    page_text = page_text.encode('utf-8', 'ignore').decode('utf-8')
+                                    full_text += page_text + "\n"
+                                    if page_num < 5:  # Check first 5 pages for TOC
+                                        if re.search(r'(?i)(contents|table\s+of\s+contents)', page_text):
+                                            toc_sections.extend(re.findall(r'^.*?[\d]+$', page_text, re.MULTILINE))
+                            except Exception as text_error:
+                                logging.error(f"Error extracting text from page {page_num}: {str(text_error)}")
+                                continue
+                        except Exception as page_error:
+                            logging.error(f"Error processing page {page_num}: {str(page_error)}")
                             continue
                     
             except Exception as e:
@@ -156,15 +163,21 @@ def extract_text_for_analysis(file_path: str) -> Tuple[str, str]:
                 for para in doc.paragraphs:
                     if para.style.name.startswith('Heading'):
                         toc_sections.append(para.text)
-                    full_text += para.text + "\n"
+                    # Clean and normalize text
+                    para_text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]', '', para.text)
+                    para_text = para_text.encode('utf-8', 'ignore').decode('utf-8')
+                    full_text += para_text + "\n"
             except Exception as e:
                 logging.error(f"Error reading DOCX: {str(e)}")
                 return "", ""
                         
         elif file_ext == '.txt':
             try:
-                with open(file_path, 'r', encoding='utf-8') as file:
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as file:
                     full_text = file.read()
+                    # Clean and normalize text
+                    full_text = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]', '', full_text)
+                    full_text = full_text.encode('utf-8', 'ignore').decode('utf-8')
                     lines = full_text.split('\n')
                     for line in lines:
                         if (line.isupper() and len(line) > 3) or \
@@ -231,8 +244,9 @@ def extract_text_for_analysis(file_path: str) -> Tuple[str, str]:
         
         analysis_parts.extend(section_texts)
         
-        # Combine parts with clear separation
+        # Combine parts with clear separation and ensure clean UTF-8
         analysis_text = "\n---\n".join(analysis_parts)
+        analysis_text = analysis_text.encode('utf-8', 'ignore').decode('utf-8')
         
         return analysis_text, full_text
                         
