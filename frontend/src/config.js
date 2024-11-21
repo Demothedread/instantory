@@ -3,7 +3,6 @@ const config = {
   development: {
     apiUrl: process.env.REACT_APP_BACKEND_URL_DEV || 'http://localhost:10000',
     headers: {
-      'Content-Type': 'application/json',
       'Accept': 'application/json',
       'Origin': window.location.origin,
       'Access-Control-Allow-Credentials': 'true'
@@ -14,7 +13,6 @@ const config = {
   production: {
     apiUrl: process.env.REACT_APP_BACKEND_URL || 'https://instantory-api.onrender.com',
     headers: {
-      'Content-Type': 'application/json',
       'Accept': 'application/json',
       'Origin': window.location.origin,
       'Access-Control-Allow-Credentials': 'true'

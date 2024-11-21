@@ -76,24 +76,38 @@ def configure_cors_origins() -> List[str]:
     
     return list(filter(None, origins))
 
-# Configure CORS
+# Configure CORS with expanded headers
 app = cors(
     app,
     allow_origin=configure_cors_origins(),
     allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE", "PATCH"],
-    allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "Accept",
+        "Origin",
+        "X-Requested-With",
+        "Access-Control-Allow-Origin",
+        "Access-Control-Allow-Headers",
+        "Access-Control-Allow-Methods",
+        "Access-Control-Allow-Credentials"
+    ],
     allow_credentials=True,
     max_age=86400,
     expose_headers=["Content-Type", "Authorization"]
 )
 
-@app.after_request
-async def after_request(response):
-    """Add CORS headers to all responses."""
+@app.route('/process-files', methods=['OPTIONS'])
+async def handle_options():
+    """Handle OPTIONS requests for the process-files endpoint."""
+    response = jsonify({'status': 'ok'})
     origin = request.headers.get('Origin')
-    if origin and origin in configure_cors_origins():
+    if origin in configure_cors_origins():
         response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, Origin, X-Requested-With'
         response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Max-Age'] = '86400'
     return response
 
 @app.route('/api/document-vault', methods=['GET'])
