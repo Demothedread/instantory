@@ -3,7 +3,7 @@ import config from '../config';
 import './InventoryTable.css';
 
 // Base64 encoded simple gray placeholder image
-const PLACEHOLDER_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAABmJLR0QA/wD/AP+gvaeTAAAAX0lEQVR4nO3BMQEAAADCoPVP7WsIoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeAN3+AABVhDxKQAAAABJRU5ErkJggg==';
+const PLACEHOLDER_IMAGE = 'https://picsum.photos/seed/picsum/200/300';
 
 function InventoryTable({ inventory }) {
   const [sortColumn, setSortColumn] = useState(null);
