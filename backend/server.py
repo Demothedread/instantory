@@ -131,4 +131,284 @@ async def handle_options():
         })
     return response
 
-[Rest of the file content remains the same]
+@app.route('/api/document-vault', methods=['GET'])
+async def get_documents():
+    """Get all documents from Document Vault."""
+    try:
+        async with app.db_pool.acquire() as conn:
+            rows = await conn.fetch("""
+                SELECT id, title, author, journal_publisher, publication_year,
+                       page_length, thesis, issue, summary, category, field,
+                       hashtags, influenced_by, file_path, file_type, created_at
+                FROM document_vault
+                ORDER BY created_at DESC
+            """)
+
+            documents = [{
+                'id': row['id'],
+                'title': row['title'],
+                'author': row['author'],
+                'journal_publisher': row['journal_publisher'],
+                'publication_year': row['publication_year'],
+                'page_length': row['page_length'],
+                'thesis': row['thesis'],
+                'issue': row['issue'],
+                'summary': row['summary'],
+                'category': row['category'],
+                'field': row['field'],
+                'hashtags': row['hashtags'],
+                'influenced_by': row['influenced_by'],
+                'file_type': row['file_type'],
+                'created_at': row['created_at'].isoformat() if row['created_at'] else None
+            } for row in rows]
+
+            return jsonify(documents)
+    except Exception as e:
+        logger.error(f"Error fetching documents: {str(e)}")
+        return jsonify({'error': 'Failed to fetch documents'}), 500
+
+@app.route('/api/document-vault/<int:doc_id>/text', methods=['GET'])
+async def get_document_text(doc_id: int):
+    """Get full text of a specific document."""
+    try:
+        async with app.db_pool.acquire() as conn:
+            row = await conn.fetchrow("""
+                SELECT extracted_text
+                FROM document_vault
+                WHERE id = $1
+            """, doc_id)
+
+            if not row:
+                return jsonify({'error': 'Document not found'}), 404
+
+            return jsonify({'text': row['extracted_text']})
+    except Exception as e:
+        logger.error(f"Error fetching document text: {str(e)}")
+        return jsonify({'error': 'Failed to fetch document text'}), 500
+
+@app.route('/api/document-vault/<int:doc_id>/file', methods=['GET'])
+async def get_document_file(doc_id: int):
+    """Download the original document file."""
+    try:
+        async with app.db_pool.acquire() as conn:
+            row = await conn.fetchrow("""
+                SELECT file_path, file_type
+                FROM document_vault
+                WHERE id = $1
+            """, doc_id)
+
+            if not row or not row['file_path']:
+                return jsonify({'error': 'Document not found'}), 404
+
+            file_path = row['file_path']
+            if not os.path.exists(file_path):
+                return jsonify({'error': 'Document file not found'}), 404
+
+            return await send_file(
+                file_path,
+                mimetype=f'application/{row["file_type"]}',
+                as_attachment=True,
+                attachment_filename=os.path.basename(file_path)
+            )
+    except Exception as e:
+        logger.error(f"Error serving document file: {str(e)}")
+        return jsonify({'error': 'Failed to serve document file'}), 500
+
+@app.route('/api/document-vault/search', methods=['POST'])
+async def search_documents():
+    """Search documents by content or metadata."""
+    try:
+        data = await request.get_json()
+        query = data.get('query', '').strip()
+        field = data.get('field', 'all')  # all, metadata, content
+
+        if not query:
+            return jsonify({'error': 'Search query is required'}), 400
+
+        async with app.db_pool.acquire() as conn:
+            if field == 'content':
+                # Search only in extracted_text
+                rows = await conn.fetch("""
+                    SELECT id, title, author, summary, extracted_text
+                    FROM document_vault
+                    WHERE extracted_text ILIKE $1
+                    ORDER BY created_at DESC
+                """, f'%{query}%')
+            elif field == 'metadata':
+                # Search in metadata fields
+                rows = await conn.fetch("""
+                    SELECT id, title, author, summary, extracted_text
+                    FROM document_vault
+                    WHERE title ILIKE $1
+                       OR author ILIKE $1
+                       OR summary ILIKE $1
+                       OR thesis ILIKE $1
+                       OR hashtags ILIKE $1
+                    ORDER BY created_at DESC
+                """, f'%{query}%')
+            else:
+                # Search all fields
+                rows = await conn.fetch("""
+                    SELECT id, title, author, summary, extracted_text
+                    FROM document_vault
+                    WHERE title ILIKE $1
+                       OR author ILIKE $1
+                       OR summary ILIKE $1
+                       OR thesis ILIKE $1
+                       OR hashtags ILIKE $1
+                       OR extracted_text ILIKE $1
+                    ORDER BY created_at DESC
+                """, f'%{query}%')
+
+            results = [{
+                'id': row['id'],
+                'title': row['title'],
+                'author': row['author'],
+                'summary': row['summary'],
+                'excerpt': extract_matching_excerpt(row['extracted_text'], query)
+            } for row in rows]
+
+            return jsonify({'results': results})
+    except Exception as e:
+        logger.error(f"Error searching documents: {str(e)}")
+        return jsonify({'error': 'Search failed'}), 500
+
+def extract_matching_excerpt(text: str, query: str, context_chars: int = 150) -> str:
+    """Extract a relevant excerpt from text containing the search query."""
+    if not text or not query:
+        return ""
+    
+    query_pos = text.lower().find(query.lower())
+    if query_pos == -1:
+        return text[:300] + "..."
+    
+    start = max(0, query_pos - context_chars)
+    end = min(len(text), query_pos + len(query) + context_chars)
+    
+    excerpt = text[start:end]
+    if start > 0:
+        excerpt = "..." + excerpt
+    if end < len(text):
+        excerpt = excerpt + "..."
+    
+    return excerpt
+
+@app.route('/api/inventory', methods=['GET'])
+async def get_inventory():
+    """Get all inventory items."""
+    try:
+        async with app.db_pool.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM products")
+
+            inventory = [{
+                'id': row['id'],
+                'name': row['name'],
+                'description': row['description'],
+                'image_url': convert_to_relative_path(row['image_url']),
+                'category': row['category'],
+                'material': row['material'],
+                'color': row['color'],
+                'dimensions': row['dimensions'],
+                'origin_source': row['origin_source'],
+                'import_cost': row['import_cost'],
+                'retail_price': row['retail_price'],
+                'key_tags': row['key_tags']
+            } for row in rows]
+
+            return jsonify(inventory)
+    except Exception as e:
+        logger.error(f"Error fetching inventory: {str(e)}")
+        return jsonify({'error': 'Failed to fetch inventory'}), 500
+
+def convert_to_relative_path(absolute_path: Optional[str]) -> Optional[str]:
+    """Convert absolute image path to relative path."""
+    if not absolute_path:
+        return None
+    path_parts = absolute_path.split('data/images/inventory/')
+    return path_parts[1] if len(path_parts) > 1 else absolute_path
+
+def allowed_file(filename: str) -> bool:
+    """Check if file extension is allowed."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {
+        'png', 'jpg', 'jpeg', 'gif', 'webp',  # Images
+        'pdf', 'doc', 'docx', 'txt', 'rtf'    # Documents
+    }
+
+@app.route('/process-files', methods=['POST'])
+async def process_files():
+    """Process uploaded files (both images and documents)."""
+    try:
+        files = await request.files
+        uploaded_files = {'images': [], 'documents': []}
+        
+        for file in files.getlist('files'):
+            if not file or not allowed_file(file.filename):
+                return jsonify({'error': 'Invalid file type'}), 400
+
+            ext = os.path.splitext(file.filename)[1].lower()
+            file_type = 'images' if ext in {'.png', '.jpg', '.jpeg', '.gif', '.webp'} else 'documents'
+            
+            filename = os.path.join(UPLOADS_DIR, file.filename)
+            await file.save(filename)
+            uploaded_files[file_type].append(filename)
+
+        if not uploaded_files['images'] and not uploaded_files['documents']:
+            return jsonify({'error': 'No valid files uploaded'}), 400
+
+        form = await request.form
+        instruction = form.get('instruction', "Catalog, categorize and Describe the item.")
+        
+        try:
+            async with app.db_pool.acquire() as conn:
+                # Process images
+                if uploaded_files['images']:
+                    await process_uploaded_images(instruction, conn)
+                
+                # Process documents
+                if uploaded_files['documents']:
+                    batch_dir = os.path.join(DOCUMENT_DIRECTORY, datetime.now().strftime("%Y%m%d-%H%M%S"))
+                    os.makedirs(batch_dir, exist_ok=True)
+                    for doc_path in uploaded_files['documents']:
+                        try:
+                            await process_document(doc_path, batch_dir, conn)
+                        except Exception as doc_error:
+                            logging.error(f"Error processing document {doc_path}: {str(doc_error)}")
+                            return jsonify({'error': f'Error processing document: {str(doc_error)}'}), 500
+                
+            return jsonify({'status': 'success', 'message': 'Files processed successfully'})
+        except Exception as db_error:
+            logging.error(f"Database error: {str(db_error)}")
+            return jsonify({'error': f'Database error: {str(db_error)}'}), 500
+    except Exception as e:
+        logging.error(f"Error processing files: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        # Clean up uploaded files
+        for file_list in uploaded_files.values():
+            for file_path in file_list:
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except Exception as cleanup_error:
+                    logging.error(f"Error cleaning up file {file_path}: {str(cleanup_error)}")
+
+
+@app.before_serving
+async def startup():
+    """Initialize application before serving."""
+    try:
+        # Ensure directories exist
+        for directory in [UPLOADS_DIR, INVENTORY_IMAGES_DIR, EXPORTS_DIR, DATA_DIR, DOCUMENT_DIRECTORY]:
+            os.makedirs(directory, exist_ok=True)
+        
+        # Initialize database connection pool and tables
+        app.db_pool = await get_db_pool()
+        await initialize_database()
+        logger.info("Application initialized successfully")
+    except Exception as e:
+        logger.error(f"Error during startup: {str(e)}")
+        raise
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
