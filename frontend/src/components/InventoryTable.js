@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import config from '../config';
 import './InventoryTable.css';
 
+// Base64 encoded simple gray placeholder image
+const PLACEHOLDER_IMAGE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAABmJLR0QA/wD/AP+gvaeTAAAAX0lEQVR4nO3BMQEAAADCoPVP7WsIoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeAN3+AABVhDxKQAAAABJRU5ErkJggg==';
+
 function InventoryTable({ inventory }) {
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState(null);
@@ -141,8 +144,10 @@ function InventoryTable({ inventory }) {
                         style={{width: '100px', height: 'auto'}}
                         className="inventory-image"
                         onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = `${config.apiUrl}/images/placeholder.png`;
+                          if (!e.target.dataset.fallbackAttempted) {
+                            e.target.dataset.fallbackAttempted = 'true';
+                            e.target.src = PLACEHOLDER_IMAGE;
+                          }
                         }}
                       />
                     )}

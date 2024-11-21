@@ -50,9 +50,9 @@ function App() {
         setInventory([]);
       }
 
-      // Fetch documents data
+      // Fetch documents data - Updated to use correct endpoint
       try {
-        const docResponse = await fetch(`${config.apiUrl}/api/documents`, {
+        const docResponse = await fetch(`${config.apiUrl}/api/document-vault`, {
           method: 'GET',
           credentials: 'include',
           headers: {
@@ -125,7 +125,7 @@ function App() {
   const handleResetDocuments = async () => {
     if (window.confirm('Are you sure you want to reset the documents? This will delete all document entries.')) {
       try {
-        const response = await fetch(`${config.apiUrl}/api/documents/reset`, {
+        const response = await fetch(`${config.apiUrl}/api/document-vault/reset`, {
           method: 'POST',
           credentials: 'include',
           headers: {
@@ -182,7 +182,8 @@ function App() {
 
   const handleExport = async (format, type = 'inventory') => {
     try {
-      const response = await fetch(`${config.apiUrl}/export-${type}?format=${format}`, {
+      const endpoint = type === 'inventory' ? 'export-inventory' : 'export-documents';
+      const response = await fetch(`${config.apiUrl}/${endpoint}?format=${format}`, {
         method: 'GET',
         credentials: 'include',
         headers: {
