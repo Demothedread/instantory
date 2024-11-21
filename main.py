@@ -263,19 +263,40 @@ async def analyze_document(text: str) -> Dict[str, Any]:
                 
                 Focus on accuracy and conciseness. For required fields, provide best inference if not explicitly stated.
                 Ensure summary is under 400 characters while capturing key points.
+                Provide response in valid JSON format only, no additional text.
                 """},
                 {"role": "user", "content": text}
             ],
             max_tokens=1600,
             temperature=0.2,
+            response_format={"type": "json_object"}  # Added response format specification
         )
         
-        return json.loads(response.choices[0].message.content)
+        try:
+            # Parse the response content directly
+            content = response.choices[0].message.content
+            if isinstance(content, str):
+                return json.loads(content)
+            return content
+        except (json.JSONDecodeError, AttributeError) as e:
+            logging.error(f"Error parsing OpenAI response: {e}")
+            # Provide default values for required fields
+            return {
+                'title': 'Untitled Document',
+                'author': 'Unknown Author',
+                'category': 'Document',
+                'field': 'General',
+                'publication_year': None,
+                'journal_publisher': None,
+                'thesis': 'Document analysis unavailable',
+                'issue': 'Unable to determine',
+                'summary': 'Document processing error occurred',
+                'influenced_by': [],
+                'hashtags': []
+            }
     except Exception as e:
         logging.error(f"Error analyzing document: {e}")
         raise
-
-# Rest of file remains unchanged until the process_document function
 
 async def process_document(file_path: str, batch_dir: str, conn: asyncpg.Connection) -> None:
     """Process a document file and store both metadata and full text."""
