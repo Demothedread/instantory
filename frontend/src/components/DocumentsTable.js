@@ -26,12 +26,13 @@ function DocumentsTable({ documents }) {
     
     setIsSearching(true);
     try {
-      const response = await fetch(`${config.apiUrl}/api/documents/search`, {
+      const response = await fetch(`${config.apiUrl}/api/document-vault/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Origin': window.location.origin
+          'Origin': window.location.origin,
+          'Access-Control-Allow-Credentials': 'true'
         },
         credentials: 'include',
         body: JSON.stringify({ query: semanticQuery })
@@ -79,6 +80,14 @@ function DocumentsTable({ documents }) {
       return sortConfig.direction === 'ascending' ? ' ↑' : ' ↓';
     }
     return '';
+  };
+
+  const handleDownload = async (docId) => {
+    try {
+      window.open(`${config.apiUrl}/api/document-vault/${docId}/file`, '_blank');
+    } catch (error) {
+      console.error('Error downloading document:', error);
+    }
   };
 
   return (
@@ -137,15 +146,12 @@ function DocumentsTable({ documents }) {
                 </span>
               </div>
               <p className="result-summary">{result.summary}</p>
-              {result.relevant_chunks && (
+              {result.excerpt && (
                 <div className="relevant-chunks">
-                  <h5>Relevant Sections:</h5>
-                  {result.relevant_chunks.map((chunk, idx) => (
-                    <div key={idx} className="chunk">
-                      <div className="chunk-content">{chunk.text}</div>
-                      <div className="chunk-context">{chunk.context}</div>
-                    </div>
-                  ))}
+                  <h5>Relevant Excerpt:</h5>
+                  <div className="chunk">
+                    <div className="chunk-content">{result.excerpt}</div>
+                  </div>
                 </div>
               )}
             </div>
@@ -181,6 +187,7 @@ function DocumentsTable({ documents }) {
                 </th>
                 <th>Influences</th>
                 <th>Tags</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -201,8 +208,13 @@ function DocumentsTable({ documents }) {
                     <div className="cell-content">{doc.issue}</div>
                   </td>
                   <td>{doc.journal_publisher}</td>
-                  <td>{doc.influences}</td>
+                  <td>{doc.influenced_by}</td>
                   <td>{doc.hashtags}</td>
+                  <td>
+                    <button onClick={() => handleDownload(doc.id)} className="download-button">
+                      Download
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

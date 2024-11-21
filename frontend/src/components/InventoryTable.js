@@ -3,7 +3,7 @@ import config from '../config';
 import './InventoryTable.css';
 
 // Base64 encoded simple gray placeholder image
-const PLACEHOLDER_IMAGE = 'https://picsum.photos/seed/picsum/200/300';
+const PLACEHOLDER_IMAGE = '';
 
 function InventoryTable({ inventory }) {
   const [sortColumn, setSortColumn] = useState(null);
@@ -71,10 +71,10 @@ function InventoryTable({ inventory }) {
       <h2>Image to Inventory</h2>
       <div className="instructions">
         <p>
-          • Image-Based Inventory: This program processes images of products, automatically categorizes them, and adds them to your inventory.<br />
-          • Image Upload & Processing: Users upload images of products (either individually or in bulk). The program saves each image in its original format, then encodes it into Base64 for further processing.<br />
-          • AI-Driven Analysis: After encoding, the image data is passed to GPT-4 Vision, which generates detailed descriptions, including product attributes (color, material, dimensions, price, etc.)<br />
-          • Inventory Updates: All processed products are automatically added to a dynamic inventory table, allowing for real-time tracking and updates.
+          This program processes images of products, automatically categorizes them, and adds them to your inventory.<br />
+          • Auto Image Processing: Users upload images of products (either individually or in bulk). The program saves each image in its original format, then adjusts sizes and encodes it into Base64 for further processing.<br />
+          • AI-Driven Analysis: After encoding, the image data is passed to GPT-4, OpenAI's powerful multimodal model, which generates detailed descriptions, including product attributes (color, material, dimensions, price, etc.)<br />
+          • Inventory Updates: All processed products are automatically added to a dynamic inventory table, allowing for tracking and updates, and linked to a ready made card based masonry image grid.<br />
         </p>
         
         <h4>Usage Instructions:</h4>
@@ -91,12 +91,13 @@ function InventoryTable({ inventory }) {
           <label htmlFor="category-filter">Filter by Category:</label>
           <select id="category-filter" value={filterCategory} onChange={(e) => handleFilter(e.target.value)}>
             <option value="">All</option>
-            <option value="Beads">Beads</option>
-            <option value="Stools">Stools</option>
-            <option value="Bowls">Bowls</option>
-            <option value="Fans">Fans</option>
-            <option value="Totebags">Totebags</option>
-            <option value="Home Decor">Home Decor</option>
+            <option value="Artwork">Artwork</option>
+            <option value="Furniture">Furniture</option>
+            <option value="Housewares">Housewares</option>
+            <option value="Tools">Tools</option>
+            <option value="Clothing">Clothing</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Others">Others</option>
           </select>
         </div>
         <div className="search-filter">
