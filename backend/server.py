@@ -337,22 +337,40 @@ async def process_files():
         form = await request.form
         instruction = form.get('instruction', "Catalog, categorize and Describe the item.")
         
-        async with app.db_pool.acquire() as conn:
-            # Process images
-            if uploaded_files['images']:
-                await process_uploaded_images(instruction, conn)
-            
-            # Process documents
-            if uploaded_files['documents']:
-                batch_dir = os.path.join(DOCUMENT_DIRECTORY, datetime.now().strftime("%Y%m%d-%H%M%S"))
-                os.makedirs(batch_dir, exist_ok=True)
-                for doc_path in uploaded_files['documents']:
-                    await process_document(doc_path, batch_dir, conn)
-            
-        return jsonify({'status': 'success', 'message': 'Files processed successfully'})
+        try:
+            async with app.db_pool.acquire() as conn:
+                # Process images
+                if uploaded_files['images']:
+                    await process_uploaded_images(instruction, conn)
+                
+                # Process documents
+                if uploaded_files['documents']:
+                    batch_dir = os.path.join(DOCUMENT_DIRECTORY, datetime.now().strftime("%Y%m%d-%H%M%S"))
+                    os.makedirs(batch_dir, exist_ok=True)
+                    for doc_path in uploaded_files['documents']:
+                        try:
+                            await process_document(doc_path, batch_dir, conn)
+                        except Exception as doc_error:
+                            logging.error(f"Error processing document {doc_path}: {str(doc_error)}")
+                            return jsonify({'error': f'Error processing document: {str(doc_error)}'}), 500
+                
+            return jsonify({'status': 'success', 'message': 'Files processed successfully'})
+        except Exception as db_error:
+            logging.error(f"Database error: {str(db_error)}")
+            return jsonify({'error': f'Database error: {str(db_error)}'}), 500
     except Exception as e:
-        logger.error(f"Error processing files: {str(e)}")
+        logging.error(f"Error processing files: {str(e)}")
         return jsonify({'error': str(e)}), 500
+    finally:
+        # Clean up uploaded files
+        for file_list in uploaded_files.values():
+            for file_path in file_list:
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except Exception as cleanup_error:
+                    logging.error(f"Error cleaning up file {file_path}: {str(cleanup_error)}")
+
 
 @app.before_serving
 async def startup():
