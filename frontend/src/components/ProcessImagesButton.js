@@ -55,6 +55,7 @@ function ProcessImagesButton({ onProcess }) {
     try {
       const response = await axios.post(`${config.apiUrl}/process-files`, formData, {
         headers: {
+          ...config.headers,
           'Content-Type': 'multipart/form-data',
         },
         withCredentials: true,
