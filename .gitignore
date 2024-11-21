@@ -36,7 +36,23 @@ yarn-error.log*
 env/
 venv/
 ENV/
+myvenv/
 
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__/
+*.sqlite3
+*.sqlite3-journal
+db.sqlite3
+db.sqlite3-journal
+
+# Flask
+instance/
+.webassets-cache
+
+# Docker
 # IDE
 .idea/
 .vscode/
@@ -57,3 +73,5 @@ data/images/
 data/exports/
 data/uploads/
 *.log
+
+
