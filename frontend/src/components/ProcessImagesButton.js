@@ -8,6 +8,7 @@ function ProcessImagesButton({ onProcess }) {
   const [instruction, setInstruction] = useState('You are an assistant that helps catalog and analyze both products and documents for inventory.');
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files);
@@ -17,6 +18,7 @@ function ProcessImagesButton({ onProcess }) {
     }
     setSelectedFiles(files);
     setErrorMessage('');
+    setUploadProgress(0);
   };
 
   const handleInstructionChange = (event) => {
@@ -56,14 +58,12 @@ function ProcessImagesButton({ onProcess }) {
       const response = await axios.post(`${config.apiUrl}/process-files`, formData, {
         headers: {
           ...config.headers,
-          'Content-Type': 'multipart/form-data',
-          'Accept': 'application/json',
-          'Origin': window.location.origin,
-          'Access-Control-Allow-Credentials': 'true'
+          'Content-Type': 'multipart/form-data'
         },
         withCredentials: true,
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
           console.log(`Upload Progress: ${percentCompleted}%`);
         }
       });
@@ -75,6 +75,7 @@ function ProcessImagesButton({ onProcess }) {
         }
         setSelectedFiles(null);
         document.getElementById('file-upload').value = '';
+        setUploadProgress(0);
       } else {
         throw new Error(response.data.message || 'An error occurred during file processing.');
       }
@@ -125,6 +126,16 @@ function ProcessImagesButton({ onProcess }) {
         </div>
       </div>
       {errorMessage && <div className="error-message">{errorMessage}</div>}
+      {isUploading && (
+        <div className="progress-bar">
+          <div 
+            className="progress-bar-fill" 
+            style={{ width: `${uploadProgress}%` }}
+          >
+            {uploadProgress}%
+          </div>
+        </div>
+      )}
       <button 
         onClick={handleProcess} 
         disabled={isUploading || !selectedFiles || !instruction.trim()}

@@ -1,9 +1,9 @@
 .process-images-container {
-  background: #f8f9fa;
   padding: 20px;
+  background-color: #f8f9fa;
   border-radius: 8px;
-  margin-bottom: 30px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
 }
 
 .instruction-section {
@@ -13,23 +13,15 @@
 .instruction-section label {
   display: block;
   margin-bottom: 8px;
-  color: #333;
   font-weight: 500;
 }
 
 .instruction-section input {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ddd;
+  padding: 10px;
+  border: 1px solid #dee2e6;
   border-radius: 4px;
   font-size: 14px;
-  transition: border-color 0.3s ease;
-}
-
-.instruction-section input:focus {
-  outline: none;
-  border-color: #179b9b;
-  box-shadow: 0 0 0 2px rgba(23, 155, 155, 0.1);
 }
 
 .file-upload-section {
@@ -39,94 +31,121 @@
 .file-upload-section label {
   display: block;
   margin-bottom: 8px;
-  color: #333;
   font-weight: 500;
 }
 
 .file-upload-section input[type="file"] {
   display: block;
   width: 100%;
-  padding: 8px;
-  border: 1px dashed #ddd;
+  padding: 10px;
+  border: 1px solid #dee2e6;
   border-radius: 4px;
-  background: white;
+  background-color: white;
   cursor: pointer;
 }
 
-.file-upload-section input[type="file"]:hover {
-  border-color: #179b9b;
+.file-types-info {
+  margin-top: 10px;
+  font-size: 0.9em;
+  color: #666;
+}
+
+.file-types-info ul {
+  margin: 5px 0;
+  padding-left: 20px;
+}
+
+.error-message {
+  color: #dc3545;
+  padding: 10px;
+  margin: 10px 0;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
 }
 
 .process-button {
-  background-color: #179b9b;
+  padding: 10px 20px;
+  background-color: #4CAF50;
   color: white;
   border: none;
-  padding: 12px 24px;
   border-radius: 4px;
-  font-size: 16px;
-  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  width: 100%;
+  margin-top: 10px;
 }
 
 .process-button:hover:not(:disabled) {
-  background-color: #138b8b;
-  transform: translateY(-1px);
-}
-
-.process-button:active:not(:disabled) {
-  transform: translateY(0);
+  background-color: #45a049;
 }
 
 .process-button:disabled {
   background-color: #cccccc;
   cursor: not-allowed;
-  opacity: 0.7;
 }
 
-.error-message {
-  color: #dc3545;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  padding: 10px 15px;
-  border-radius: 4px;
-  margin-top: 10px;
-  font-size: 14px;
+.progress-bar {
+  width: 100%;
+  height: 20px;
+  background-color: #f0f0f0;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 10px 0;
 }
 
-/* Loading state styles */
-.process-button.loading {
-  position: relative;
-  padding-right: 40px;
+.progress-bar-fill {
+  height: 100%;
+  background-color: #4CAF50;
+  transition: width 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
 }
 
-.process-button.loading::after {
-  content: '';
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  border: 2px solid white;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: translateY(-50%) rotate(360deg);
-  }
-}
-
-/* Responsive Design */
+/* Responsive adjustments */
 @media (max-width: 768px) {
   .process-images-container {
     padding: 15px;
   }
 
+  .instruction-section input,
+  .file-upload-section input[type="file"] {
+    font-size: 14px;
+  }
+
   .process-button {
-    width: 100%;
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .process-images-container {
+    background-color: #2d2d2d;
+  }
+
+  .instruction-section input,
+  .file-upload-section input[type="file"] {
+    background-color: #3d3d3d;
+    border-color: #4d4d4d;
+    color: #ffffff;
+  }
+
+  .file-types-info {
+    color: #aaaaaa;
+  }
+
+  .progress-bar {
+    background-color: #3d3d3d;
+  }
+
+  .progress-bar-fill {
+    background-color: #45a049;
   }
 }
