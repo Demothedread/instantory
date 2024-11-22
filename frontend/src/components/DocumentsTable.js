@@ -1,24 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import config from '../config';
 import './DocumentsTable.css';
 
 function DocumentsTable({ documents }) {
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
-  const [searchTerm, setSearchTerm] = useState('');
+  const [sortColumn, setSortColumn] = useState(null);
+  const [sortDirection, setSortDirection] = useState(null);
   const [filterCategory, setFilterCategory] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [semanticResults, setSemanticResults] = useState(null);
   const [semanticQuery, setSemanticQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
 
-  // Get unique categories for filter dropdown
-  const categories = [...new Set(documents.map(doc => doc.category))].filter(Boolean);
-
-  const handleSort = (key) => {
-    let direction = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
     }
-    setSortConfig({ key, direction });
+  };
+
+  const handleFilter = (category) => {
+    setFilterCategory(category);
+  };
+
+  const handleSearch = (term) => {
+    setSearchTerm(term);
   };
 
   const handleSemanticSearch = async () => {
@@ -51,37 +58,6 @@ function DocumentsTable({ documents }) {
     }
   };
 
-  const sortedDocuments = React.useMemo(() => {
-    let sortableItems = [...documents];
-    if (sortConfig.key) {
-      sortableItems.sort((a, b) => {
-        if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
-        }
-        if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
-    return sortableItems;
-  }, [documents, sortConfig]);
-
-  const filteredDocuments = sortedDocuments.filter(doc => {
-    const matchesSearch = Object.values(doc).some(value => 
-      value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    const matchesCategory = !filterCategory || doc.category === filterCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const getSortIndicator = (key) => {
-    if (sortConfig.key === key) {
-      return sortConfig.direction === 'ascending' ? ' ↑' : ' ↓';
-    }
-    return '';
-  };
-
   const handleDownload = async (docId) => {
     try {
       window.open(`${config.apiUrl}/api/document-vault/${docId}/file`, '_blank');
@@ -89,6 +65,55 @@ function DocumentsTable({ documents }) {
       console.error('Error downloading document:', error);
     }
   };
+
+  const filteredDocuments = useMemo(() => {
+    if (!Array.isArray(documents)) return [];
+    return documents.filter((doc) => {
+      const matchesCategory = !filterCategory || doc?.category === filterCategory;
+      const matchesSearch = !searchTerm || 
+        Object.values(doc).some(value => 
+          value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      return matchesCategory && matchesSearch;
+    });
+  }, [documents, filterCategory, searchTerm]);
+
+  const sortedDocuments = useMemo(() => {
+    let sortableItems = [...filteredDocuments];
+    if (sortColumn) {
+      sortableItems.sort((a, b) => {
+        const aValue = a[sortColumn];
+        const bValue = b[sortColumn];
+        
+        if (sortColumn === 'publication_year') {
+          return sortDirection === 'asc' 
+            ? (aValue || 0) - (bValue || 0)
+            : (bValue || 0) - (aValue || 0);
+        }
+        
+        const aStr = String(aValue || '').toLowerCase();
+        const bStr = String(bValue || '').toLowerCase();
+        if (aStr < bStr) return sortDirection === 'asc' ? -1 : 1;
+        if (aStr > bStr) return sortDirection === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [filteredDocuments, sortColumn, sortDirection]);
+
+  const categories = useMemo(() => {
+    if (!Array.isArray(documents)) return [];
+    return [...new Set(documents.map(doc => doc.category))].filter(Boolean);
+  }, [documents]);
+
+  if (!Array.isArray(documents) || documents.length === 0) {
+    return (
+      <div>
+        <h2>Document Vault</h2>
+        <p>No documents available.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="documents-table-container">
@@ -98,12 +123,12 @@ function DocumentsTable({ documents }) {
             type="text"
             placeholder="Filter documents..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearch(e.target.value)}
             className="search-input"
           />
           <select
             value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
+            onChange={(e) => handleFilter(e.target.value)}
             className="category-filter"
           >
             <option value="">All Categories</option>
@@ -141,9 +166,9 @@ function DocumentsTable({ documents }) {
             <div key={index} className="result-item">
               <div className="result-header">
                 <h4>{result.title}</h4>
-                <span className="similarity-score">
-                  Similarity: {(result.similarity * 100).toFixed(1)}%
-                </span>
+                <button onClick={() => handleDownload(result.id)} className="download-button">
+                  Download
+                </button>
               </div>
               <p className="result-summary">{result.summary}</p>
               {result.excerpt && (
@@ -165,25 +190,25 @@ function DocumentsTable({ documents }) {
             <thead>
               <tr>
                 <th onClick={() => handleSort('title')}>
-                  Title{getSortIndicator('title')}
+                  Title{sortColumn === 'title' && (sortDirection === 'asc' ? ' ↑' : ' ↓')}
                 </th>
                 <th onClick={() => handleSort('author')}>
-                  Author{getSortIndicator('author')}
+                  Author{sortColumn === 'author' && (sortDirection === 'asc' ? ' ↑' : ' ↓')}
                 </th>
                 <th onClick={() => handleSort('category')}>
-                  Category{getSortIndicator('category')}
+                  Category{sortColumn === 'category' && (sortDirection === 'asc' ? ' ↑' : ' ↓')}
                 </th>
                 <th onClick={() => handleSort('field')}>
-                  Field{getSortIndicator('field')}
+                  Field{sortColumn === 'field' && (sortDirection === 'asc' ? ' ↑' : ' ↓')}
                 </th>
                 <th onClick={() => handleSort('publication_year')}>
-                  Year{getSortIndicator('publication_year')}
+                  Year{sortColumn === 'publication_year' && (sortDirection === 'asc' ? ' ↑' : ' ↓')}
                 </th>
                 <th>Summary</th>
                 <th>Thesis</th>
                 <th>Issue</th>
                 <th onClick={() => handleSort('journal_publisher')}>
-                  Journal/Publisher{getSortIndicator('journal_publisher')}
+                  Journal/Publisher{sortColumn === 'journal_publisher' && (sortDirection === 'asc' ? ' ↑' : ' ↓')}
                 </th>
                 <th>Influences</th>
                 <th>Tags</th>
@@ -191,7 +216,7 @@ function DocumentsTable({ documents }) {
               </tr>
             </thead>
             <tbody>
-              {filteredDocuments.map((doc, index) => (
+              {sortedDocuments.map((doc, index) => (
                 <tr key={index}>
                   <td>{doc.title}</td>
                   <td>{doc.author}</td>
