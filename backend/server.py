@@ -16,14 +16,6 @@ import base64
 
 # Add parent directory to Python path to import main.py
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from main import (
-    initialize_database, 
-    get_db_pool,
-    process_uploaded_images,
-    process_document,
-    DOCUMENT_DIRECTORY
-)
-
 # Load environment variables from .env if it exists
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 if os.path.exists(dotenv_path):
@@ -338,49 +330,90 @@ def allowed_file(filename: str) -> bool:
 async def process_files():
     """Process uploaded files (both images and documents)."""
     try:
+        # Log request details
+        logger.info("Received file upload request")
+        logger.debug(f"Request headers: {dict(request.headers)}")
+
+        # Check if files are present in request
         files = await request.files
+        if not files:
+            logger.error("No files found in request")
+            return jsonify({'error': 'No files uploaded'}), 400
+
         uploaded_files = {'images': [], 'documents': []}
         
+        # Process each file
         for file in files.getlist('files'):
-            if not file or not allowed_file(file.filename):
-                return jsonify({'error': 'Invalid file type'}), 400
+            if not file:
+                logger.error("Empty file object received")
+                continue
 
-            ext = os.path.splitext(file.filename)[1].lower()
-            file_type = 'images' if ext in {'.png', '.jpg', '.jpeg', '.gif', '.webp'} else 'documents'
-            
-            filename = os.path.join(UPLOADS_DIR, file.filename)
-            await file.save(filename)
-            uploaded_files[file_type].append(filename)
+            if not file.filename:
+                logger.error("File has no filename")
+                continue
+
+            if not allowed_file(file.filename):
+                logger.error(f"Invalid file type: {file.filename}")
+                continue
+
+            try:
+                ext = os.path.splitext(file.filename)[1].lower()
+                file_type = 'images' if ext in {'.png', '.jpg', '.jpeg', '.gif', '.webp'} else 'documents'
+                
+                # Create unique filename to prevent collisions
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                safe_filename = f"{timestamp}_{file.filename}"
+                filename = os.path.join(UPLOADS_DIR, safe_filename)
+                
+                # Ensure upload directory exists
+                os.makedirs(UPLOADS_DIR, exist_ok=True)
+                
+                # Save file
+                logger.info(f"Saving file: {safe_filename}")
+                await file.save(filename)
+                uploaded_files[file_type].append(filename)
+                logger.info(f"Successfully saved file: {safe_filename}")
+            except Exception as file_error:
+                logger.error(f"Error saving file {file.filename}: {str(file_error)}")
+                continue
 
         if not uploaded_files['images'] and not uploaded_files['documents']:
+            logger.error("No valid files were uploaded")
             return jsonify({'error': 'No valid files uploaded'}), 400
 
+        # Get instruction from form data
         form = await request.form
         instruction = form.get('instruction', "Catalog, categorize and Describe the item.")
+        logger.info(f"Processing files with instruction: {instruction}")
         
         try:
             async with app.db_pool.acquire() as conn:
                 # Process images
                 if uploaded_files['images']:
+                    logger.info(f"Processing {len(uploaded_files['images'])} images")
                     await process_uploaded_images(instruction, conn)
                 
                 # Process documents
                 if uploaded_files['documents']:
+                    logger.info(f"Processing {len(uploaded_files['documents'])} documents")
                     batch_dir = os.path.join(DOCUMENT_DIRECTORY, datetime.now().strftime("%Y%m%d-%H%M%S"))
                     os.makedirs(batch_dir, exist_ok=True)
                     for doc_path in uploaded_files['documents']:
                         try:
+                            logger.info(f"Processing document: {os.path.basename(doc_path)}")
                             await process_document(doc_path, batch_dir, conn)
+                            logger.info(f"Successfully processed document: {os.path.basename(doc_path)}")
                         except Exception as doc_error:
-                            logging.error(f"Error processing document {doc_path}: {str(doc_error)}")
+                            logger.error(f"Error processing document {doc_path}: {str(doc_error)}")
                             return jsonify({'error': f'Error processing document: {str(doc_error)}'}), 500
                 
+            logger.info("All files processed successfully")
             return jsonify({'status': 'success', 'message': 'Files processed successfully'})
         except Exception as db_error:
-            logging.error(f"Database error: {str(db_error)}")
+            logger.error(f"Database error: {str(db_error)}")
             return jsonify({'error': f'Database error: {str(db_error)}'}), 500
     except Exception as e:
-        logging.error(f"Error processing files: {str(e)}")
+        logger.error(f"Error processing files: {str(e)}")
         return jsonify({'error': str(e)}), 500
     finally:
         # Clean up uploaded files
@@ -388,9 +421,10 @@ async def process_files():
             for file_path in file_list:
                 try:
                     if os.path.exists(file_path):
+                        logger.info(f"Cleaning up file: {os.path.basename(file_path)}")
                         os.remove(file_path)
                 except Exception as cleanup_error:
-                    logging.error(f"Error cleaning up file {file_path}: {str(cleanup_error)}")
+                    logger.error(f"Error cleaning up file {file_path}: {str(cleanup_error)}")
 
 async def get_db_pool():
     """Get PostgreSQL connection pool from environment variables or URL."""
@@ -442,7 +476,7 @@ async def startup():
             os.makedirs(directory, exist_ok=True)
         
         # Initialize database connection pool and tables
-        app.db_pool = await get_db_pool()
+        app.db_pool = await get_db_pool()  # Using imported get_db_pool from main.py
         await initialize_database()
         logger.info("Application initialized successfully")
     except Exception as e:
