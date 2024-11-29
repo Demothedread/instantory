@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import config from '../config';
 import './InventoryTable.css';
-
-// Base64 encoded simple gray placeholder image
-const PLACEHOLDER_IMAGE = 'instantory/frontend/src/assets/placeholder.png';
+import placeholderImage from '../assets/placeholder.png';
 
 function InventoryTable({ inventory }) {
   const [sortColumn, setSortColumn] = useState(null);
@@ -65,25 +63,79 @@ function InventoryTable({ inventory }) {
     if (aStr > bStr) return sortDirection === 'asc' ? 1 : -1;
     return 0;
   });
-
   return (
-    <div>
-      <h2>Image to Inventory</h2>
-      <div className="instructions">
+    <div className="inventory-container">
+      <div className="header-section">
+        <h1>Revolutionize Your Workflow with Our Image and Document Processing Service</h1>
         <p>
-          This program processes images of products, automatically categorizes them, and adds them to your inventory.<br />
-          • Auto Image Processing: Users upload images of products (either individually or in bulk). The program saves each image in its original format, then adjusts sizes and encodes it into Base64 for further processing.<br />
-          • AI-Driven Analysis: After encoding, the image data is passed to GPT-4, OpenAI's powerful multimodal model, which generates detailed descriptions, including product attributes (color, material, dimensions, price, etc.)<br />
-          • Inventory Updates: All processed products are automatically added to a dynamic inventory table, allowing for tracking and updates, and linked to a ready made card based masonry image grid.<br />
+          Introducing our cutting-edge Image and Document Processing Service—revolutionizing the way you manage visual and textual data.
+          This service seamlessly handles images and documents one at a time, employing advanced AI algorithms to deliver powerful insights
+          that transform your workflow.
         </p>
-        
-        <h4>Usage Instructions:</h4>
-        <p>
-          1. Upload Images: Select product images using the 'Choose Files' button and click 'Process New Images'.<br />
-          2. Processing: The program will validate and process the images (ensuring they meet required size limits) and pass them through the AI for analysis.<br />
-          3. View Inventory: Once processed, view the cataloged products with detailed descriptions, prices, and images in the inventory table or image grid.<br />
-          4. Maintain Records: The original product images are preserved in a designated folder for future use or verification.
-        </p>
+
+        <h2>How It Works</h2>
+
+        <div className="workflow-section">
+          <div className="image-workflow">
+            <h3>For Images</h3>
+            <p>
+              When an image is uploaded, our AI analyzes its content to generate detailed descriptions, helping you catalog and categorize 
+              visual assets effortlessly. Imagine uploading a product photo; the system generates a description like 
+              "A red sports car parked in a cityscape," which enhances product listings and searchability. The results are stored in a highly 
+              structured SQL table, with each unique item linked to an image grid for easy access and management.
+            </p>
+          </div>
+
+          <div className="document-workflow">
+            <h3>For Documents</h3>
+            <p>
+              When a document is processed, the service summarizes its key points, extracts relevant metadata (like author, creation date, 
+              and keywords), and builds a searchable vectorized database of terms. For instance, uploading an academic paper means you 
+              instantly receive a concise summary and can quickly search for terms throughout the document, accelerating research and review 
+              processes.
+            </p>
+          </div>
+        </div>
+
+        <div className="benefits-section">
+          <h3>Key Benefits</h3>
+          <ul>
+            <li><strong>Efficient Cataloging:</strong> Quickly tag and describe images and documents, enhancing discoverability.</li>
+            <li><strong>Structured Data:</strong> SQL output allows for easy integration into existing systems.</li>
+            <li><strong>Intelligent Summarization:</strong> Get to the crux of documents without sifting through pages.</li>
+            <li><strong>Searchability:</strong> Vectorized terms enable advanced search capabilities across all stored content.</li>
+          </ul>
+
+          <p>
+            Whether you're managing a media library or researching vast documentation, our service is your go-to solution for intelligent 
+            data management that fits perfectly into today's fast-paced, data-driven landscape.
+          </p>
+        </div>
+
+        <div className="technology-section">
+          <h3>Technology Powered by GPT-4o</h3>
+          <p>
+            This system utilizes GPT-4o image recognition technology to create and describe a catalog of items, saving you hours of time-consuming 
+            product entry by automating the process. Trained against thousands of product images and leveraging GPT-4o more generally, it is 
+            designed to determine the specifications, materials, and estimate an MSRP based on thousands of similar products. This makes it 
+            perfect for automatic inventory creation and management.
+          </p>
+          <p>
+            Additionally, for documents, this technology is ideal for researchers who need to quickly identify the most relevant content within 
+            a batch of documents. It provides both a starting point and a comprehensive analysis to enhance your research, allowing you to focus 
+            on what matters most while delivering deeper insights efficiently.
+          </p>
+        </div>
+
+        <div className="instructions-section">
+          <h3>Usage Instructions</h3>
+          <div className="instruction-steps">
+            <p><strong>1. Upload Files:</strong> Select images or documents using the 'Choose Files' button and click 'Process Files'.</p>
+            <p><strong>2. Processing:</strong> Files are validated and processed through our AI analysis pipeline.</p>
+            <p><strong>3. View Results:</strong> Access processed items in the inventory table or document vault.</p>
+            <p><strong>4. Maintain Records:</strong> Original files are preserved for future reference.</p>
+          </div>
+        </div>
       </div>
 
       <div className="filter-section">
@@ -91,13 +143,12 @@ function InventoryTable({ inventory }) {
           <label htmlFor="category-filter">Filter by Category:</label>
           <select id="category-filter" value={filterCategory} onChange={(e) => handleFilter(e.target.value)}>
             <option value="">All</option>
-            <option value="Artwork">Artwork</option>
-            <option value="Furniture">Furniture</option>
-            <option value="Housewares">Housewares</option>
-            <option value="Tools">Tools</option>
-            <option value="Clothing">Clothing</option>
-            <option value="Electronics">Electronics</option>
-            <option value="Others">Others</option>
+            <option value="Beads">Beads</option>
+            <option value="Stools">Stools</option>
+            <option value="Bowls">Bowls</option>
+            <option value="Fans">Fans</option>
+            <option value="Totebags">Totebags</option>
+            <option value="Home Decor">Home Decor</option>
           </select>
         </div>
         <div className="search-filter">
@@ -128,41 +179,39 @@ function InventoryTable({ inventory }) {
             </tr>
           </thead>
           <tbody>
-            {sortedInventory.map((item, index) => {
-              return (
-                <tr key={index}>
-                  <td>{item?.name || ''}</td>
-                  <td className="description-cell">
-                    {(item?.description || '').split('. ').map((sentence, idx) => (
-                      <div key={idx}>{sentence.trim()}</div>
-                    ))}
-                  </td>
-                  <td className="image-cell">
-                    {item?.image_url && (
-                      <img 
-                        src={`${config.apiUrl}/images/${encodeURIComponent(item.image_url)}`} 
-                        alt={item?.name || 'Product'} 
-                        style={{width: '100px', height: 'auto'}}
-                        className="inventory-image"
-                        onError={(e) => {
-                          if (!e.target.dataset.retried) {
-                            e.target.dataset.retried = true;
-                            e.target.src = PLACEHOLDER_IMAGE;
-                          }
-                        }}
-                      />
-                    )}
-                  </td>   
-                  <td>{item?.category || ''}</td>
-                  <td>{item?.material || ''}</td>
-                  <td>{item?.color || ''}</td>
-                  <td>{item?.dimensions || ''}</td>
-                  <td>{item?.origin_source || ''}</td>
-                  <td>{item?.import_cost ? `$${Number(item.import_cost).toFixed(2)}` : ''}</td>
-                  <td>{item?.retail_price ? `$${Number(item.retail_price).toFixed(2)}` : ''}</td>
-                </tr>
-              );
-            })}
+            {sortedInventory.map((item, index) => (
+              <tr key={index}>
+                <td>{item?.name || ''}</td>
+                <td className="description-cell">
+                  {(item?.description || '').split('. ').map((sentence, idx) => (
+                    <div key={idx}>{sentence.trim()}</div>
+                  ))}
+                </td>
+                <td className="image-cell">
+                  {item?.image_url && (
+                    <img 
+                      src={`${config.apiUrl}/images/${encodeURIComponent(item.image_url)}`} 
+                      alt={item?.name || 'Product'} 
+                      style={{width: '100px', height: 'auto'}}
+                      className="inventory-image"
+                      onError={(e) => {
+                        if (!e.target.dataset.retried) {
+                          e.target.dataset.retried = true;
+                          e.target.src = placeholderImage;
+                        }
+                      }}
+                    />
+                  )}
+                </td>   
+                <td>{item?.category || ''}</td>
+                <td>{item?.material || ''}</td>
+                <td>{item?.color || ''}</td>
+                <td>{item?.dimensions || ''}</td>
+                <td>{item?.origin_source || ''}</td>
+                <td>{item?.import_cost ? `$${Number(item.import_cost).toFixed(2)}` : ''}</td>
+                <td>{item?.retail_price ? `$${Number(item.retail_price).toFixed(2)}` : ''}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

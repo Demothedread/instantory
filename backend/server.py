@@ -14,7 +14,7 @@ import asyncio
 from dotenv import load_dotenv
 import base64
 
-# Add parent directory to Python path to import main.py
+# Add parent directory to Python path to import     qÄR1
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 # Load environment variables from .env if it exists
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -30,6 +30,7 @@ except ImportError:
     INVENTORY_IMAGES_DIR = os.environ.get('INVENTORY_IMAGES_DIR', './inventory_images')
     EXPORTS_DIR = os.environ.get('EXPORTS_DIR', './exports')
     DATA_DIR = os.environ.get('DATA_DIR', './data')
+    DOCUMENT_DIRECTORY = os.environ.get('DOCUMENT_DIRECTORY', './documents')
 
 # Ensure directories exist
 os.makedirs(UPLOADS_DIR, exist_ok=True)
@@ -465,7 +466,6 @@ async def get_db_pool():
     except Exception as e:
         logging.error(f"Error creating database pool: {str(e)}")
         raise
-
 
 @app.before_serving
 async def startup():

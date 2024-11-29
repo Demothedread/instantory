@@ -1,61 +1,121 @@
-.instructions {
+.inventory-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header-section {
+  margin-bottom: 40px;
+  text-align: left;
+}
+
+.header-section h1 {
+  color: #333;
+  font-size: 2.5em;
+  margin-bottom: 20px;
+  line-height: 1.2;
+}
+
+.header-section p {
+  font-size: 1.1em;
+  line-height: 1.6;
+  color: #555;
+}
+
+.workflow-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin: 30px 0;
+}
+
+.image-workflow,
+.document-workflow {
   background: #f8f9fa;
   padding: 20px;
   border-radius: 8px;
-  margin-bottom: 30px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.instructions p {
+.benefits-section {
+  margin: 30px 0;
+}
+
+.benefits-section ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.benefits-section li {
+  margin: 15px 0;
+  padding-left: 25px;
+  position: relative;
+}
+
+.benefits-section li:before {
+  content: "•";
+  color: #4CAF50;
+  font-weight: bold;
+  position: absolute;
+  left: 0;
+}
+
+.technology-section {
+  background: #f8f9fa;
+  padding: 25px;
+  border-radius: 8px;
+  margin: 30px 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.instructions-section {
+  margin: 30px 0;
+}
+
+.instruction-steps p {
   margin: 10px 0;
-  line-height: 1.6;
-  color: #444;
-}
-
-.instructions h4 {
-  color: #333;
-  margin: 20px 0 10px 0;
+  padding-left: 20px;
+  border-left: 3px solid #4CAF50;
 }
 
 .filter-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  gap: 20px;
-  flex-wrap: wrap;
+  margin: 20px 0;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.category-filter {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.category-filter,
+.search-filter {
+  flex: 1;
+  margin: 0 10px;
 }
 
 .category-filter label {
-  color: #333;
+  display: block;
+  margin-bottom: 5px;
   font-weight: 500;
 }
 
-.category-filter select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background-color: white;
-  min-width: 150px;
-}
-
-.search-filter {
-  flex-grow: 1;
-  max-width: 400px;
-}
-
-.search-input {
+.category-filter select,
+.search-filter input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+  background-color: white;
+}
+
+.search-filter input {
+  padding-left: 30px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>');
+  background-repeat: no-repeat;
+  background-position: 8px center;
 }
 
 .table-container {
@@ -63,28 +123,24 @@
   margin-top: 20px;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1000px;
-}
-
-thead {
-  background-color: #f8f9fa;
+  min-width: 800px;
 }
 
 th {
-  padding: 12px 15px;
+  background-color: #f8f9fa;
+  padding: 12px;
   text-align: left;
-  color: #333;
   font-weight: 600;
-  border-bottom: 2px solid #dee2e6;
+  color: #333;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-  white-space: nowrap;
+  border-bottom: 2px solid #dee2e6;
+  transition: background-color 0.2s;
 }
 
 th:hover {
@@ -92,9 +148,9 @@ th:hover {
 }
 
 td {
-  padding: 12px 15px;
+  padding: 12px;
   border-bottom: 1px solid #dee2e6;
-  color: #444;
+  vertical-align: top;
 }
 
 tr:hover {
@@ -107,39 +163,109 @@ tr:hover {
 
 .description-cell div {
   margin-bottom: 5px;
+  line-height: 1.4;
 }
 
 .image-cell {
   width: 120px;
+  text-align: center;
 }
 
 .inventory-image {
   border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+  max-width: 100px;
+  height: auto;
+  object-fit: cover;
 }
 
 .inventory-image:hover {
   transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
+  .workflow-section {
+    grid-template-columns: 1fr;
+  }
+
   .filter-section {
     flex-direction: column;
-    align-items: stretch;
   }
 
+  .category-filter,
   .search-filter {
-    max-width: none;
-  }
-
-  .category-filter {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .category-filter select {
+    margin: 10px 0;
     width: 100%;
+  }
+
+  .header-section h1 {
+    font-size: 2em;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .inventory-container {
+    background-color: #1a1a1a;
+    color: #ffffff;
+  }
+
+  .header-section h1 {
+    color: #ffffff;
+  }
+
+  .header-section p {
+    color: #cccccc;
+  }
+
+  .image-workflow,
+  .document-workflow,
+  .technology-section,
+  .filter-section {
+    background: #2d2d2d;
+  }
+
+  .category-filter select,
+  .search-filter input {
+    background-color: #3d3d3d;
+    border-color: #4d4d4d;
+    color: #ffffff;
+  }
+
+  .search-filter input {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>');
+  }
+
+  .table-container {
+    background: #2d2d2d;
+  }
+
+  th {
+    background-color: #2d2d2d;
+    color: #ffffff;
+    border-bottom-color: #4d4d4d;
+  }
+
+  th:hover {
+    background-color: #3d3d3d;
+  }
+
+  td {
+    border-bottom-color: #4d4d4d;
+    color: #ffffff;
+  }
+
+  tr:hover {
+    background-color: #3d3d3d;
+  }
+
+  .inventory-image {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+
+  .inventory-image:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
   }
 }
