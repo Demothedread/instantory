@@ -80,9 +80,9 @@ async def initialize_database() -> None:
                 )
             ''')
 
-            # Create the document_vault table for document metadata and extracted text
+            # Create the documents table for document metadata and extracted text
             await conn.execute('''
-                CREATE TABLE IF NOT EXISTS document_vault (
+                CREATE TABLE IF NOT EXISTS documents (
                     id SERIAL PRIMARY KEY,
                     title TEXT,
                     author TEXT,
@@ -332,7 +332,7 @@ async def process_document(file_path: str, batch_dir: str, conn: asyncpg.Connect
 
         # Insert document metadata and extracted text into document_vault
         await conn.execute('''
-            INSERT INTO document_vault
+            INSERT INTO documents
             (title, author, journal_publisher, publication_year, page_length,
              thesis, issue, summary, category, field, hashtags, influenced_by,
              file_path, file_type, extracted_text)

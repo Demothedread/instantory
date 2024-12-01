@@ -63,7 +63,7 @@ async def test_document_upload(client):
     assert response.status_code == 200
     
     # Verify document in Document Vault
-    response = await client.get('/api/document-vault')
+    response = await client.get('/api/documents')
     assert response.status_code == 200
     documents = response.json()
     assert len(documents) > 0
@@ -71,7 +71,7 @@ async def test_document_upload(client):
     
     # Verify document text retrieval
     doc_id = documents[0]['id']
-    response = await client.get(f'/api/document-vault/{doc_id}/text')
+    response = await client.get(f'/api/documents/{doc_id}/text')
     assert response.status_code == 200
     assert 'text' in response.json()
 
@@ -96,7 +96,7 @@ async def test_document_search(client):
     await client.post('/process-files', files=files)
     
     # Test search
-    response = await client.post('/api/document-vault/search', json={
+    response = await client.post('/api/documents/search', json={
         'query': 'Test Document',
         'field': 'metadata'
     })

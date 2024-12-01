@@ -1,15 +1,19 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap');
-
 @import url("https://use.typekit.net/rfh6pul.css");
 
 :root {
-  --primary-gold: #ffd700;
-  --secondary-gold: #c0a080;
+  --emerald: #2fa37a;
+  --burgundy: #872635;
+  --gold: #d6a348;
+  --teal: #3e8c95;
+  --silver: #bfc0c1;
+  --dark-gold: #8c6a30;
+  --light-aqua: #a4ded8;
+  --deep-green: #275d4e;
+  --pale-gold: #ecc56a;
+  --soft-teal: #57b49e;
   --dark-bg: #1a1a1a;
   --darker-bg: #0f0f0f;
-  --text-light: #e0c9a6;
-  --text-dark: #2c2c2c;
-  --accent-color: #b8860b;
 }
 
 * {
@@ -20,11 +24,11 @@
 
 body {
   margin: 0;
-  font-family: 'Degular Mono','vintage deco demi', 'Playfair Display', serif;
+  font-family: 'Playfair Display', serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: var(--darker-bg);
-  color: var(--text-light);
+  background: var(--dark-bg);
+  color: var(--silver);
   line-height: 1.6;
   overflow-x: hidden;
 }
@@ -37,61 +41,61 @@ body::before {
   width: 100%;
   height: 100%;
   background-image: 
-    linear-gradient(45deg, rgba(255, 215, 0, 0.05) 25%, transparent 25%),
-    linear-gradient(-45deg, rgba(255, 215, 0, 0.05) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgba(255, 215, 0, 0.05) 75%),
-    linear-gradient(-45deg, transparent 75%, rgba(255, 215, 0, 0.05) 75%);
-  background-size: 20px 20px;
-  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    linear-gradient(45deg, rgba(47, 163, 122, 0.03) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(47, 163, 122, 0.03) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(47, 163, 122, 0.03) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(47, 163, 122, 0.03) 75%);
+  background-size: 40px 40px;
+  background-position: 0 0, 0 20px, 20px -20px, -20px 0px;
   pointer-events: none;
   z-index: -1;
 }
 
 code {
-  font-family: 'Degular Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
-  background: rgba(255, 215, 0, 0.1);
+  font-family: 'Degular Mono', monospace;
+  background: rgba(214, 163, 72, 0.1);
   padding: 2px 5px;
   border-radius: 3px;
-  color: var(--primary-gold);
+  color: var(--gold);
 }
 
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--dark-bg);
+  background: var(--deep-green);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--primary-gold);
-  border-radius: 5px;
+  background: var(--gold);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-color);
+  background: var(--dark-gold);
 }
 
 ::selection {
-  background: rgba(255, 215, 0, 0.3);
-  color: var(--primary-gold);
+  background: rgba(47, 163, 122, 0.3);
+  color: var(--gold);
 }
 
 input, select, textarea {
   font-family: 'Degular Mono', monospace;
   background: var(--dark-bg);
-  border: 1px solid var(--primary-gold);
-  color: var(--text-light);
-  padding: 8px 12px;
+  border: 1px solid var(--gold);
+  color: var(--silver);
+  padding: 10px 15px;
   border-radius: 0;
   transition: all 0.3s ease;
 }
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+  border-color: var(--emerald);
+  box-shadow: 0 0 5px rgba(47, 163, 122, 0.3);
 }
 
 table {
@@ -99,26 +103,27 @@ table {
   border-spacing: 0;
   width: 100%;
   margin: 20px 0;
-  border: 2px solid var(--primary-gold);
+  border: 2px solid var(--gold);
+  background: rgba(26, 26, 26, 0.95);
 }
 
 th, td {
-  padding: 12px 15px;
+  padding: 15px 20px;
   text-align: left;
-  border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+  border-bottom: 1px solid rgba(214, 163, 72, 0.2);
 }
 
 th {
-  background: linear-gradient(45deg, var(--dark-bg), var(--darker-bg));
-  color: var(--primary-gold);
+  background: linear-gradient(45deg, var(--deep-green), var(--emerald));
+  color: var(--pale-gold);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   font-size: 0.9rem;
 }
 
 tr:hover {
-  background: rgba(255, 215, 0, 0.05);
+  background: rgba(47, 163, 122, 0.05);
 }
 
 @media (max-width: 768px) {

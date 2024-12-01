@@ -143,7 +143,7 @@ async def handle_options():
         })
     return response
 
-@app.route('/api/document-vault', methods=['GET'])
+@app.route('/api/documents', methods=['GET'])
 async def get_documents():
     """Get all documents from Document Vault."""
     try:
@@ -179,7 +179,7 @@ async def get_documents():
         logger.error(f"Error fetching documents: {str(e)}")
         return jsonify({'error': 'Failed to fetch documents'}), 500
 
-@app.route('/api/document-vault/<int:doc_id>/text', methods=['GET'])
+@app.route('/api/documents/<int:doc_id>/text', methods=['GET'])
 async def get_document_text(doc_id: int):
     """Get full text of a specific document."""
     try:
@@ -198,7 +198,7 @@ async def get_document_text(doc_id: int):
         logger.error(f"Error fetching document text: {str(e)}")
         return jsonify({'error': 'Failed to fetch document text'}), 500
 
-@app.route('/api/document-vault/<int:doc_id>/file', methods=['GET'])
+@app.route('/api/documents/<int:doc_id>/file', methods=['GET'])
 async def get_document_file(doc_id: int):
     """Download the original document file."""
     try:
@@ -226,7 +226,7 @@ async def get_document_file(doc_id: int):
         logger.error(f"Error serving document file: {str(e)}")
         return jsonify({'error': 'Failed to serve document file'}), 500
 
-@app.route('/api/document-vault/search', methods=['POST'])
+@app.route('/api/documents/search', methods=['POST'])
 async def search_documents():
     """Search documents by content or metadata."""
     try:

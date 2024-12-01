@@ -14,6 +14,8 @@ function App() {
   const [error, setError] = useState(null);
   const [newTableName, setNewTableName] = useState('');
   const [showNewTableDialog, setShowNewTableDialog] = useState(false);
+  const [showInventoryDropdown, setShowInventoryDropdown] = useState(false);
+  const [showDocumentsDropdown, setShowDocumentsDropdown] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -50,7 +52,7 @@ function App() {
         setInventory([]);
       }
 
-      // Fetch documents data - Updated to use correct endpoint
+      // Fetch documents data
       try {
         const docResponse = await fetch(`${config.apiUrl}/api/document-vault`, {
           method: 'GET',
@@ -220,52 +222,73 @@ function App() {
         <ProcessImagesButton onProcess={handleProcessFiles} />
         <div className="App">
           <div style={{ textAlign: 'center', margin: '10px 0' }}>
-            <button onClick={() => handleExport('csv', 'inventory')} style={{ backgroundColor: '#4CAF50' }}>
-              Export Inventory as CSV
-            </button>
-            <button onClick={() => handleExport('xls', 'inventory')} style={{ backgroundColor: '#2196F3', marginLeft: '10px' }}>
-              Export Inventory as XLS
-            </button>
-            <button onClick={() => handleExport('csv', 'documents')} style={{ backgroundColor: '#4CAF50', marginLeft: '10px' }}>
-              Export Documents as CSV
-            </button>
-            <button onClick={() => handleExport('xls', 'documents')} style={{ backgroundColor: '#2196F3', marginLeft: '10px' }}>
-              Export Documents as XLS
-            </button>
-            <button onClick={handleResetInventory} style={{ marginLeft: '20px', backgroundColor: '#ff4444' }}>
-              Reset Inventory
-            </button>
-            <button onClick={handleResetDocuments} style={{ marginLeft: '10px', backgroundColor: '#ff4444' }}>
-              Reset Documents
-            </button>
-            <button onClick={() => setShowNewTableDialog(true)} style={{ marginLeft: '10px', backgroundColor: '#44ff44' }}>
+            {/* Inventory Actions Dropdown */}
+            <div className="dropdown-container">
+              <button 
+                className="dropdown-trigger"
+                onClick={() => setShowInventoryDropdown(!showInventoryDropdown)}
+                onBlur={() => setTimeout(() => setShowInventoryDropdown(false), 200)}
+              >
+                Inventory Actions
+              </button>
+              {showInventoryDropdown && (
+                <div className="dropdown-menu">
+                  <button onClick={() => handleExport('csv', 'inventory')}>
+                    Export as CSV
+                  </button>
+                  <button onClick={() => handleExport('xls', 'inventory')}>
+                    Export as XLS
+                  </button>
+                  <button onClick={handleResetInventory} className="danger">
+                    Reset Inventory
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Documents Actions Dropdown */}
+            <div className="dropdown-container">
+              <button 
+                className="dropdown-trigger"
+                onClick={() => setShowDocumentsDropdown(!showDocumentsDropdown)}
+                onBlur={() => setTimeout(() => setShowDocumentsDropdown(false), 200)}
+              >
+                Documents Actions
+              </button>
+              {showDocumentsDropdown && (
+                <div className="dropdown-menu">
+                  <button onClick={() => handleExport('csv', 'documents')}>
+                    Export as CSV
+                  </button>
+                  <button onClick={() => handleExport('xls', 'documents')}>
+                    Export as XLS
+                  </button>
+                  <button onClick={handleResetDocuments} className="danger">
+                    Reset Documents
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button onClick={() => setShowNewTableDialog(true)} style={{ marginLeft: '10px' }}>
               New Inventory Table
             </button>
           </div>
 
           {showNewTableDialog && (
-            <div className="modal" style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              backgroundColor: 'white',
-              padding: '20px',
-              borderRadius: '5px',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-              zIndex: 1000
-            }}>
-              <h3>Create New Inventory Table</h3>
-              <input
-                type="text"
-                value={newTableName}
-                onChange={(e) => setNewTableName(e.target.value)}
-                placeholder="Enter table name"
-                style={{ margin: '10px 0' }}
-              />
-              <div>
-                <button onClick={handleCreateNewTable}>Create</button>
-                <button onClick={() => setShowNewTableDialog(false)} style={{ marginLeft: '10px' }}>Cancel</button>
+            <div className="modal">
+              <div className="modal-content">
+                <h3>Create New Inventory Table</h3>
+                <input
+                  type="text"
+                  value={newTableName}
+                  onChange={(e) => setNewTableName(e.target.value)}
+                  placeholder="Enter table name"
+                />
+                <div>
+                  <button onClick={handleCreateNewTable}>Create</button>
+                  <button onClick={() => setShowNewTableDialog(false)}>Cancel</button>
+                </div>
               </div>
             </div>
           )}
@@ -285,7 +308,7 @@ function App() {
           </nav>
           {error && <div className="error-message">{error}</div>}
 
-          <div className="main-content" style={{ padding: '20px' }}>
+          <div className="main-content">
             <Routes>
               <Route 
                 path="/" 
