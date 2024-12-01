@@ -14,34 +14,35 @@ import asyncio
 from dotenv import load_dotenv
 import base64
 
-# Add parent directory to Python path to import     qÄR1
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+# Configure logging first
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 # Load environment variables from .env if it exists
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 if os.path.exists(dotenv_path):
     load_dotenv(dotenv_path)
 
-# Import configuration
+# Add parent directory to Python path to import main.py
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+# Import configuration first
 try:
-    from config import UPLOADS_DIR, INVENTORY_IMAGES_DIR, EXPORTS_DIR, DATA_DIR
+    from config import UPLOADS_DIR, INVENTORY_IMAGES_DIR, EXPORTS_DIR, DATA_DIR, DOCUMENT_DIRECTORY
 except ImportError:
-    print("Warning: Unable to import config.py. Falling back to environment variables.")
-    UPLOADS_DIR = os.environ.get('UPLOADS_DIR', './uploads')
-    INVENTORY_IMAGES_DIR = os.environ.get('INVENTORY_IMAGES_DIR', './inventory_images')
-    EXPORTS_DIR = os.environ.get('EXPORTS_DIR', './exports')
+    logger.warning("Unable to import config.py. Falling back to environment variables.")
     DATA_DIR = os.environ.get('DATA_DIR', './data')
-    DOCUMENT_DIRECTORY = os.environ.get('DOCUMENT_DIRECTORY', './documents')
+    UPLOADS_DIR = os.environ.get('UPLOADS_DIR', os.path.join(DATA_DIR, 'uploads'))
+    INVENTORY_IMAGES_DIR = os.environ.get('INVENTORY_IMAGES_DIR', os.path.join(DATA_DIR, 'images', 'inventory'))
+    EXPORTS_DIR = os.environ.get('EXPORTS_DIR', os.path.join(DATA_DIR, 'exports'))
+    DOCUMENT_DIRECTORY = os.environ.get('DOCUMENT_DIRECTORY', os.path.join(DATA_DIR, 'documents'))
 
-# Ensure directories exist
-os.makedirs(UPLOADS_DIR, exist_ok=True)
-os.makedirs(INVENTORY_IMAGES_DIR, exist_ok=True)
-os.makedirs(EXPORTS_DIR, exist_ok=True)
-os.makedirs(DATA_DIR, exist_ok=True)
-os.makedirs(DOCUMENT_DIRECTORY, exist_ok=True)
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# Import main after config is set up
+from main import (
+    initialize_database, 
+    process_uploaded_images,
+    process_document
+)
 
 # Initialize app
 app = Quart(__name__)
@@ -84,12 +85,30 @@ app = cors(
         "Access-Control-Allow-Headers",
         "Access-Control-Allow-Methods",
         "Access-Control-Allow-Credentials",
-        "Content-Length"  # Added Content-Length header
+        "Content-Length"
     ],
     allow_credentials=True,
     max_age=86400,
-    expose_headers=["Content-Type", "Authorization", "Content-Length"]  # Added Content-Length
+    expose_headers=["Content-Type", "Authorization", "Content-Length"]
 )
+
+@app.before_serving
+async def startup():
+    """Initialize application before serving."""
+    try:
+        # Ensure directories exist
+        for directory in [DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, EXPORTS_DIR, DOCUMENT_DIRECTORY]:
+            os.makedirs(directory, exist_ok=True)
+            logger.info(f"Created directory: {directory}")
+        
+        # Initialize database connection pool and tables
+        app.db_pool = await get_db_pool()
+        await initialize_database()
+        logger.info("Application initialized successfully")
+    except Exception as e:
+        logger.error(f"Error during startup: {str(e)}")
+        raise
+
 
 @app.after_request
 async def after_request(response):
@@ -466,23 +485,3 @@ async def get_db_pool():
     except Exception as e:
         logging.error(f"Error creating database pool: {str(e)}")
         raise
-
-@app.before_serving
-async def startup():
-    """Initialize application before serving."""
-    try:
-        # Ensure directories exist
-        for directory in [UPLOADS_DIR, INVENTORY_IMAGES_DIR, EXPORTS_DIR, DATA_DIR, DOCUMENT_DIRECTORY]:
-            os.makedirs(directory, exist_ok=True)
-        
-        # Initialize database connection pool and tables
-        app.db_pool = await get_db_pool()  # Using imported get_db_pool from main.py
-        await initialize_database()
-        logger.info("Application initialized successfully")
-    except Exception as e:
-        logger.error(f"Error during startup: {str(e)}")
-        raise
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port)
