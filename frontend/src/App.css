@@ -65,7 +65,7 @@ body {
 }
 
 .hero-section {
-  background-image: url('path_to_chevron_pattern.png');
+  background-image: url('/assets/chevron.png');
   background-size: cover;
   padding: 60px 20px;
   text-align: center;
