@@ -8,11 +8,12 @@ function ImageList({ inventory = [] }) {
   const [imageError, setImageError] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
 
   if (!Array.isArray(inventory) || inventory.length === 0) {
     return (
-      <div>
-        <h2>Product Images</h2>
+      <div className="image-list-container">
+        <h2 className="title">Product Images</h2>
         <p>No images available.</p>
       </div>
     );
@@ -20,9 +21,9 @@ function ImageList({ inventory = [] }) {
 
   const breakpointColumnsObj = {
     default: 4,
-    1100: 3,
-    700: 2,
-    500: 1
+    1400: 3,
+    1000: 2,
+    700: 1
   };
 
   const handleImageClick = (item) => {
@@ -55,25 +56,9 @@ function ImageList({ inventory = [] }) {
   });
 
   return (
-    <div>
-      <h2>Product Images</h2>
+    <div className="image-list-container">
+      <h1 className="title">Product Images</h1>
       <div className="filter-section">
-        <div className="category-filter">
-          <label htmlFor="category-filter">Filter by Category:</label>
-          <select 
-            id="category-filter" 
-            value={filterCategory} 
-            onChange={(e) => setFilterCategory(e.target.value)}
-          >
-            <option value="">All</option>
-            <option value="Beads">Beads</option>
-            <option value="Stools">Stools</option>
-            <option value="Bowls">Bowls</option>
-            <option value="Fans">Fans</option>
-            <option value="Totebags">Totebags</option>
-            <option value="Home Decor">Home Decor</option>
-          </select>
-        </div>
         <div className="search-filter">
           <input 
             type="text" 
@@ -83,12 +68,32 @@ function ImageList({ inventory = [] }) {
             className="search-input"
           />
         </div>
+        <div className="filter-menu-container">
+          <button 
+            className="filter-menu-trigger" 
+            onClick={() => setShowFilterMenu(!showFilterMenu)}
+            onBlur={() => setTimeout(() => setShowFilterMenu(false), 200)}
+          >
+            Filter by Category
+          </button>
+          {showFilterMenu && (
+            <div className="filter-dropdown">
+              <button onClick={() => setFilterCategory('')}>All</button>
+              <button onClick={() => setFilterCategory('Beads')}>Beads</button>
+              <button onClick={() => setFilterCategory('Stools')}>Stools</button>
+              <button onClick={() => setFilterCategory('Bowls')}>Bowls</button>
+              <button onClick={() => setFilterCategory('Fans')}>Fans</button>
+              <button onClick={() => setFilterCategory('Totebags')}>Totebags</button>
+              <button onClick={() => setFilterCategory('Home Decor')}>Home Decor</button>
+            </div>
+          )}
+        </div>
       </div>
 
       <Masonry
         breakpointCols={breakpointColumnsObj}
-        className="my-masonry-grid"
-        columnClassName="my-masonry-grid_column"
+        className="image-masonry-grid"
+        columnClassName="image-masonry-grid_column"
       >
         {filteredInventory.map((item, index) => {
           if (!item?.image_url) return null;
@@ -121,7 +126,7 @@ function ImageList({ inventory = [] }) {
             <img 
               src={`${config.apiUrl}/images/${encodeURIComponent(selectedItem.image_url)}`}
               alt={selectedItem.name || 'Product'}
-              style={{maxWidth: '100%', height: 'auto'}}
+              className="modal-image"
               onError={(e) => {
                 e.target.style.display = 'none';
                 e.target.nextSibling.style.display = 'block';

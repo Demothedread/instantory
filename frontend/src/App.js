@@ -16,10 +16,12 @@ function App() {
   const [showNewTableDialog, setShowNewTableDialog] = useState(false);
   const [showInventoryDropdown, setShowInventoryDropdown] = useState(false);
   const [showDocumentsDropdown, setShowDocumentsDropdown] = useState(false);
+  const [showMainMenu, setShowMainMenu] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
+
 
   const fetchData = async () => {
     setLoading(true);
@@ -33,8 +35,8 @@ function App() {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Origin': window.location.origin
-          }
+            'Origin': window.location.origin,
+          },
         });
 
         if (invResponse.ok) {
@@ -60,8 +62,8 @@ function App() {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Origin': window.location.origin
-          }
+            'Origin': window.location.origin,
+          },
         });
 
         if (docResponse.ok) {
@@ -106,15 +108,15 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'Origin': window.location.origin
+            'Origin': window.location.origin,
           },
           body: JSON.stringify({ table_name: 'products' }),
         });
-        
+
         if (!response.ok) {
           throw new Error('Failed to reset inventory');
         }
-        
+
         await fetchData();
         alert('Inventory reset successful!');
       } catch (error) {
@@ -133,14 +135,14 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'Origin': window.location.origin
-          }
+            'Origin': window.location.origin,
+          },
         });
-        
+
         if (!response.ok) {
           throw new Error('Failed to reset documents');
         }
-        
+
         await fetchData();
         alert('Documents reset successful!');
       } catch (error) {
@@ -163,15 +165,15 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Origin': window.location.origin
+          'Origin': window.location.origin,
         },
         body: JSON.stringify({ table_name: newTableName.trim() }),
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to create new table');
       }
-      
+
       await fetchData();
       setShowNewTableDialog(false);
       setNewTableName('');
@@ -191,8 +193,8 @@ function App() {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Origin': window.location.origin
-        }
+          'Origin': window.location.origin,
+        },
       });
 
       if (!response.ok) {
@@ -213,102 +215,105 @@ function App() {
       setError(`Failed to export ${type}. Please try again later.`);
     }
   };
-
   return (
     <Router>
-      <div className="content-center">
-        <h1>The Power Sorcerer's</h1>
-        <h2>Inventory Management System</h2>
-        <ProcessImagesButton onProcess={handleProcessFiles} />
-        <div className="App">
-          <div style={{ textAlign: 'center', margin: '10px 0' }}>
-            {/* Inventory Actions Dropdown */}
-            <div className="dropdown-container">
-              <button 
-                className="dropdown-trigger"
-                onClick={() => setShowInventoryDropdown(!showInventoryDropdown)}
-                onBlur={() => setTimeout(() => setShowInventoryDropdown(false), 200)}
-              >
-                Inventory Actions
-              </button>
-              {showInventoryDropdown && (
-                <div className="dropdown-menu">
-                  <button onClick={() => handleExport('csv', 'inventory')}>
-                    Export as CSV
-                  </button>
-                  <button onClick={() => handleExport('xls', 'inventory')}>
-                    Export as XLS
-                  </button>
-                  <button onClick={handleResetInventory} className="danger">
-                    Reset Inventory
-                  </button>
-                </div>
-              )}
-            </div>
+      <div className="app-container">
+        {/* Neon Title */}
+        <header className="app-header">
+          <h1 className="neon-title">BARTLEBY'S</h1>
+        </header>
 
-            {/* Documents Actions Dropdown */}
-            <div className="dropdown-container">
-              <button 
-                className="dropdown-trigger"
-                onClick={() => setShowDocumentsDropdown(!showDocumentsDropdown)}
-                onBlur={() => setTimeout(() => setShowDocumentsDropdown(false), 200)}
-              >
-                Documents Actions
-              </button>
-              {showDocumentsDropdown && (
-                <div className="dropdown-menu">
-                  <button onClick={() => handleExport('csv', 'documents')}>
-                    Export as CSV
-                  </button>
-                  <button onClick={() => handleExport('xls', 'documents')}>
-                    Export as XLS
-                  </button>
-                  <button onClick={handleResetDocuments} className="danger">
-                    Reset Documents
-                  </button>
-                </div>
-              )}
-            </div>
+        {/* Main Content */}
+        <div className="main-section">
+          {/* Process Images Button */}
+          <ProcessImagesButton onProcess={handleProcessFiles} />
 
-            <button onClick={() => setShowNewTableDialog(true)} style={{ marginLeft: '10px' }}>
-              New Inventory Table
+          {/* Main Menu */}
+          <div className="menu-container">
+            <button 
+              className="menu-trigger" 
+              onClick={() => setShowMainMenu(!showMainMenu)}
+              onBlur={() => setTimeout(() => setShowMainMenu(false), 200)}
+            >
+              Menu
             </button>
+            {showMainMenu && (
+              <div className="menu-dropdown">
+                <Link to="/">Inventory Overview</Link>
+                <Link to="/images">Image Gallery</Link>
+                <Link to="/documents">Document Library</Link>
+                <div className="dropdown-divider"></div>
+                {/* Inventory Actions */}
+                <div className="submenu">
+                  <button 
+                    onClick={() => setShowInventoryDropdown(!showInventoryDropdown)}
+                  >
+                    Manage Inventory
+                  </button>
+                  {showInventoryDropdown && (
+                    <div className="submenu-dropdown">
+                      <button onClick={() => handleExport('csv', 'inventory')}>
+                        Download CSV Report
+                      </button>
+                      <button onClick={() => handleExport('xls', 'inventory')}>
+                        Download Excel Report
+                      </button>
+                      <button onClick={handleResetInventory} className="danger">
+                        Clear All Inventory Data
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {/* Documents Actions */}
+                <div className="submenu">
+                  <button 
+                    onClick={() => setShowDocumentsDropdown(!showDocumentsDropdown)}
+                  >
+                    Manage Documents
+                  </button>
+                  {showDocumentsDropdown && (
+                    <div className="submenu-dropdown">
+                      <button onClick={() => handleExport('csv', 'documents')}>
+                        Download CSV Report
+                      </button>
+                      <button onClick={() => handleExport('xls', 'documents')}>
+                        Download Excel Report
+                      </button>
+                      <button onClick={handleResetDocuments} className="danger">
+                        Clear All Documents
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => setShowNewTableDialog(true)}>
+                  Create Custom Inventory
+                </button>
+              </div>
+            )}
           </div>
 
           {showNewTableDialog && (
             <div className="modal">
               <div className="modal-content">
-                <h3>Create New Inventory Table</h3>
+                <h3>Create Custom Inventory Table</h3>
                 <input
                   type="text"
                   value={newTableName}
                   onChange={(e) => setNewTableName(e.target.value)}
-                  placeholder="Enter table name"
+                  placeholder="Enter a name for your inventory"
                 />
                 <div>
-                  <button onClick={handleCreateNewTable}>Create</button>
+                  <button onClick={handleCreateNewTable}>Create Table</button>
                   <button onClick={() => setShowNewTableDialog(false)}>Cancel</button>
                 </div>
               </div>
             </div>
           )}
 
-          <nav>
-            <ul className="nav-links">
-              <li>
-                <Link to="/">Inventory Table</Link>
-              </li>
-              <li>
-                <Link to="/images">Image Grid</Link>
-              </li>
-              <li>
-                <Link to="/documents">Documents</Link>
-              </li>
-            </ul>
-          </nav>
           {error && <div className="error-message">{error}</div>}
 
-          <div className="main-content">
+          {/* Main Content Area */}
+          <div className="content-area">
             <Routes>
               <Route 
                 path="/" 

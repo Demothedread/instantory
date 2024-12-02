@@ -1,189 +1,168 @@
+/* InventoryTable.css */
+
+/* Importing custom fonts */
+@font-face {
+  font-family:"bodega-sans";
+  src:url("https://use.typekit.net/af/56d5a3/00000000000000003b9ae3c4/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n3&v=3") 
+}
+
+@font-face {
+  font-family:"swaak-centennial-mn";
+  src:url("https://use.typekit.net/af/b4a385/000000000000000077559585/30/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n4&v=3") 
+}
+
+@font-face {
+  font-family:"capitol";
+  src:url("https://use.typekit.net/af/13b4e6/00000000000000007735b446/30/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n3&v=3") 
+}
+
+body {
+  font-family: 'bodega-sans', sans-serif;
+  background-color: #0a0a0a; /* Lacquered black */
+  color: #e0e0e0; /* Metallic silver */
+  margin: 0;
+  padding: 0;
+}
+
 .inventory-container {
-  padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
+  padding: 20px;
+}
+
+.title {
+  font-family: 'swaak-centennial-mn', 'capitol', serif;
+  font-size: 3em;
+  color: #7fffd4; /* Ice blue */
+  text-align: center;
+  margin-bottom: 30px;
 }
 
 .header-section {
   margin-bottom: 40px;
-  text-align: left;
-}
-
-.header-section h1 {
-  color: #333;
-  font-size: 2.5em;
-  margin-bottom: 20px;
-  line-height: 1.2;
-}
-
-.header-section p {
-  font-size: 1.1em;
-  line-height: 1.6;
-  color: #555;
-}
-
-.workflow-section {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 30px;
-  margin: 30px 0;
-}
-
-.image-workflow,
-.document-workflow {
-  background: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.benefits-section {
-  margin: 30px 0;
-}
-
-.benefits-section ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-.benefits-section li {
-  margin: 15px 0;
-  padding-left: 25px;
-  position: relative;
-}
-
-.benefits-section li:before {
-  content: "•";
-  color: #4CAF50;
-  font-weight: bold;
-  position: absolute;
-  left: 0;
-}
-
-.technology-section {
-  background: #f8f9fa;
-  padding: 25px;
-  border-radius: 8px;
-  margin: 30px 0;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.instructions-section {
-  margin: 30px 0;
-}
-
-.instruction-steps p {
-  margin: 10px 0;
-  padding-left: 20px;
-  border-left: 3px solid #4CAF50;
 }
 
 .filter-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin: 20px 0;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
 }
 
-.category-filter,
 .search-filter {
   flex: 1;
-  margin: 0 10px;
+  margin-right: 10px;
 }
 
-.category-filter label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 500;
-}
-
-.category-filter select,
-.search-filter input {
+.search-input {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-  background-color: white;
+  border: 1px solid #4b6e71; /* Emerald green */
+  background-color: #1a1a1a;
+  color: #e0e0e0;
 }
 
-.search-filter input {
-  padding-left: 30px;
-  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>');
-  background-repeat: no-repeat;
-  background-position: 8px center;
+.filter-menu-container {
+  position: relative;
+}
+
+.filter-menu-trigger {
+  background-color: #4b6e71; /* Emerald green */
+  color: #e0e0e0;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-family: 'Bodega Sans', sans-serif;
+}
+
+.filter-menu-trigger:hover {
+  background-color: #7fffd4; /* Ice blue */
+  color: #0a0a0a;
+}
+
+.filter-dropdown {
+  position: absolute;
+  background-color: #0a0a0a;
+  box-shadow: 0px 8px 16px rgba(0,0,0,0.5);
+  z-index: 2;
+  min-width: 200px;
+  margin-top: 5px;
+}
+
+.filter-dropdown button {
+  background: none;
+  border: none;
+  color: #e0e0e0;
+  padding: 10px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  font-family: 'bodega-sans', sans-serif;
+}
+
+.filter-dropdown button:hover {
+  background-color: #4b6e71;
 }
 
 .table-container {
   overflow-x: auto;
-  margin-top: 20px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-table {
+.inventory-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 800px;
+  animation: fadeIn 0.5s ease-in-out;
 }
 
-th {
-  background-color: #f8f9fa;
-  padding: 12px;
+.inventory-table th,
+.inventory-table td {
+  padding: 15px;
+  border: 1px solid #4b6e71;
   text-align: left;
-  font-weight: 600;
-  color: #333;
-  cursor: pointer;
-  border-bottom: 2px solid #dee2e6;
-  transition: background-color 0.2s;
 }
 
-th:hover {
-  background-color: #e9ecef;
+.inventory-table th {
+  font-family: 'swaak-centennial-mn', 'Capitol', serif;
+  font-size: 1.2em;
+  background-color: #1a1a1a;
+  color: #b8860b; /* Pale gold */
+  position: sticky;
+  top: 0;
 }
 
-td {
-  padding: 12px;
-  border-bottom: 1px solid #dee2e6;
-  vertical-align: top;
+.inventory-table tbody tr:nth-child(even) {
+  background-color: #0a0a0a;
 }
 
-tr:hover {
-  background-color: #f8f9fa;
+.inventory-table tbody tr:hover {
+  background-color: #4b6e71;
+  color: #e0e0e0;
 }
 
-.description-cell {
-  max-width: 300px;
+.inventory-image {
+  width: 100px;
+  height: auto;
+  border: 1px solid #4b6e71;
 }
 
 .description-cell div {
   margin-bottom: 5px;
-  line-height: 1.4;
 }
 
-.image-cell {
-  width: 120px;
-  text-align: center;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.inventory-image {
-  border-radius: 4px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: transform 0.2s;
-  max-width: 100px;
-  height: auto;
-  object-fit: cover;
+/* Animation when switching between tables */
+.table-container {
+  animation: slideIn 0.5s ease-in-out;
 }
 
-.inventory-image:hover {
-  transform: scale(1.1);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-}
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}        
 
 @media (max-width: 768px) {
   .workflow-section {
@@ -235,7 +214,7 @@ tr:hover {
   }
 
   .search-filter input {
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23aaa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>');
+    background-image: url();
   }
 
   .table-container {

@@ -1,151 +1,146 @@
+/* ProcessImagesButton.css */
+
+/* Importing custom fonts */
+@font-face {
+  font-family: 'bodega-sans';
+  src: url('https://use.typekit.net/af/56d5a3/00000000000000003b9ae3c4/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n3&v=3');
+}
+
+@font-face {
+  font-family: 'swaak-centennial-mn';
+  src: url('https://use.typekit.net/af/b4a385/000000000000000077559585/30/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n4&v=3');
+}
+
+@font-face {
+  font-family: 'capitol';
+  src: url('https://use.typekit.net/af/13b4e6/00000000000000007735b446/30/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n3&v=3');
+}
+
+@font-face {
+  font-family: 'broadacre-thin-2';
+  src: url('https://use.typekit.net/af/fac79c/00000000000000007735e114/30/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n1&v=3');
+}
+
+body {
+  font-family: 'bodega-sans', sans-serif;
+  background-color: #0a0a0a; /* Lacquered black */
+  color: #e0e0e0; /* Metallic silver */
+}
+
 .process-images-container {
+  max-width: 800px;
+  margin: 0 auto;
   padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  margin-bottom: 20px;
 }
 
-.instruction-section {
-  margin-bottom: 20px;
-}
-
-.instruction-section label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-}
-
-.instruction-section input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
+.instruction-section,
 .file-upload-section {
   margin-bottom: 20px;
 }
 
+.instruction-section label,
 .file-upload-section label {
+  font-family: 'swaak-centennial-mn', 'capitol', serif;
+  font-size: 1.2em;
+  color: #7fffd4; /* Ice blue */
   display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
+  margin-bottom: 10px;
 }
 
-.file-upload-section input[type="file"] {
-  display: block;
+.instruction-input,
+.file-input {
   width: 100%;
   padding: 10px;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  background-color: white;
-  cursor: pointer;
+  border: 1px solid #4b6e71; /* Emerald green */
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  font-family: 'bodega-sans', sans-serif;
 }
 
 .file-types-info {
   margin-top: 10px;
   font-size: 0.9em;
-  color: #666;
+  color: #b8860b; /* Pale gold */
 }
 
 .file-types-info ul {
-  margin: 5px 0;
-  padding-left: 20px;
+  list-style: none;
+  padding-left: 0;
+}
+
+.file-types-info li::before {
+  content: '• ';
+  color: #7fffd4; /* Ice blue */
 }
 
 .error-message {
-  color: #dc3545;
+  color: #800020; /* Dark burgundy */
+  background-color: #1a1a1a;
   padding: 10px;
-  margin: 10px 0;
-  background-color: #f8d7da;
-  border: 1px solid #f5c6cb;
-  border-radius: 4px;
-}
-
-.process-button {
-  padding: 10px 20px;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-  width: 100%;
-  margin-top: 10px;
-}
-
-.process-button:hover:not(:disabled) {
-  background-color: #45a049;
-}
-
-.process-button:disabled {
-  background-color: #cccccc;
-  cursor: not-allowed;
+  margin: 20px 0;
+  border: 1px solid #800020;
+  text-align: center;
+  font-family: 'bodega-sans', sans-serif;
 }
 
 .progress-bar {
+  background-color: #1a1a1a;
+  border: 1px solid #4b6e71;
+  height: 25px;
   width: 100%;
-  height: 20px;
-  background-color: #f0f0f0;
-  border-radius: 10px;
+  margin-bottom: 10px;
   overflow: hidden;
-  margin: 10px 0;
 }
 
 .progress-bar-fill {
+  background-color: #7fffd4;
   height: 100%;
-  background-color: #4CAF50;
-  transition: width 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 12px;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+  color: #0a0a0a;
+  text-align: center;
+  line-height: 25px;
+  transition: width 0.3s ease-in-out;
+  font-family: 'bodega-sans', sans-serif;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
+.processing-status {
+  font-family: 'broadacre-thin-2', sans-serif;
+  color: #e0e0e0;
+  font-size: 1em;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.process-button {
+  background-color: #4b6e71; /* Emerald green */
+  color: #e0e0e0;
+  border: none;
+  padding: 15px 30px;
+  cursor: pointer;
+  font-family: 'bodega-sans', sans-serif;
+  font-size: 1.2em;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+  display: block;
+}
+
+.process-button:hover {
+  background-color: #7fffd4; /* Ice blue */
+  color: #0a0a0a;
+}
+
+@media (max-width: 600px) {
   .process-images-container {
-    padding: 15px;
+    padding: 10px;
   }
 
-  .instruction-section input,
-  .file-upload-section input[type="file"] {
-    font-size: 14px;
+  .instruction-section label,
+  .file-upload-section label {
+    font-size: 1em;
   }
 
   .process-button {
-    padding: 8px 16px;
-    font-size: 14px;
-  }
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .process-images-container {
-    background-color: #2d2d2d;
-  }
-
-  .instruction-section input,
-  .file-upload-section input[type="file"] {
-    background-color: #3d3d3d;
-    border-color: #4d4d4d;
-    color: #ffffff;
-  }
-
-  .file-types-info {
-    color: #aaaaaa;
-  }
-
-  .progress-bar {
-    background-color: #3d3d3d;
-  }
-
-  .progress-bar-fill {
-    background-color: #45a049;
+    font-size: 1em;
+    padding: 10px 20px;
   }
 }

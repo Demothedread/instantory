@@ -10,6 +10,7 @@ function DocumentsTable({ documents }) {
   const [semanticResults, setSemanticResults] = useState(null);
   const [semanticQuery, setSemanticQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
 
   const handleSort = (column) => {
     if (sortColumn === column) {
@@ -33,7 +34,7 @@ function DocumentsTable({ documents }) {
     
     setIsSearching(true);
     try {
-      const response = await fetch(`${config.apiUrl}/api/document-vault/search`, {
+      const response = await fetch(`${config.apiUrl}/api/documents/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,7 +61,7 @@ function DocumentsTable({ documents }) {
 
   const handleDownload = async (docId) => {
     try {
-      window.open(`${config.apiUrl}/api/document-vault/${docId}/file`, '_blank');
+      window.open(`${config.apiUrl}/api/documents/${docId}/file`, '_blank');
     } catch (error) {
       console.error('Error downloading document:', error);
     }
@@ -108,8 +109,8 @@ function DocumentsTable({ documents }) {
 
   if (!Array.isArray(documents) || documents.length === 0) {
     return (
-      <div>
-        <h2>Document Vault</h2>
+      <div className="documents-table-container">
+        <h2 className="title">Document Vault</h2>
         <p>No documents available.</p>
       </div>
     );
@@ -117,48 +118,59 @@ function DocumentsTable({ documents }) {
 
   return (
     <div className="documents-table-container">
-      <div className="search-controls">
-        <div className="basic-search">
+      <h1 className="title">Document Vault</h1>
+
+      <div className="filter-section">
+        <div className="search-filter">
           <input
             type="text"
-            placeholder="Filter documents..."
+            placeholder="Search documents..."
             value={searchTerm}
             onChange={(e) => handleSearch(e.target.value)}
             className="search-input"
           />
-          <select
-            value={filterCategory}
-            onChange={(e) => handleFilter(e.target.value)}
-            className="category-filter"
-          >
-            <option value="">All Categories</option>
-            {categories.map(category => (
-              <option key={category} value={category}>{category}</option>
-            ))}
-          </select>
         </div>
-
-        <div className="semantic-search">
-          <input
-            type="text"
-            placeholder="Enter semantic search query..."
-            value={semanticQuery}
-            onChange={(e) => setSemanticQuery(e.target.value)}
-            className="semantic-search-input"
-          />
+        <div className="filter-menu-container">
           <button 
-            onClick={handleSemanticSearch}
-            disabled={isSearching || !semanticQuery.trim()}
-            className="semantic-search-button"
+            className="filter-menu-trigger" 
+            onClick={() => setShowFilterMenu(!showFilterMenu)}
+            onBlur={() => setTimeout(() => setShowFilterMenu(false), 200)}
           >
-            {isSearching ? 'Searching...' : 'Semantic Search'}
+            Filter by Category
           </button>
+          {showFilterMenu && (
+            <div className="filter-dropdown">
+              <button onClick={() => handleFilter('')}>All Categories</button>
+              {categories.map(category => (
+                <button key={category} onClick={() => handleFilter(category)}>
+                  {category}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
+      </div>
+
+      <div className="semantic-search-section">
+        <input
+          type="text"
+          placeholder="Enter semantic search query..."
+          value={semanticQuery}
+          onChange={(e) => setSemanticQuery(e.target.value)}
+          className="semantic-search-input"
+        />
+        <button 
+          onClick={handleSemanticSearch}
+          disabled={isSearching || !semanticQuery.trim()}
+          className="semantic-search-button"
+        >
+          {isSearching ? 'Searching...' : 'Semantic Search'}
+        </button>
       </div>
 
       {semanticResults && (
         <div className="semantic-results">
-          <h3>Search Results</h3>
+          <h3 className="subtitle">Search Results</h3>
           <button onClick={() => setSemanticResults(null)} className="clear-results">
             Clear Results
           </button>
@@ -185,30 +197,30 @@ function DocumentsTable({ documents }) {
       )}
 
       {!semanticResults && (
-        <div className="table-wrapper">
+        <div className="table-container">
           <table className="documents-table">
             <thead>
               <tr>
                 <th onClick={() => handleSort('title')}>
-                  Title{sortColumn === 'title' && (sortDirection === 'asc' ? ' ↑' : ' ↓')}
+                  Title {sortColumn === 'title' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
                 <th onClick={() => handleSort('author')}>
-                  Author{sortColumn === 'author' && (sortDirection === 'asc' ? ' ↑' : ' ↓')}
+                  Author {sortColumn === 'author' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
                 <th onClick={() => handleSort('category')}>
-                  Category{sortColumn === 'category' && (sortDirection === 'asc' ? ' ↑' : ' ↓')}
+                  Category {sortColumn === 'category' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
                 <th onClick={() => handleSort('field')}>
-                  Field{sortColumn === 'field' && (sortDirection === 'asc' ? ' ↑' : ' ↓')}
+                  Field {sortColumn === 'field' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
                 <th onClick={() => handleSort('publication_year')}>
-                  Year{sortColumn === 'publication_year' && (sortDirection === 'asc' ? ' ↑' : ' ↓')}
+                  Year {sortColumn === 'publication_year' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
                 <th>Summary</th>
                 <th>Thesis</th>
                 <th>Issue</th>
                 <th onClick={() => handleSort('journal_publisher')}>
-                  Journal/Publisher{sortColumn === 'journal_publisher' && (sortDirection === 'asc' ? ' ↑' : ' ↓')}
+                  Journal/Publisher {sortColumn === 'journal_publisher' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
                 <th>Influences</th>
                 <th>Tags</th>

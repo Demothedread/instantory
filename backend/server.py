@@ -1,5 +1,5 @@
 from typing import List, Optional
-from quart import Quart, jsonify, request, send_file
+from quart import Quart, jsonify, request, send_file, websocket
 from quart_cors import cors
 import asyncpg
 import logging
@@ -13,6 +13,11 @@ import urllib.parse as urlparse
 import asyncio
 from dotenv import load_dotenv
 import base64
+import uuid
+
+# Global dictionary to track tasks (For demonstration; consider using Redis or a database in production)
+processing_tasks = {}
+
 
 # Configure logging first
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -445,6 +450,23 @@ async def process_files():
                         os.remove(file_path)
                 except Exception as cleanup_error:
                     logger.error(f"Error cleaning up file {file_path}: {str(cleanup_error)}")
+        try:
+                # Generate a unique task ID
+                task_id = str(uuid.uuid4())
+                processing_tasks[task_id] = {
+                    'status': 'queued',
+                    'progress': 0,
+                    'message': 'Task queued'
+                }
+
+                # Start the processing in the background
+                asyncio.create_task(process_files_async(uploaded_files, instruction, task_id))
+
+                return jsonify({'status': 'success', 'task_id': task_id}), 202
+
+        except Exception as e:
+            logger.error(f"Error processing files: {str(e)}")
+            return jsonify({'error': str(e)}), 500
 
 async def get_db_pool():
     """Get PostgreSQL connection pool from environment variables or URL."""
@@ -485,3 +507,44 @@ async def get_db_pool():
     except Exception as e:
         logging.error(f"Error creating database pool: {str(e)}")
         raise
+
+async def process_files_async(uploaded_files, instruction, task_id):
+    try:
+        processing_tasks[task_id]['status'] = 'processing'
+        processing_tasks[task_id]['message'] = 'Processing files...'
+        processing_tasks[task_id]['progress'] = 10
+
+        async with app.db_pool.acquire() as conn:
+            # Process images
+            if uploaded_files['images']:
+                processing_tasks[task_id]['message'] = 'Processing images...'
+                await process_uploaded_images(instruction, conn)
+                processing_tasks[task_id]['progress'] = 50
+
+            # Process documents
+            if uploaded_files['documents']:
+                processing_tasks[task_id]['message'] = 'Processing documents...'
+                await process_document(uploaded_files['documents'], instruction, conn)
+                processing_tasks[task_id]['progress'] = 80
+
+        processing_tasks[task_id]['status'] = 'completed'
+        processing_tasks[task_id]['message'] = 'Processing complete!'
+        processing_tasks[task_id]['progress'] = 100
+
+    except Exception as e:
+        logger.error(f"Error in background processing task {task_id}: {str(e)}")
+        processing_tasks[task_id]['status'] = 'failed'
+        processing_tasks[task_id]['message'] = f'Error: {str(e)}'
+        processing_tasks[task_id]['progress'] = 100
+
+@app.route('/processing-status/<task_id>', methods=['GET'])
+async def processing_status(task_id):
+    task_info = processing_tasks.get(task_id)
+    if not task_info:
+        return jsonify({'error': 'Invalid task ID'}), 404
+
+    return jsonify({
+        'status': task_info['status'],
+        'progress': task_info['progress'],
+        'message': task_info['message']
+    })     

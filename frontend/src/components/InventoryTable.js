@@ -8,6 +8,7 @@ function InventoryTable({ inventory }) {
   const [sortDirection, setSortDirection] = useState(null);
   const [filterCategory, setFilterCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
 
   const handleSort = (column) => {
     if (sortColumn === column) {
@@ -28,8 +29,8 @@ function InventoryTable({ inventory }) {
 
   if (!Array.isArray(inventory) || inventory.length === 0) {
     return (
-      <div>
-        <h2>Inventory</h2>
+      <div className="inventory-container">
+        <h2 className="title">Inventory</h2>
         <p>No inventory data available.</p>
       </div>
     );
@@ -63,94 +64,14 @@ function InventoryTable({ inventory }) {
     if (aStr > bStr) return sortDirection === 'asc' ? 1 : -1;
     return 0;
   });
+
   return (
     <div className="inventory-container">
       <div className="header-section">
-        <h1>Revolutionize Your Workflow with Our Image and Document Processing Service</h1>
-        <p>
-          Introducing our cutting-edge Image and Document Processing Service—revolutionizing the way you manage visual and textual data.
-          This service seamlessly handles images and documents one at a time, employing advanced AI algorithms to deliver powerful insights
-          that transform your workflow.
-        </p>
-
-        <h2>How It Works</h2>
-
-        <div className="workflow-section">
-          <div className="image-workflow">
-            <h3>For Images</h3>
-            <p>
-              When an image is uploaded, our AI analyzes its content to generate detailed descriptions, helping you catalog and categorize 
-              visual assets effortlessly. Imagine uploading a product photo; the system generates a description like 
-              "A red sports car parked in a cityscape," which enhances product listings and searchability. The results are stored in a highly 
-              structured SQL table, with each unique item linked to an image grid for easy access and management.
-            </p>
-          </div>
-
-          <div className="document-workflow">
-            <h3>For Documents</h3>
-            <p>
-              When a document is processed, the service summarizes its key points, extracts relevant metadata (like author, creation date, 
-              and keywords), and builds a searchable vectorized database of terms. For instance, uploading an academic paper means you 
-              instantly receive a concise summary and can quickly search for terms throughout the document, accelerating research and review 
-              processes.
-            </p>
-          </div>
-        </div>
-
-        <div className="benefits-section">
-          <h3>Key Benefits</h3>
-          <ul>
-            <li><strong>Efficient Cataloging:</strong> Quickly tag and describe images and documents, enhancing discoverability.</li>
-            <li><strong>Structured Data:</strong> SQL output allows for easy integration into existing systems.</li>
-            <li><strong>Intelligent Summarization:</strong> Get to the crux of documents without sifting through pages.</li>
-            <li><strong>Searchability:</strong> Vectorized terms enable advanced search capabilities across all stored content.</li>
-          </ul>
-
-          <p>
-            Whether you're managing a media library or researching vast documentation, our service is your go-to solution for intelligent 
-            data management that fits perfectly into today's fast-paced, data-driven landscape.
-          </p>
-        </div>
-
-        <div className="technology-section">
-          <h3>Technology Powered by GPT-4o</h3>
-          <p>
-            This system utilizes GPT-4o image recognition technology to create and describe a catalog of items, saving you hours of time-consuming 
-            product entry by automating the process. Trained against thousands of product images and leveraging GPT-4o more generally, it is 
-            designed to determine the specifications, materials, and estimate an MSRP based on thousands of similar products. This makes it 
-            perfect for automatic inventory creation and management.
-          </p>
-          <p>
-            Additionally, for documents, this technology is ideal for researchers who need to quickly identify the most relevant content within 
-            a batch of documents. It provides both a starting point and a comprehensive analysis to enhance your research, allowing you to focus 
-            on what matters most while delivering deeper insights efficiently.
-          </p>
-        </div>
-
-        <div className="instructions-section">
-          <h3>Usage Instructions</h3>
-          <div className="instruction-steps">
-            <p><strong>1. Upload Files:</strong> Select images or documents using the 'Choose Files' button and click 'Process Files'.</p>
-            <p><strong>2. Processing:</strong> Files are validated and processed through our AI analysis pipeline.</p>
-            <p><strong>3. View Results:</strong> Access processed items in the inventory table or document vault.</p>
-            <p><strong>4. Maintain Records:</strong> Original files are preserved for future reference.</p>
-          </div>
-        </div>
+        <h1 className="title">Inventory</h1>
       </div>
 
       <div className="filter-section">
-        <div className="category-filter">
-          <label htmlFor="category-filter">Filter by Category:</label>
-          <select id="category-filter" value={filterCategory} onChange={(e) => handleFilter(e.target.value)}>
-            <option value="">All</option>
-            <option value="Beads">Beads</option>
-            <option value="Stools">Stools</option>
-            <option value="Bowls">Bowls</option>
-            <option value="Fans">Fans</option>
-            <option value="Totebags">Totebags</option>
-            <option value="Home Decor">Home Decor</option>
-          </select>
-        </div>
         <div className="search-filter">
           <input 
             type="text" 
@@ -160,10 +81,30 @@ function InventoryTable({ inventory }) {
             className="search-input"
           />
         </div>
+        <div className="filter-menu-container">
+          <button 
+            className="filter-menu-trigger" 
+            onClick={() => setShowFilterMenu(!showFilterMenu)}
+            onBlur={() => setTimeout(() => setShowFilterMenu(false), 200)}
+          >
+            Filter by Category
+          </button>
+          {showFilterMenu && (
+            <div className="filter-dropdown">
+              <button onClick={() => handleFilter('')}>All</button>
+              <button onClick={() => handleFilter('Beads')}>Beads</button>
+              <button onClick={() => handleFilter('Stools')}>Stools</button>
+              <button onClick={() => handleFilter('Bowls')}>Bowls</button>
+              <button onClick={() => handleFilter('Fans')}>Fans</button>
+              <button onClick={() => handleFilter('Totebags')}>Totebags</button>
+              <button onClick={() => handleFilter('Home Decor')}>Home Decor</button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="table-container">
-        <table>
+        <table className="inventory-table">
           <thead>
             <tr>
               <th onClick={() => handleSort('name')}>Name {sortColumn === 'name' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
@@ -192,7 +133,6 @@ function InventoryTable({ inventory }) {
                     <img 
                       src={`${config.apiUrl}/images/${encodeURIComponent(item.image_url)}`} 
                       alt={item?.name || 'Product'} 
-                      style={{width: '100px', height: 'auto'}}
                       className="inventory-image"
                       onError={(e) => {
                         if (!e.target.dataset.retried) {

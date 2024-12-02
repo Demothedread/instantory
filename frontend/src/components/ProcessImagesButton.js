@@ -9,6 +9,9 @@ function ProcessImagesButton({ onProcess }) {
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [processingStatus, setProcessingStatus] = useState('');
+  const [taskId, setTaskId] = useState(null);
 
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files);
@@ -19,6 +22,8 @@ function ProcessImagesButton({ onProcess }) {
     setSelectedFiles(files);
     setErrorMessage('');
     setUploadProgress(0);
+    setProcessingProgress(0);
+    setProcessingStatus('');
   };
 
   const handleInstructionChange = (event) => {
@@ -69,13 +74,10 @@ function ProcessImagesButton({ onProcess }) {
       });
 
       if (response.data.status === 'success') {
-        alert('Files processed successfully!');
-        if (onProcess) {
-          await onProcess();
-        }
-        setSelectedFiles(null);
-        document.getElementById('file-upload').value = '';
-        setUploadProgress(0);
+        setTaskId(response.data.task_id);
+        setUploadProgress(100);
+        setProcessingStatus('Processing files...');
+        pollProcessingStatus(response.data.task_id);
       } else {
         throw new Error(response.data.message || 'An error occurred during file processing.');
       }
@@ -87,9 +89,52 @@ function ProcessImagesButton({ onProcess }) {
         error.message || 
         'An error occurred while processing the files. Please try again.'
       );
-    } finally {
       setIsUploading(false);
     }
+  };
+
+  const pollProcessingStatus = (taskId) => {
+    const interval = setInterval(async () => {
+      try {
+        const statusResponse = await axios.get(`${config.apiUrl}/processing-status/${taskId}`, {
+          headers: {
+            ...config.headers
+          },
+          withCredentials: true
+        });
+
+        if (statusResponse.data.status === 'completed') {
+          setProcessingProgress(100);
+          setProcessingStatus('Processing complete!');
+          clearInterval(interval);
+          alert('Files processed successfully!');
+          if (onProcess) {
+            await onProcess();
+          }
+          setSelectedFiles(null);
+          document.getElementById('file-upload').value = '';
+          setUploadProgress(0);
+          setProcessingProgress(0);
+          setProcessingStatus('');
+          setIsUploading(false);
+          // Auto-reload the page
+          window.location.reload();
+        } else if (statusResponse.data.status === 'failed') {
+          setErrorMessage('An error occurred during processing.');
+          clearInterval(interval);
+          setIsUploading(false);
+        } else {
+          // Update processing progress and status
+          setProcessingProgress(statusResponse.data.progress);
+          setProcessingStatus(statusResponse.data.message);
+        }
+      } catch (error) {
+        console.error('Error getting processing status:', error);
+        setErrorMessage('An error occurred while getting processing status.');
+        setIsUploading(false);
+        clearInterval(interval);
+      }
+    }, 2000); // Poll every 2 seconds
   };
 
   return (
@@ -104,6 +149,7 @@ function ProcessImagesButton({ onProcess }) {
           placeholder="Enter custom instruction for file interpretation"
           aria-label="Custom instruction for file interpretation"
           disabled={isUploading}
+          className="instruction-input"
         />
       </div>
       <div className="file-upload-section">
@@ -116,6 +162,7 @@ function ProcessImagesButton({ onProcess }) {
           accept="image/*,.pdf,.doc,.docx,.txt,.rtf"
           aria-label="Choose files to process"
           disabled={isUploading}
+          className="file-input"
         />
         <div className="file-types-info">
           Supported file types:
@@ -127,14 +174,31 @@ function ProcessImagesButton({ onProcess }) {
       </div>
       {errorMessage && <div className="error-message">{errorMessage}</div>}
       {isUploading && (
-        <div className="progress-bar">
-          <div 
-            className="progress-bar-fill" 
-            style={{ width: `${uploadProgress}%` }}
-          >
-            {uploadProgress}%
+        <>
+          <div className="progress-bar">
+            <div 
+              className="progress-bar-fill" 
+              style={{ width: `${uploadProgress}%` }}
+            >
+              {uploadProgress}%
+            </div>
           </div>
-        </div>
+          {uploadProgress === 100 && (
+            <>
+              <div className="progress-bar">
+                <div 
+                  className="progress-bar-fill" 
+                  style={{ width: `${processingProgress}%` }}
+                >
+                  {processingProgress}%
+                </div>
+              </div>
+              <div className="processing-status">
+                {processingStatus}
+              </div>
+            </>
+          )}
+        </>
       )}
       <button 
         onClick={handleProcess} 
