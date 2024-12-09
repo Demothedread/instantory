@@ -220,7 +220,9 @@ function App() {
       <div className="app-container">
         {/* Neon Title */}
         <header className="app-header">
-          <h1 className="neon-title">BARTLEBY'S</h1>
+          <h1 className="neon-title">BARTLEBY</h1>
+          <div className="app-title">the based intern</div>
+            <h2 className="app-subtitle"> No task too menial. No inventory list too long.  <br></br>Let Bartleby do your bitchwork</h2>
         </header>
 
         {/* Main Content */}
