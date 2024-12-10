@@ -18,7 +18,7 @@
 
 body {
   font-family: 'bodega-sans', sans-serif;
-  background-color: #0a0a0a; /* Lacquered black */
+  background-color: #24002b; /* Lacquered black */
   color: #e0e0e0; /* Metallic silver */
   margin: 0;
   padding: 0;
@@ -214,7 +214,7 @@ body {
   }
 
   .search-filter input {
-    background-image: url(https://imgur.com/O4Z3DoQ);
+    background-image: url('/src/assets/borders/artdeco_transparentborder.png');
   }
 
   .table-container {
