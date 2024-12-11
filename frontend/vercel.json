@@ -1,19 +1,11 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "build"
-      }
-    }
-  ],
+  "framework": "create-react-app",
   "routes": [
     {
       "src": "/static/(.*)",
       "headers": { "cache-control": "s-maxage=31536000, immutable" },
-      "dest": "/static/$1"
+      "dest": "/stat"
     },
     {
       "src": "/favicon.ico",
