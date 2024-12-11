@@ -11,7 +11,7 @@ const config = {
   },
   // Production API URL
   production: {
-    apiUrl: process.env.REACT_APP_BACKEND_URL || 'https://instantory-api.onrender.com',
+    apiUrl: process.env.REACT_APP_BACKEND_URL || 'https://instantory.onrender.com',
     headers: {
       'Accept': 'application/json',
       'Origin': window.location.origin,
