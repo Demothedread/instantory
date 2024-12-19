@@ -1,33 +1,77 @@
 /* ProcessImagesButton.css */
-@font-face {
-  font-family: 'bodega-sans';
-  src: url('https://use.typekit.net/af/56d5a3/00000000000000003b9ae3c4/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n3&v=3');
-}
-
-@font-face {
-  font-family: 'swaak-centennial-mn';
-  src: url('https://use.typekit.net/af/b4a385/000000000000000077559585/30/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n4&v=3');
+:root {
+  --emerald: #1A9485;
+  --emerald-light: #40E0D0;
+  --burgundy: #800020;
+  --gold: #D4AF37;
+  --cream: #F5F2E9;
+  --dark-green: #0A4B40;
+  --black: #1A1A1A;
 }
 
 .process-images-container {
   max-width: 800px;
-  margin: 2rem auto;
-  padding: 20px;
-  background: rgba(10, 10, 10, 0.9);
-  border: 1px solid #4b6e71;
+  margin: 3rem auto;
+  padding: 3rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid var(--gold);
+  position: relative;
   animation: slideUp 0.5s ease-out;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.1);
+}
+
+.process-images-container::before,
+.process-images-container::after {
+  content: '';
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background-image: url('../assets/borders/decoTrans_goldCorner.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.process-images-container::before {
+  top: -25px;
+  left: -25px;
+  transform: rotate(-45deg);
+}
+
+.process-images-container::after {
+  bottom: -25px;
+  right: -25px;
+  transform: rotate(135deg);
 }
 
 .instruction-section,
 .file-upload-section {
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
+  position: relative;
+  padding: 0.5rem;
+}
+
+.instruction-section::after,
+.file-upload-section::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50%;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--gold),
+    transparent
+  );
 }
 
 .instruction-section label,
 .file-upload-section label {
-  font-family: '-centennial-mn', serif;
+  font-family: 'Playfair Display', serif;
   font-size: 1.2em;
-  color: #7fffd4;
+  color: var(--burgundy);
   display: block;
   margin-bottom: 0.5rem;
   animation: fadeIn 0.5s ease-out;
@@ -35,28 +79,48 @@
 
 .instruction-input,
 .file-input {
-  box-sizing: border-box; /* Include padding and border in the element's total width */
+  box-sizing: border-box;
   width: 100%;
-  padding: 12px;
-  border: 1px solid #9cf7ff;
-  background-color: rgba(26, 26, 26, 0.8);
-  color: #e0e0e0;
-  font-family: 'bodega-sans', sans-serif;
+  padding: 15px;
+  border: 1px solid var(--emerald);
+  background-color: var(--cream);
+  color: var(--black);
+  font-family: 'Josefin Sans', sans-serif;
   transition: all 0.3s ease;
+  border-radius: 2px;
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.instruction-input {
+  font-style: italic;
+  color: var(--burgundy);
+}
+
+.instruction-input:focus {
+  font-style: normal;
+  color: var(--black);
 }
 
 .instruction-input:focus,
 .file-input:focus {
-  border-color: #91faff;
-  box-shadow: 0 0 10px rgba(127, 255, 212, 0.3);
+  border-color: var(--gold);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
   outline: none;
 }
 
 .file-types-info {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
   font-size: 0.9em;
-  color: #b8860b;
+  color: var(--dark-green);
+  font-family: 'Josefin Sans', sans-serif;
   animation: fadeIn 0.5s ease-out;
+  padding: 1rem;
+  background: rgba(26, 148, 133, 0.05);
+  border-left: 3px solid var(--emerald);
 }
 
 .file-types-info ul {
@@ -72,27 +136,27 @@
 
 .file-types-info li::before {
   content: '•';
-  color: #7fffd4;
+  color: var(--emerald);
   position: absolute;
   left: 0;
   animation: pulse 2s infinite;
 }
 
 .error-message {
-  color: #800020;
-  background-color: rgba(26, 26, 26, 0.9);
+  color: var(--burgundy);
+  background-color: rgba(255, 255, 255, 0.9);
   padding: 15px;
   margin: 20px 0;
-  border: 1px solid #800020;
+  border: 1px solid var(--burgundy);
   text-align: center;
-  font-family: 'bodega-sans', sans-serif;
+  font-family: 'Josefin Sans', sans-serif;
   animation: shake 0.5s ease-in-out;
 }
 
 .progress-bar {
-  background-color: rgba(26, 26, 26, 0.8);
+  background-color: var(--cream);
   box-sizing: border-box;
-  border: 1px solid #93fswaakbff;
+  border: 1px solid var(--gold);
   height: 25px;
   width: 100%;
   margin: 1rem 0;
@@ -101,13 +165,13 @@
 }
 
 .progress-bar-fill {
-  background: linear-gradient(45deg, #121313,#6ba2a7, #1ddd9d);
+  background: linear-gradient(45deg, var(--emerald), var(--emerald-light));
   height: 100%;
-  color: #0a0a0a;
+  color: var(--cream);
   text-align: center;
   line-height: 25px;
   transition: width 0.3s ease-in-out;
-  font-family: 'bodega-sans', sans-serif;
+  font-family: 'Josefin Sans', sans-serif;
   position: relative;
 }
 
@@ -128,8 +192,9 @@
 }
 
 .processing-status {
-  font-family: 'bodega-sans', sans-serif;
-  color: #e0e0e0;
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  color: var(--burgundy);
   font-size: 1em;
   text-align: center;
   margin: 1rem 0;
@@ -137,32 +202,52 @@
 }
 
 .process-button {
-  background-color: #4b6e71;
+  background: var(--emerald);
   box-sizing: border-box;
-  color: #e0e0e0;
-  border: 1px solid #c9e41c;
-  padding: 15px 30px;
+  color: var(--cream);
+  border: 2px solid var(--gold);
+  padding: 18px 35px;
   cursor: pointer;
-  font-family: 'bodega-sans', sans-serif;
+  font-family: 'Josefin Sans', sans-serif;
   font-size: 1.2em;
   width: 100%;
   max-width: 300px;
-  margin: 1rem auto;
+  margin: 2rem auto;
   display: block;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.process-button::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: shimmerButton 3s infinite;
 }
 
 .process-button:hover {
-  background-color: #7fffd4;
-  color: #0a0a0a;
+  background: var(--emerald-light);
+  color: var(--black);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(127, 255, 212, 0.3);
+  box-shadow: 0 4px 12px rgba(26, 148, 133, 0.3);
 }
 
 .process-button:disabled {
-  background-color: #2a3e40;
+  background: var(--dark-green);
+  opacity: 0.7;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
@@ -206,6 +291,17 @@
   }
   to {
     transform: translateX(100%);
+  }
+}
+
+@keyframes shimmerButton {
+  0% {
+    top: -50%;
+    left: -50%;
+  }
+  100% {
+    top: 150%;
+    left: 150%;
   }
 }
 

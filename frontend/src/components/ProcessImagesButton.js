@@ -5,7 +5,9 @@ import './ProcessImagesButton.css';
 
 function ProcessImagesButton({ onProcess }) {
   const [selectedFiles, setSelectedFiles] = useState(null);
-  const [instruction, setInstruction] = useState('You are an assistant that helps catalog and analyze both products and documents for inventory.');
+  const [instruction, setInstruction] = useState('');
+  const [isInstructionFocused, setIsInstructionFocused] = useState(false);
+  const defaultInstruction = 'You are an assistant that helps catalog and analyze both products and documents for inventory.';
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -93,10 +95,10 @@ function ProcessImagesButton({ onProcess }) {
     }
   };
 
-  const pollProcessingStatus = (taskId) => {
+  const pollProcessingStatus = (taskID) => {
     const interval = setInterval(async () => {
       try {
-        const statusResponse = await axios.get(`${config.apiUrl}/processing-status/${taskId}`, {
+        const statusResponse = await axios.get(`${config.apiUrl}/processing-status/${taskID}`, {
           headers: {
             ...config.headers
           },
@@ -141,15 +143,23 @@ function ProcessImagesButton({ onProcess }) {
     <div className="process-images-container">
       <div className="instruction-section">
         <label htmlFor="instruction-input">Custom Instruction:</label>
-        <input
+        <textarea
           id="instruction-input"
-          type="text"
-          value={instruction}
+          value={isInstructionFocused || instruction ? instruction : defaultInstruction}
           onChange={handleInstructionChange}
+          onFocus={() => {
+            setIsInstructionFocused(true);
+            if (!instruction) setInstruction('');
+          }}
+          onBlur={() => {
+            setIsInstructionFocused(false);
+            if (!instruction.trim()) setInstruction('');
+          }}
           placeholder="Enter custom instruction for file interpretation"
           aria-label="Custom instruction for file interpretation"
           disabled={isUploading}
           className="instruction-input"
+          rows={3}
         />
       </div>
       <div className="file-upload-section">

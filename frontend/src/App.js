@@ -221,12 +221,13 @@ function App() {
         {/* Neon Title */}
         <header className="app-header">
           <h1 className="neon-title">BARTLEBY</h1>
-          <div className="app-title">the based intern</div>
-            <h2 className="app-subtitle"> No task too menial. No inventory list too long.  <br></br>Let Bartleby do your bitchwork</h2>
+          <div className="app-title">Catalog*Categorize*Describe*Sort*Summarize</div>
+            <h2 className="app-subtitle"> Diligent Assignation Performed with Quiet Resignation</h2>
         </header>
 
         {/* Main Content */}
         <div className="main-section">
+          <p className='body-text'> At present, a service most methodical: I take in pictures and documents, discern their essence, and render them into well-ordered SQL tables, each sortable to the user’s design. For each item, I produce, with AI-powered precision, a fitting description or a descriptive summary, diligently cataloged one-by-one, into the tables presented below.  </p>
           {/* Process Images Button */}
           <ProcessImagesButton onProcess={handleProcessFiles} />
 
@@ -255,13 +256,13 @@ function App() {
                   {showInventoryDropdown && (
                     <div className="submenu-dropdown">
                       <button onClick={() => handleExport('csv', 'inventory')}>
-                        Download CSV Report
+                        Download As CSV
                       </button>
                       <button onClick={() => handleExport('xls', 'inventory')}>
-                        Download Excel Report
+                        Download As Excel 
                       </button>
                       <button onClick={handleResetInventory} className="danger">
-                        Clear All Inventory Data
+                        Clear All Data
                       </button>
                     </div>
                   )}
