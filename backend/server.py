@@ -57,8 +57,10 @@ app.db_pool = None
 def configure_cors_origins() -> List[str]:
     """Configure CORS origins from environment variables and defaults."""
     origins = {
+        'https://bartleby.vercel.app',
         'https://instantory.vercel.app',
-        'https://instantory-api.onrender.com',
+        'https://hocomnia.com'
+        'https://instantory.onrender.com',
         'https://instantory-backend.onrender.com',
         'http://localhost:3000',
         'http://127.0.0.1:3000',

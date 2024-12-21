@@ -29,6 +29,7 @@
     }
   ],
   "env": {
-    "REACT_APP_BACKEND_URL": "https://instantory.onrender.com"
+    "REACT_APP_BACKEND_URL": "https://instantory.onrender.com",
+    "DATABASE_URL": "postgresql://instantory_db_user:dOnjIofuc6rPHqSCPQ3Pi5btjBcizIPu@dpg-ctbqgrrtq21c73deq7ng-a.oregon-postgres.render.com/instantory_db"
   }
 }

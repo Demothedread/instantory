@@ -1,7 +1,7 @@
 # Service configuration for the backend API
 services:
   - type: web
-    name: instantory-api  # Service name on Render
+    name: instantory # Service name on Render
     runtime: python
     buildCommand: cd backend && pip install -r requirements.txt  # Install dependencies
     startCommand: cd backend && hypercorn server:app --bind 0.0.0.0:$PORT --access-log -  # Start server
@@ -10,12 +10,12 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: PORT
-        value: "10000"
+        value: "443"
 
       # Database configuration (managed by Render)
       - key: DATABASE_URL
         fromDatabase:
-          name: instantory_sql
+          name: instantory_db
           property: connectionString
 
       # Security and CORS settings
@@ -24,19 +24,19 @@ services:
       - key: ALLOW_CREDENTIALS
         value: "true"
       - key: CORS_ORIGIN
-        value: https://instantory.vercel.app,https://instantory-dhj0hu4yd-demothedreads-projects.vercel.app
+        value: https://bartleby.vercel.app
 
       # API configuration
       - key: PUBLIC_BACKEND_URL
-        value: https://instantory-api.onrender.com
+        value: https://instantory.onrender.com
 
       # Frontend URL for CORS
       - key: VERCEL_URL
-        value: "https://instantory-6pl2dnzgn-demothedreads-projects.vercel.app"
+        value: "https://bartleby.vercel.app"
 
 # Database configuration
 databases:
-  - name: instantory_sql
-    databaseName: instantory_sql
+  - name: instantory_db
+    databaseName: instantory_db
     plan: free
     ipAllowList: []  # Allow all IPs for development
