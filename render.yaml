@@ -28,11 +28,19 @@ services:
 
       # API configuration
       - key: PUBLIC_BACKEND_URL
-        value: https://instantory.onrender.com
+        value: https://bartleby.onrender.com
 
       # Frontend URL for CORS
       - key: VERCEL_URL
         value: "https://bartleby.vercel.app"
+
+      # Vercel Blob Storage
+      - key: BLOB_READ_WRITE_TOKEN
+        value: "vercel_blob_rw_s5xuxXH6T3fDx9Oz_AdnmR7yE2uQjnt1cWInfUzpXQdtrpS"
+
+      # OpenAI Configuration (required for AI processing)
+      - key: OPENAI_API_KEY
+        sync: false  # This will prompt for the value during deployment
 
 # Database configuration
 databases:
