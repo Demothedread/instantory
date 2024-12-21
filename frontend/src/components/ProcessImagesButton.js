@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { put } from '@vercel/blob';
 import config from '../config';
 import './ProcessImagesButton.css';
 
@@ -62,17 +63,33 @@ function ProcessImagesButton({ onProcess }) {
     formData.append('instruction', instruction);
 
     try {
-      const response = await axios.post(`${config.apiUrl}/process-files`, formData, {
+      // Upload files to Vercel Blob
+      const uploadPromises = selectedFiles.map(async (file) => {
+        const blob = await put(file.name, file, {
+          access: 'public',
+          token: process.env.REACT_APP_BLOB_READ_WRITE_TOKEN,
+          handleUploadUrl: (url) => {
+            console.log('Upload URL:', url);
+            return url;
+          },
+        });
+        return { originalName: file.name, blobUrl: blob.url };
+      });
+
+      setUploadProgress(50);
+      const uploadedFiles = await Promise.all(uploadPromises);
+      setUploadProgress(100);
+
+      // Send blob URLs to backend
+      const response = await axios.post(`${config.apiUrl}/process-files`, {
+        files: uploadedFiles,
+        instruction: instruction
+      }, {
         headers: {
           ...config.headers,
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'application/json'
         },
-        withCredentials: true,
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(percentCompleted);
-          console.log(`Upload Progress: ${percentCompleted}%`);
-        }
+        withCredentials: true
       });
 
       if (response.data.status === 'success') {
