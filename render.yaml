@@ -15,7 +15,7 @@ services:
       # Database configuration (managed by Render)
       - key: DATABASE_URL
         fromDatabase:
-          name: bartlebyGRE
+          name: instantory_db
           property: connectionString
 
       # Security and CORS settings
@@ -28,7 +28,7 @@ services:
 
       # API configuration
       - key: PUBLIC_BACKEND_URL
-        value: https://bartleby.onrender.com
+        value: https://instantory.onrender.com
 
       # Frontend URL for CORS
       - key: VERCEL_URL
@@ -44,7 +44,7 @@ services:
 
 # Database configuration
 databases:
-  - name: bartlebyGRE
-    databaseName: bartlebyGRE
+  - name: instantory_db
+    databaseName: instantory_db
     plan: free
     ipAllowList: []  # Allow all IPs for development
