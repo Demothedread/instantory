@@ -1,3 +1,4 @@
+@import url("https://use.typekit.net/ocb4vnc.css");
 /* Art Deco Color Palette inspired by provided reference */
 :root {
   --emerald: #1A9485;
@@ -7,20 +8,26 @@
   --cream: #F5F2E9;
   --dark-green: #0A4B40;
   --black: #1A1A1A;
+  --silver: #abc4c5;
+  --chartreuse: #abc555;
+  --plum: #d4adfa;
+  --teal: #1a8e99;
 }
 
 /* Base Styles with Art Deco Background Pattern */
 body {
   margin: 0;
   padding: 0;
-  background-color: var(--cream);
+  background-color:linear-gradient(to top, var(--silver) 40%, var(--teal) 100%);
   color: var(--black);
-  font-family: 'Josefin Sans', sans-serif;
-}
+  font-family: bree, sans-serif;
+  font-weight: 300;
+  font-style: normal;
+}    
 
 .app-container {
   min-height: 100vh; 
-  background-image: url('./assets/decopattern2.png');
+  background-image: url('./assets/gold_circles.png');
   background-size: 200px;
   background-repeat: repeat;
   position: relative;
@@ -42,7 +49,7 @@ body {
   content: '';
   position: absolute;
   width: 100%;
-  height: 30px;
+  height: 45px;
   z-index: 2;
 }
 
@@ -55,7 +62,7 @@ body {
 
 .app-header::after { 
   bottom: 0;
-  background-image: url('./assets/borders/artdeco_goldBottom.jpeg');
+  background-image: url('./assets/borders/artdeco_goldbottom2.png');
   background-size: contain;
   background-repeat: repeat-x;
 }
@@ -83,15 +90,16 @@ body {
 }
 
 .neon-title {
-  font-family: 'Cinzel Decorative', cursive;
+  font-family: 'p22-zaner-pro-three', sans-serif;
   font-size: 4rem;
-  color: var(--gold);
+  color: #F5F2E9;
   text-align: center;
   margin: 0;
   text-shadow: 
-    0 0 5px rgba(212, 175, 55, 0.8),
-    0 0 10px rgba(212, 175, 55, 0.5),
-    0 0 15px rgba(212, 175, 55, 0.3);
+    0 0 5px rgba(254, 230, 149, 0.8),
+    0 0 10px rgba(254, 218, 100, 0.774),
+    0 0 15px rgba(253, 255, 208, 0.9),
+    0 0 25px rgba(260,200,100,0.8);
   position: relative;
   z-index: 1;
   display: inline-block;
@@ -143,8 +151,8 @@ body {
 
 /* Stylized Body Text */
 .body-text {
-  font-family: 'Playfair Display', serif;
-  font-style: italic;
+  font-family: 'bree', serif;
+  font-style:light; 
   color: var(--burgundy);
   text-align: center;
   max-width: 800px;
