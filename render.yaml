@@ -41,8 +41,7 @@ services:
       # OpenAI Configuration (required for AI processing)
       - key: OPENAI_API_KEY
         sync: false  # This will prompt for the value during deployment
-
-https://ap.www.namecheap.com/ProductList/SslCertificates# Database configuration
+        
 databases:
   - name: instantory_db
     databaseName: instantory_db
