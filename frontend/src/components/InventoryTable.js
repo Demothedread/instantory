@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import config from '../config';
 import './InventoryTable.css';
-import placeholderImage from '../assets/placeholder.png';
+import placeholderImage from '../assets/icons/placeholder.png';
 
 function InventoryTable({ inventory }) {
   const [sortColumn, setSortColumn] = useState(null);

@@ -55,24 +55,28 @@ body {
 
 .app-header::before { 
   top: 0;
-  background-image: url('./assets/borders/artdeco_goldTop.jpeg');
+  border: 10px solid transparent; /* Width and style of border */
+  border-image: url('./assets/artdeco_cottoncandy_0002_Layer-4.png') 30 round;
+  border-image-repeat: repeat-x;
+  border-image-width: 20px;
   background-size: contain;
   background-repeat: repeat-x;
+  z-index: 5;
 }
 
 .app-header::after { 
   bottom: 0;
-  background-image: url('./assets/borders/artdeco_goldbottom2.png');
+  background-image: url('./assets/artdeco_separator2_0004_Layer-5.png');
   background-size: contain;
   background-repeat: repeat-x;
 }
 
-.app-header::before,
+.app-header::before
 .app-header::after {
-  mask-image: url('./assets/borders/artdeco_transparentborder.png');
+  mask-image: url('./assets/artdeco_separator2_0003_Layer-6.png');
   mask-size: contain;
   mask-repeat: repeat-x;
-  -webkit-mask-image: url('./assets/borders/artdeco_transparentborder.png');
+  -webkit-mask-image: url('./assets/artdeco_separator2_0004_Layer-5.png');
   -webkit-mask-size: contain;
   -webkit-mask-repeat: repeat-x;
 }
@@ -90,7 +94,7 @@ body {
 }
 
 .neon-title {
-  font-family: 'p22-zaner-pro-three', sans-serif;
+  font-family: 'mason-sans', sans-serif;
   font-size: 4rem;
   color: #F5F2E9;
   text-align: center;
@@ -102,21 +106,25 @@ body {
     0 0 25px rgba(260,200,100,0.8);
   position: relative;
   z-index: 1;
-  display: inline-block;
-}
-
-.neon-title {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 1rem;
 }
 
+.neon-title::first-letter {
+  font-size: 6em;      /* Makes the first letter 3x larger */
+  font-family: 'p22-zaner-pro-three', serif;
+  font-weight: bold;   /* Makes it bold */
+  color: #c6e14c;         /* Darker color */
+  margin-right: 5px;   /* Adds space between the letter and the rest of the text */
+}
+
 .neon-title::before {
   content: '';
   position: relative;
-  width: 80px;
-  height: 80px;
+  width: 100px;
+  height: 120px;
   background-image: url('./assets/1216BartMascotNoBkg/1216BartMascotNoBkg-120.png');
   background-size: contain;
   background-repeat: no-repeat;
@@ -169,7 +177,7 @@ body {
   position: absolute;
   width: 50px;
   height: 50px;
-  background-image: url('./assets/borders/decoTrans_goldCorner.png');
+  background-image: url('./assets/borders/corner_set1/decoTrans_goldCorner.png');
   background-size: contain;
   background-repeat: no-repeat;
 }
