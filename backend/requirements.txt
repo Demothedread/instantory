@@ -24,3 +24,5 @@ pypdf2>=3.0,<4.0
 pytest<=6.2.5  # For testing
 black>=21.9b0  # For code formatting
 flake8<=3.9.2  # For linting
+aiohttp<=3.10.5
+
