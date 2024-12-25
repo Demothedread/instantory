@@ -75,7 +75,7 @@ body {
 
 .app-header::before
 .app-header::after {
-  mask-image: url('./assets/circles-gold.jpeg'
+  mask-image: url('./assets/circles-gold.jpeg');
   mask-size: contain;
   mask-repeat: repeat-x;
   -webkit-mask-image: url('./assets/circles-gold.png');
