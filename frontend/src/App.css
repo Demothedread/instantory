@@ -73,7 +73,7 @@ body {
 
 .app-header::before
 .app-header::after {
-  mask-image: url('./assets/artdeco_separator2_0003_Layer-6.png');
+  mask-image: url('./assets/borders/artdeco_goldBottom.jpeg');
   mask-size: contain;
   mask-repeat: repeat-x;
   -webkit-mask-image: url('./assets/artdeco_separator2_0004_Layer-5.png');
@@ -205,7 +205,7 @@ body {
   color: var(--cream);
   border: 2px solid var(--gold);
   padding: 1rem 2rem;
-  font-family: 'Josefin Sans', sans-serif;
+  font-family: 'tt-modernoir', sans-serif;
   font-size: 1.1rem;
   cursor: pointer;
   transition: all 0.3s ease;
