@@ -54,29 +54,31 @@ body {
 }
 
 .app-header::before { 
+  width: 60%;
   top: 0;
-  border: 10px solid transparent; /* Width and style of border */
-  border-image: url('./assets/borders/artdeco_goldTop.jpeg') 30 round;
-  border-image-repeat: repeat-x;
-  border-image-width: 10px;
+  border: 20px transparent; /* Width and style of border */
+  border-image-source: url('./assets/borders/artdeco_goldTop.jpeg');
+  border-image-slice: 30;
+  border-image-width: 20px;
+  border-image-repeat: stretch;
   background-size: contain;
-  background-repeat: repeat-x;
+  background-repeat: no-repeat;
   z-index: 4;
 }
 
 .app-header::after { 
   bottom: 0;
-  background-image: url('./assets/buttons/BrassButton.png');
+  background-image: url('./assets/borders/artdeco_goldBottom.jpeg');
   background-size: contain;
   background-repeat: repeat-x;
 }
 
 .app-header::before
 .app-header::after {
-  mask-image: url('./assets/borders/artdeco_goldBottom.jpeg');
+  mask-image: url('./assets/circles-gold.jpeg'
   mask-size: contain;
   mask-repeat: repeat-x;
-  -webkit-mask-image: url('./assets/artdeco_separator2_0004_Layer-5.png');
+  -webkit-mask-image: url('./assets/circles-gold.png');
   -webkit-mask-size: contain;
   -webkit-mask-repeat: repeat-x;
 }
@@ -113,11 +115,12 @@ body {
 }
 
 .neon-title::first-letter {
-  font-size: 6em;      /* Makes the first letter 3x larger */
+  font-size: 10em;      /* Makes the first letter 3x larger */
   font-family: 'p22-zaner-pro-three', serif;
   font-weight: bold;   /* Makes it bold */
-  color: #c6e14c;         /* Darker color */
+  color: #e14cdc;         /* Darker color */
   margin-right: 5px;   /* Adds space between the letter and the rest of the text */
+  padding: auto;
 }
 
 .neon-title::before {
@@ -142,10 +145,10 @@ body {
 }
 
 .app-subtitle {
-  font-family: 'Playfair Display', serif;
+  font-family: 'ht-neon', serif;
   color: var(--gold);
   text-align: center;
-  font-style: italic;
+  font-style: normal;
   margin-top: 0.5rem;
 }
 
@@ -350,8 +353,8 @@ body {
 }
 
 .content-area > div:only-child {
-  font-family: 'Playfair Display', serif;
-  font-style: italic;
+  font-family: 'bree', serif;
+  font-style: light;
   color: var(--burgundy);
   text-align: center;
   overflow: hidden;

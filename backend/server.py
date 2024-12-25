@@ -1,20 +1,24 @@
-from typing import List, Optional
-from quart import Quart, jsonify, request, send_file, make_response
-from quart_cors import cors
+import asyncio
 import asyncpg
+import aiohttp
+import base64
+import io
+import json
 import logging
 import os
 import sys
 import urllib.parse as urlparse
-import asyncio
-from dotenv import load_dotenv
 import uuid
-import aiohttp
+from typing import List, Optional
+
+from dotenv import load_dotenv
 from openai import AsyncOpenAI
+from PIL import Image
+from quart import Quart, jsonify, request, send_file, make_response, websocket
+from quart_cors import cors
 
 # Global dictionary to track tasks (For demonstration; consider using Redis or a database in production)
 processing_tasks = {}
-
 
 # Configure logging first
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -426,9 +430,25 @@ async def analyze_image_with_gpt4v(image_url: str, instruction: str) -> dict:
                 # Get the image content
                 image_data = await response.read()
                 
-                # Encode image to base64
-                import base64
-                base64_image = base64.b64encode(image_data).decode('utf-8')
+                # Process and resize image before base64 conversion
+                from PIL import Image
+                import io
+                
+                # Convert bytes to PIL Image
+                img = Image.open(io.BytesIO(image_data))
+                
+                # Convert RGBA to RGB if needed
+                if img.mode == 'RGBA':
+                    img = img.convert('RGB')
+                
+                # Resize image while maintaining aspect ratio
+                max_size = (512, 512)
+                img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                
+                # Convert processed image to base64
+                buffered = io.BytesIO()
+                img.save(buffered, format="JPEG", quality=85)
+                base64_image = base64.b64encode(buffered.getvalue()).decode('utf-8')
                 
                 # Call GPT-4V
                 response = await client.chat.completions.create(
@@ -450,8 +470,11 @@ async def analyze_image_with_gpt4v(image_url: str, instruction: str) -> dict:
                                            "}"
                                 },
                                 {
-                                    "type": "image",
-                                    "image_url": f"data:image/jpeg;base64,{base64_image}"
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:image/jpeg;base64,{base64_image}",
+                                        "detail": "high"
+                                    }
                                 }
                             ]
                         }
@@ -589,40 +612,55 @@ async def process_files():
 
 async def process_files_async(uploaded_files: dict, instruction: str, task_id: str) -> None:
     """Process files asynchronously."""
-    try:
-        task_info = processing_tasks.get(task_id)
-        if not task_info:
-            logger.error(f"Task {task_id} not found in processing_tasks")
-            return
+    # Get task info at the start and keep it in scope
+    task_info = processing_tasks.get(task_id)
+    if not task_info:
+        logger.error(f"Task {task_id} not found in processing_tasks")
+        return
 
-        task_info['status'] = 'processing'
-        task_info['message'] = 'Processing files...'
-        task_info['progress'] = 10
+    try:
+        # Update initial status
+        task_info.update({
+            'status': 'processing',
+            'message': 'Processing files...',
+            'progress': 10
+        })
 
         async with app.db_pool.acquire() as conn:
             # Process images
             if uploaded_files['images']:
-                task_info['message'] = 'Processing images...'
+                task_info.update({
+                    'message': 'Processing images...',
+                    'progress': 20
+                })
                 await process_blob_images(uploaded_files['images'], instruction, conn)
                 task_info['progress'] = 50
 
             # Process documents
             if uploaded_files['documents']:
-                task_info['message'] = 'Processing documents...'
+                task_info.update({
+                    'message': 'Processing documents...',
+                    'progress': 60
+                })
                 for doc in uploaded_files['documents']:
                     await process_blob_document(doc, instruction, conn)
                 task_info['progress'] = 80
 
-        task_info['status'] = 'completed'
-        task_info['message'] = 'Processing complete!'
-        task_info['progress'] = 100
+        # Update final success status
+        task_info.update({
+            'status': 'completed',
+            'message': 'Processing complete!',
+            'progress': 100
+        })
 
     except Exception as e:
         logger.error(f"Error in background processing task {task_id}: {str(e)}")
-        if task_info:
-            task_info['status'] = 'failed'
-            task_info['message'] = f'Error: {str(e)}'
-            task_info['progress'] = 100
+        # Update error status
+        task_info.update({
+            'status': 'failed',
+            'message': f'Error: {str(e)}',
+            'progress': 100
+        })
 
 @app.route('/processing-status/<task_id>', methods=['GET'])
 async def processing_status(task_id):
