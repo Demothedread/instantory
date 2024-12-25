@@ -56,17 +56,17 @@ body {
 .app-header::before { 
   top: 0;
   border: 10px solid transparent; /* Width and style of border */
-  border-image: url('./assets/artdeco_cottoncandy_0002_Layer-4.png') 30 round;
+  border-image: url('./assets/borders/artdeco_goldTop.jpeg') 30 round;
   border-image-repeat: repeat-x;
-  border-image-width: 20px;
+  border-image-width: 10px;
   background-size: contain;
   background-repeat: repeat-x;
-  z-index: 5;
+  z-index: 4;
 }
 
 .app-header::after { 
   bottom: 0;
-  background-image: url('./assets/artdeco_separator2_0004_Layer-5.png');
+  background-image: url('./assets/buttons/brassButton.png');
   background-size: contain;
   background-repeat: repeat-x;
 }
@@ -133,7 +133,7 @@ body {
 }
 
 .app-title {
-  font-family: 'Poiret One', cursive;
+  font-family: 'tt-modernoir', cursive;
   color: var(--cream);
   text-align: center;
   font-size: 1.5rem;
