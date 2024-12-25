@@ -131,7 +131,7 @@ function InventoryTable({ inventory }) {
                 <td className="image-cell">
                   {item?.image_url && (
                     <img 
-                      src={`${config.apiUrl}/images/${encodeURIComponent(item.image_url)}`} 
+                      src={item.image_url} 
                       alt={item?.name || 'Product'} 
                       className="inventory-image"
                       onError={(e) => {

@@ -9,6 +9,8 @@ import urllib.parse as urlparse
 import asyncio
 from dotenv import load_dotenv
 import uuid
+import aiohttp
+from openai import AsyncOpenAI
 
 # Global dictionary to track tasks (For demonstration; consider using Redis or a database in production)
 processing_tasks = {}
@@ -25,6 +27,46 @@ if os.path.exists(dotenv_path):
 
 # Add parent directory to Python path to import main.py
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+async def get_db_pool():
+    """Get PostgreSQL connection pool from environment variables or URL."""
+    try:
+        database_url = os.getenv('DATABASE_URL')
+        if not database_url:
+            raise ValueError("DATABASE_URL environment variable is required")
+        
+        url = urlparse.urlparse(database_url)
+        
+        # Create connection pool with retries
+        for attempt in range(3):
+            try:
+                pool = await asyncpg.create_pool(
+                    user=url.username,
+                    password=url.password,
+                    database=url.path[1:],
+                    host=url.hostname,
+                    port=url.port,
+                    ssl='require',
+                    min_size=1,
+                    max_size=10,
+                    command_timeout=60,
+                    server_settings={
+                        'client_encoding': 'UTF8'
+                    }
+                )
+                if pool:
+                    return pool
+            except Exception as e:
+                logging.error(f"Database connection attempt {attempt + 1} failed: {str(e)}")
+                if attempt == 2:  # Last attempt
+                    raise
+                await asyncio.sleep(1)  # Wait before retrying
+                continue
+        
+        raise ValueError("Failed to establish database connection after retries")
+    except Exception as e:
+        logging.error(f"Error creating database pool: {str(e)}")
+        raise
 
 # Import configuration first
 try:
@@ -368,11 +410,84 @@ def allowed_file(filename: str) -> bool:
         'pdf', 'doc', 'docx', 'txt', 'rtf'    # Documents
     }
 
+
+client = AsyncOpenAI(
+    api_key=os.getenv('OPENAI_API_KEY')
+)
+
+async def analyze_image_with_gpt4v(image_url: str, instruction: str) -> dict:
+    """Analyze image using GPT-4V."""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(image_url) as response:
+                if response.status != 200:
+                    raise Exception(f"Failed to fetch image: {response.status}")
+                
+                # Get the image content
+                image_data = await response.read()
+                
+                # Encode image to base64
+                import base64
+                base64_image = base64.b64encode(image_data).decode('utf-8')
+                
+                # Call GPT-4V
+                response = await client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": f"{instruction}\n\nPlease analyze this image and provide the following details in JSON format:\n"
+                                           "{\n"
+                                           "  'description': 'Detailed description of the item',\n"
+                                           "  'category': 'Product category',\n"
+                                           "  'material': 'Main materials used',\n"
+                                           "  'color': 'Primary colors',\n"
+                                           "  'dimensions': 'Approximate dimensions',\n"
+                                           "  'origin': 'Style or cultural origin'\n"
+                                           "}"
+                                },
+                                {
+                                    "type": "image",
+                                    "image_url": f"data:image/jpeg;base64,{base64_image}"
+                                }
+                            ]
+                        }
+                    ],
+                    max_tokens=1000
+                )
+                
+                # Parse the response
+                import json
+                try:
+                    result = json.loads(response.choices[0].message.content)
+                except:
+                    # If JSON parsing fails, create a structured response
+                    text_response = response.choices[0].message.content
+                    result = {
+                        'description': text_response[:500],
+                        'category': 'Other',
+                        'material': 'Unknown',
+                        'color': 'Various',
+                        'dimensions': 'Not specified',
+                        'origin': 'Unknown'
+                    }
+                
+                return result
+    except Exception as e:
+        logger.error(f"Error analyzing image with GPT-4o: {str(e)}")
+        raise
+
 async def process_blob_images(images, instruction, conn):
     """Process images from Vercel Blob URLs."""
     for image in images:
         try:
-            # Store the blob URL directly in the database
+            # Analyze image with GPT-4V
+            analysis = await analyze_image_with_gpt4v(image['url'], instruction)
+            
+            # Store the results in the database
             await conn.execute(
                 """
                 INSERT INTO products (
@@ -381,15 +496,15 @@ async def process_blob_images(images, instruction, conn):
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                 """,
                 image['name'],
-                "Description will be generated by AI",
-                image['url'],  # Store the Blob URL directly
-                "Category",
-                "Material",
-                "Color",
-                "Dimensions",
-                "Origin",
-                0.0,
-                0.0
+                analysis['description'],
+                image['url'],
+                analysis['category'],
+                analysis['material'],
+                analysis['color'],
+                analysis['dimensions'],
+                analysis['origin'],
+                0.0,  # Default import cost
+                0.0   # Default retail price
             )
         except Exception as e:
             logger.error(f"Error processing image {image['name']}: {str(e)}")
@@ -471,76 +586,43 @@ async def process_files():
         logger.error(f"Error processing files: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-async def get_db_pool():
-    """Get PostgreSQL connection pool from environment variables or URL."""
-    try:
-        database_url = os.getenv('DATABASE_URL')
-        if not database_url:
-            raise ValueError("DATABASE_URL environment variable is required")
-        
-        url = urlparse.urlparse(database_url)
-        
-        # Create connection pool with retries
-        for attempt in range(3):
-            try:
-                pool = await asyncpg.create_pool(
-                    user=url.username,
-                    password=url.password,
-                    database=url.path[1:],
-                    host=url.hostname,
-                    port=url.port,
-                    ssl='require',
-                    min_size=1,
-                    max_size=10,
-                    command_timeout=60,
-                    server_settings={
-                        'client_encoding': 'UTF8'
-                    }
-                )
-                if pool:
-                    return pool
-            except Exception as e:
-                logging.error(f"Database connection attempt {attempt + 1} failed: {str(e)}")
-                if attempt == 2:  # Last attempt
-                    raise
-                await asyncio.sleep(1)  # Wait before retrying
-                continue
-        
-        raise ValueError("Failed to establish database connection after retries")
-    except Exception as e:
-        logging.error(f"Error creating database pool: {str(e)}")
-        raise
 
-async def process_files_async(uploaded_files, instruction, task_id):
+async def process_files_async(uploaded_files: dict, instruction: str, task_id: str) -> None:
     """Process files asynchronously."""
     try:
-        processing_tasks[task_id]['status'] = 'processing'
-        processing_tasks[task_id]['message'] = 'Processing files...'
-        processing_tasks[task_id]['progress'] = 10
+        task_info = processing_tasks.get(task_id)
+        if not task_info:
+            logger.error(f"Task {task_id} not found in processing_tasks")
+            return
+
+        task_info['status'] = 'processing'
+        task_info['message'] = 'Processing files...'
+        task_info['progress'] = 10
 
         async with app.db_pool.acquire() as conn:
             # Process images
             if uploaded_files['images']:
-                processing_tasks[task_id]['message'] = 'Processing images...'
+                task_info['message'] = 'Processing images...'
                 await process_blob_images(uploaded_files['images'], instruction, conn)
-                processing_tasks[task_id]['progress'] = 50
+                task_info['progress'] = 50
 
             # Process documents
             if uploaded_files['documents']:
-                processing_tasks[task_id]['message'] = 'Processing documents...'
+                task_info['message'] = 'Processing documents...'
                 for doc in uploaded_files['documents']:
                     await process_blob_document(doc, instruction, conn)
-                processing_tasks[task_id]['progress'] = 80
+                task_info['progress'] = 80
 
-        processing_tasks[task_id]['status'] = 'completed'
-        processing_tasks[task_id]['message'] = 'Processing complete!'
-        processing_tasks[task_id]['progress'] = 100
+        task_info['status'] = 'completed'
+        task_info['message'] = 'Processing complete!'
+        task_info['progress'] = 100
 
     except Exception as e:
         logger.error(f"Error in background processing task {task_id}: {str(e)}")
-        processing_tasks[task_id]['status'] = 'failed'
-        processing_tasks[task_id]['message'] = f'Error: {str(e)}'
-        processing_tasks[task_id]['progress'] = 100
+        if task_info:
+            task_info['status'] = 'failed'
+            task_info['message'] = f'Error: {str(e)}'
+            task_info['progress'] = 100
 
 @app.route('/processing-status/<task_id>', methods=['GET'])
 async def processing_status(task_id):
