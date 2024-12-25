@@ -78,7 +78,7 @@ body {
   mask-image: url('./assets/circles-gold.jpeg');
   mask-size: contain;
   mask-repeat: repeat-x;
-  -webkit-mask-image: url('./assets/circles-gold.png');
+  -webkit-mask-image: url('./assets/circles-gold.jpeg');
   -webkit-mask-size: contain;
   -webkit-mask-repeat: repeat-x;
 }
