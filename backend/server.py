@@ -52,7 +52,7 @@ def configure_cors_origins() -> List[str]:
     origins = {
         'https://bartleby.vercel.app',
         'https://instantory.vercel.app',
-        'https://hocomnia.com'
+        'https://hocomnia.com',
         'https://instantory.onrender.com',
         'https://instantory-backend.onrender.com',
         'http://localhost:3000',
@@ -60,6 +60,11 @@ def configure_cors_origins() -> List[str]:
         'http://localhost:10000',
         'http://127.0.0.1:10000'
     }
+
+    # Get frontend URL from environment
+    frontend_url = os.getenv('CORS_ORIGIN')
+    if frontend_url:
+        origins.add(frontend_url)
     
     # Add environment-specific origins
     for env_var in ['VERCEL_URL', 'CORS_ORIGIN', 'PUBLIC_BACKEND_URL', 'FRONTEND_URL']:
@@ -118,13 +123,30 @@ async def after_request(response):
         response.headers.update({
             'Access-Control-Allow-Origin': origin,
             'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, PUT, DELETE, PATCH',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Content-Length',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Content-Length, Access-Control-Allow-Origin',
             'Access-Control-Allow-Credentials': 'true',
             'Access-Control-Max-Age': '86400',
             'Access-Control-Expose-Headers': 'Content-Type, Authorization, Content-Length',
             'Vary': 'Origin'
         })
     return response
+
+@app.before_request
+async def before_request():
+    """Handle preflight requests."""
+    if request.method == "OPTIONS":
+        origin = request.headers.get('Origin')
+        if origin in configure_cors_origins():
+            response = await make_response()
+            response.headers.update({
+                'Access-Control-Allow-Origin': origin,
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS, PUT, DELETE, PATCH',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept, Origin, X-Requested-With, Content-Length, Access-Control-Allow-Origin',
+                'Access-Control-Allow-Credentials': 'true',
+                'Access-Control-Max-Age': '86400'
+            })
+            return response
+    return None
 
 @app.route('/process-files', methods=['OPTIONS'])
 async def handle_options():

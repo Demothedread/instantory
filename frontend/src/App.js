@@ -35,7 +35,6 @@ function App() {
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Origin': window.location.origin,
           },
         });
 
@@ -56,13 +55,12 @@ function App() {
 
       // Fetch documents data
       try {
-        const docResponse = await fetch(`${config.apiUrl}/api/document-vault`, {
+        const docResponse = await fetch(`${config.apiUrl}/api/documents`, {
           method: 'GET',
           credentials: 'include',
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
-            'Origin': window.location.origin,
           },
         });
 
@@ -108,7 +106,6 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'Origin': window.location.origin,
           },
           body: JSON.stringify({ table_name: 'products' }),
         });
@@ -129,13 +126,12 @@ function App() {
   const handleResetDocuments = async () => {
     if (window.confirm('Are you sure you want to reset the documents? This will delete all document entries.')) {
       try {
-        const response = await fetch(`${config.apiUrl}/api/document-vault/reset`, {
+        const response = await fetch(`${config.apiUrl}/api/documents/reset`, {
           method: 'POST',
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'Origin': window.location.origin,
           },
         });
 
@@ -165,7 +161,6 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Origin': window.location.origin,
         },
         body: JSON.stringify({ table_name: newTableName.trim() }),
       });
@@ -193,7 +188,6 @@ function App() {
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Origin': window.location.origin,
         },
       });
 
