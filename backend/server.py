@@ -11,14 +11,15 @@ import urllib.parse as urlparse
 import uuid
 from typing import List, Optional
 
+import PyPDF2
+from docx import Document
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from PIL import Image
 from quart import Quart, jsonify, request, send_file, make_response, websocket
 from quart_cors import cors
 
-# Global dictionary to track tasks (For demonstration; consider using Redis or a database in production)
-processing_tasks = {}
+from main import analyze_document
 
 # Configure logging first
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -31,6 +32,22 @@ if os.path.exists(dotenv_path):
 
 # Add parent directory to Python path to import main.py
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
+# Set up data directories
+DATA_DIR = os.environ.get('DATA_DIR', './data')
+UPLOADS_DIR = os.environ.get('UPLOADS_DIR', os.path.join(DATA_DIR, 'uploads'))
+INVENTORY_IMAGES_DIR = os.environ.get('INVENTORY_IMAGES_DIR', os.path.join(DATA_DIR, 'images', 'inventory'))
+EXPORTS_DIR = os.environ.get('EXPORTS_DIR', os.path.join(DATA_DIR, 'exports'))
+DOCUMENT_DIRECTORY = os.environ.get('DOCUMENT_DIRECTORY', os.path.join(DATA_DIR, 'documents'))
+
+# Try to import config, fall back to environment variables if not found
+try:
+    from config import UPLOADS_DIR, INVENTORY_IMAGES_DIR, EXPORTS_DIR, DATA_DIR, DOCUMENT_DIRECTORY
+except ImportError:
+    logger.warning("Unable to import config.py. Using environment variables.")
+
+# Global dictionary to track tasks (For demonstration; consider using Redis or a database in production)
+processing_tasks = {}
 
 async def get_db_pool():
     """Get PostgreSQL connection pool from environment variables or URL."""
@@ -461,23 +478,23 @@ async def analyze_image_with_gpt4v(image_url: str, instruction: str) -> dict:
                                     "type": "text",
                                     "text": f"""You are an assistant that helps catalog and analyze both products and documents for inventory.
 
-{instruction}
+                                    {instruction}
 
-Analyze this image and provide a detailed inventory entry in JSON format with the following fields:
-{{
-  'name': 'Brief, descriptive product name',
-  'description': 'Detailed description broken into key points with periods',
-  'category': 'One of: Technology, Artwork, Food & Beverage, Travel, Housewares, Fashion, Entertainment, Health & Beauty, Sports & Fitness, Education, or Other',
-  'material': 'Primary materials used in construction',
-  'color': 'Primary and secondary colors',
-  'dimensions': 'Approximate dimensions or size',
-  'origin_source': 'Cultural origin or manufacturing source',
-  'import_cost': 'Estimated import cost in USD (numeric only)',
-  'retail_price': 'Suggested retail price in USD (numeric only)',
-  'key_tags': 'Comma-separated keywords for search and categorization'
-}}
+                                    Analyze this image and provide a detailed inventory entry in JSON format with the following fields:
+                                    {{
+                                    'name': 'Brief, descriptive product name',
+                                    'description': 'Detailed description broken into key points with periods',
+                                    'category': 'One of: Technology, Artwork, Food & Beverage, Travel, Housewares, Fashion, Entertainment, Health & Beauty, Sports & Fitness, Education, or Other',
+                                    'material': 'Primary materials used in construction',
+                                    'color': 'Primary and secondary colors',
+                                    'dimensions': 'Approximate dimensions or size',
+                                    'origin_source': 'Cultural origin or manufacturing source',
+                                    'import_cost': 'Estimated import cost in USD (numeric only)',
+                                    'retail_price': 'Suggested retail price in USD (numeric only)',
+                                    'key_tags': 'Comma-separated keywords for search and categorization'
+                                }}
 
-Ensure all fields are filled with appropriate values based on the image analysis."""
+                                    Ensure all fields are filled with appropriate values based on the image analysis."""
                                 },
                                 {
                                     "type": "image_url",
@@ -552,17 +569,67 @@ async def process_blob_images(images, instruction, conn):
 async def process_blob_document(doc, instruction, conn):
     """Process document from Vercel Blob URL."""
     try:
-        # Store the blob URL directly in the database
-        await conn.execute(
-            """
-            INSERT INTO document_vault (
-                title, file_path, file_type
-            ) VALUES ($1, $2, $3)
-            """,
-            doc['name'],
-            doc['url'],  # Store the Blob URL directly
-            os.path.splitext(doc['name'])[1][1:]  # Get file extension without dot
-        )
+        # Download document from Vercel Blob
+        async with aiohttp.ClientSession() as session:
+            async with session.get(doc['url']) as response:
+                if response.status != 200:
+                    raise Exception(f"Failed to fetch document: {response.status}")
+                
+                # Get the document content
+                document_data = await response.read()
+                
+                # Extract text for analysis
+                with io.BytesIO(document_data) as doc_buffer:
+                    file_ext = os.path.splitext(doc['name'])[1].lower()
+                    
+                    if file_ext == '.pdf':
+                        pdf_reader = PyPDF2.PdfReader(doc_buffer)
+                        text = ""
+                        for page in pdf_reader.pages:
+                            text += page.extract_text() + "\n"
+                    elif file_ext == '.docx':
+                        doc_obj = Document(doc_buffer)
+                        text = "\n".join([paragraph.text for paragraph in doc_obj.paragraphs])
+                    elif file_ext == '.txt':
+                        text = document_data.decode('utf-8', errors='ignore')
+                    else:
+                        raise ValueError(f"Unsupported file type: {file_ext}")
+
+                # Analyze document with GPT-4
+                doc_info = await analyze_document(text)
+                
+                # Store metadata in PostgreSQL
+                await conn.execute(
+                    """
+                    INSERT INTO document_vault (
+                        title, author, journal_publisher, publication_year,
+                        page_length, thesis, issue, summary, category,
+                        field, hashtags, influenced_by, file_path,
+                        file_type, extracted_text
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                    """,
+                    doc_info.get('title', doc['name']),
+                    doc_info.get('author', ''),
+                    doc_info.get('journal_publisher', ''),
+                    doc_info.get('publication_year'),
+                    len(text.split('\n')),
+                    doc_info.get('thesis', ''),
+                    doc_info.get('issue', ''),
+                    doc_info.get('summary', '')[:400],
+                    doc_info.get('category', ''),
+                    doc_info.get('field', ''),
+                    ','.join(doc_info.get('hashtags', [])),
+                    ','.join(doc_info.get('influenced_by', [])),
+                    doc['url'],  # Store Vercel Blob URL
+                    file_ext[1:],  # Remove leading dot
+                    text  # Store full text for future vector embedding
+                )
+                
+                # TODO: Add vector embedding storage
+                # This would involve:
+                # 1. Creating embeddings from the text
+                # 2. Storing in a vector database (e.g., Pinecone, Weaviate)
+                # 3. Linking embeddings to document metadata via doc['url']
     except Exception as e:
         logger.error(f"Error processing document {doc['name']}: {str(e)}")
         raise

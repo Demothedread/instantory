@@ -80,9 +80,9 @@ async def initialize_database() -> None:
                 )
             ''')
 
-            # Create the documents table for document metadata and extracted text
+            # Create the document_vault table for document metadata and extracted text
             await conn.execute('''
-                CREATE TABLE IF NOT EXISTS documents (
+                CREATE TABLE IF NOT EXISTS document_vault (
                     id SERIAL PRIMARY KEY,
                     title TEXT,
                     author TEXT,
