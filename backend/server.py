@@ -459,15 +459,25 @@ async def analyze_image_with_gpt4v(image_url: str, instruction: str) -> dict:
                             "content": [
                                 {
                                     "type": "text",
-                                    "text": f"{instruction}\n\nPlease analyze this image and provide the following details in JSON format:\n"
-                                           "{\n"
-                                           "  'description': 'Detailed description of the item',\n"
-                                           "  'category': 'Product category',\n"
-                                           "  'material': 'Main materials used',\n"
-                                           "  'color': 'Primary colors',\n"
-                                           "  'dimensions': 'Approximate dimensions',\n"
-                                           "  'origin': 'Style or cultural origin'\n"
-                                           "}"
+                                    "text": f"""You are an assistant that helps catalog and analyze both products and documents for inventory.
+
+{instruction}
+
+Analyze this image and provide a detailed inventory entry in JSON format with the following fields:
+{{
+  'name': 'Brief, descriptive product name',
+  'description': 'Detailed description broken into key points with periods',
+  'category': 'One of: Technology, Artwork, Food & Beverage, Travel, Housewares, Fashion, Entertainment, Health & Beauty, Sports & Fitness, Education, or Other',
+  'material': 'Primary materials used in construction',
+  'color': 'Primary and secondary colors',
+  'dimensions': 'Approximate dimensions or size',
+  'origin_source': 'Cultural origin or manufacturing source',
+  'import_cost': 'Estimated import cost in USD (numeric only)',
+  'retail_price': 'Suggested retail price in USD (numeric only)',
+  'key_tags': 'Comma-separated keywords for search and categorization'
+}}
+
+Ensure all fields are filled with appropriate values based on the image analysis."""
                                 },
                                 {
                                     "type": "image_url",
@@ -490,12 +500,16 @@ async def analyze_image_with_gpt4v(image_url: str, instruction: str) -> dict:
                     # If JSON parsing fails, create a structured response
                     text_response = response.choices[0].message.content
                     result = {
+                        'name': 'Untitled Item',
                         'description': text_response[:500],
                         'category': 'Other',
                         'material': 'Unknown',
                         'color': 'Various',
                         'dimensions': 'Not specified',
-                        'origin': 'Unknown'
+                        'origin_source': 'Unknown',
+                        'import_cost': 0.0,
+                        'retail_price': 0.0,
+                        'key_tags': 'unclassified'
                     }
                 
                 return result
@@ -515,19 +529,21 @@ async def process_blob_images(images, instruction, conn):
                 """
                 INSERT INTO products (
                     name, description, image_url, category, material,
-                    color, dimensions, origin_source, import_cost, retail_price
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    color, dimensions, origin_source, import_cost, retail_price,
+                    key_tags
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                 """,
-                image['name'],
+                analysis['name'],
                 analysis['description'],
                 image['url'],
                 analysis['category'],
                 analysis['material'],
                 analysis['color'],
                 analysis['dimensions'],
-                analysis['origin'],
-                0.0,  # Default import cost
-                0.0   # Default retail price
+                analysis['origin_source'],
+                float(analysis.get('import_cost', 0)),
+                float(analysis.get('retail_price', 0)),
+                analysis.get('key_tags', '')
             )
         except Exception as e:
             logger.error(f"Error processing image {image['name']}: {str(e)}")
