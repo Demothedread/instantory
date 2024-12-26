@@ -19,7 +19,7 @@ from PIL import Image
 from quart import Quart, jsonify, request, send_file, make_response, websocket
 from quart_cors import cors
 
-from main import analyze_document
+from ..main import analyze_document
 
 # Configure logging first
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -101,7 +101,7 @@ except ImportError:
     DOCUMENT_DIRECTORY = os.environ.get('DOCUMENT_DIRECTORY', os.path.join(DATA_DIR, 'documents'))
 
 # Import main after config is set up
-from main import (
+from ..main import (
     initialize_database
 )
 
