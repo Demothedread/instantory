@@ -215,13 +215,13 @@ function App() {
         {/* Neon Title */}
         <header className="app-header">
           <h1 className="neon-title">BARTLEBY</h1>
-          <div className="app-title">Catalog*Categorize*Describe*Sort*Summarize</div>
-            <h2 className="app-subtitle"> Diligent Assignation Performed with Quiet Resignation</h2>
+          <div className="app-title"> * Describe * Sort * Summarize * Catalog * Categorize * <br> here when you would rather not </br></div>
         </header>
 
         {/* Main Content */}
         <div className="main-section">
-          <p className='body-text'> At present, a service most methodical: I take in pictures and documents, discern their essence, and render them into well-ordered SQL tables, each sortable to the user’s design. For each item, I produce, with AI-powered precision, a fitting description or a descriptive summary, diligently cataloged one-by-one, into the tables presented below.  </p>
+          <h2 className="app-subtitle"> * THE ONE-CLICK-AND-DONE PROMISE* </h2>
+          <p className='body-text'> The toils of  but its necessary, a / service most methodical: I take in pictures and documents, discern their essence, and render them into well-ordered SQL tables, each sortable to the user’s design. For each item, I produce, with AI-powered precision, a fitting description or a descriptive summary, diligently cataloged one-by-one, into the tables presented below.  </p>
           {/* Process Images Button */}
           <ProcessImagesButton onProcess={handleProcessFiles} />
 
