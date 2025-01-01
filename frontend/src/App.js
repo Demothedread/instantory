@@ -220,8 +220,8 @@ function App() {
 
         {/* Main Content */}
         <div className="main-section">
-          <h2 className="app-subtitle"> * THE ONE-CLICK-AND-DONE PROMISE* </h2>
-          <p className='body-text'> The toils of  but its necessary, a / service most methodical: I take in pictures and documents, discern their essence, and render them into well-ordered SQL tables, each sortable to the user’s design. For each item, I produce, with AI-powered precision, a fitting description or a descriptive summary, diligently cataloged one-by-one, into the tables presented below.  </p>
+          <h2 className="app-subtitle"> * THE ONE-CLICK-AND-DONE GUARANTEE * </h2>
+          <p className='body-text'> Leave the toils of tedium behind, go forth from the wasteland of winterf natural inclination of the machine-minded being, : I take in pictures and documents, discern their essence, and render them into well-ordered SQL tables, each sortable to the user’s design. For each item, I produce, with AI-powered precision, a fitting description or a descriptive summary, diligently cataloged one-by-one, into the tables presented below.  </p>
           {/* Process Images Button */}
           <ProcessImagesButton onProcess={handleProcessFiles} />
 

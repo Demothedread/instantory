@@ -10,7 +10,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: PORT
-        value: "443"
+        sync: true  # Let Render assign the port dynamically
 
       # Database configuration (managed by Render)
       - key: DATABASE_URL
