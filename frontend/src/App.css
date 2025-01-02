@@ -75,10 +75,10 @@ body {
 
 .app-header::before
 .app-header::after {
-  mask-image: url('./assets/circles-gold.jpeg');
+  mask-image: url('');
   mask-size: contain;
   mask-repeat: repeat-x;
-  -webkit-mask-image: url('./assets/circles-gold.jpeg');
+  -webkit-mask-image: url('');
   -webkit-mask-size: contain;
   -webkit-mask-repeat: repeat-x;
 }
