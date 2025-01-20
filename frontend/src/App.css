@@ -1,0 +1,346 @@
+/* App.css */
+@import url('https://use.typekit.net/rfh6pul.css');
+@import url('https://use.typekit.net/ocb4vnc.css');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Josefin+Sans:wght@400;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Poiret+One&display=swap');
+
+:root {
+  --emerald: #1A9485;
+  --emerald-light: #40E0D0;
+  --burgundy: #800020;
+  --gold: #D4AF37;
+  --cream: #F5F2E9;
+  --dark-green: #0A4B40;
+  --black: #1A1A1A;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--black);
+  color: var(--cream);
+  font-family: 'Josefin Sans', sans-serif;
+}
+
+.app-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-image: url('./assets/borders/ArtDeco/EmeraldDeco7.png');
+  background-size: 100% auto;
+  background-repeat: no-repeat;
+  background-position: center top;
+}
+
+.app-header {
+  padding: 2rem;
+  text-align: center;
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.app-header::before,
+.app-header::after {
+  content: '';
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  background-image: url('./assets/borders/ArtDeco/EmeraldDeco1.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.app-header::before {
+  top: 0;
+  left: 0;
+  transform: rotate(-90deg);
+}
+
+.app-header::after {
+  top: 0;
+  right: 0;
+  transform: rotate(90deg);
+}
+
+.neon-title {
+  font-family: 'Cinzel Decorative', cursive;
+  font-size: 4.5rem;
+  margin: 0;
+  color: var(--emerald-light);
+  text-shadow: 
+    0 0 5px var(--emerald),
+    0 0 10px var(--emerald),
+    0 0 20px var(--emerald-light),
+    0 0 40px var(--emerald-light);
+  animation: neonPulse 1.5s ease-in-out infinite alternate;
+}
+
+.app-title {
+  font-family: 'Poiret One', cursive;
+  font-size: 1.5rem;
+  color: var(--gold);
+  margin-top: 1rem;
+  letter-spacing: 2px;
+}
+
+.app-subtitle {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem;
+  color: var(--emerald-light);
+  text-align: center;
+  margin: 2rem 0;
+  position: relative;
+  padding: 0 2rem;
+}
+
+.app-subtitle::before,
+.app-subtitle::after {
+  content: '';
+  position: absolute;
+  width: 100px;
+  height: 50px;
+  background-image: url('./assets/borders/ArtDeco/EmeraldDeco2.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.app-subtitle::before {
+  left: 0;
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.app-subtitle::after {
+  right: 0;
+  transform: translateY(-50%);
+}
+
+.main-section {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.body-text {
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 1.2rem;
+  line-height: 1.6;
+  color: var(--cream);
+  text-align: center;
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: rgba(26, 148, 133, 0.1);
+  border: 1px solid var(--emerald);
+  position: relative;
+}
+
+.body-text::before,
+.body-text::after {
+  content: '';
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  background-image: url('./assets/borders/ArtDeco/EmeraldDeco3.png');
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.body-text::before {
+  top: -20px;
+  left: -20px;
+  transform: rotate(-90deg);
+}
+
+.body-text::after {
+  bottom: -20px;
+  right: -20px;
+  transform: rotate(90deg);
+}
+
+.menu-container {
+  position: relative;
+  margin: 2rem 0;
+}
+
+.menu-trigger {
+  background: var(--emerald);
+  color: var(--cream);
+  border: none;
+  padding: 1rem 2rem;
+  font-family: 'Poiret One', cursive;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.menu-trigger::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: shimmer 3s infinite;
+}
+
+.menu-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--black);
+  border: 1px solid var(--emerald);
+  min-width: 200px;
+  z-index: 10;
+  padding: 1rem 0;
+}
+
+.menu-dropdown a,
+.menu-dropdown button {
+  display: block;
+  padding: 0.8rem 1.5rem;
+  color: var(--cream);
+  text-decoration: none;
+  font-family: 'Josefin Sans', sans-serif;
+  transition: all 0.3s ease;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-dropdown a:hover,
+.menu-dropdown button:hover {
+  background: var(--emerald);
+  color: var(--black);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--emerald);
+  margin: 0.5rem 0;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal-content {
+  background: var(--black);
+  padding: 2rem;
+  border: 2px solid var(--emerald);
+  max-width: 500px;
+  width: 90%;
+  position: relative;
+}
+
+.modal-content h3 {
+  color: var(--emerald-light);
+  font-family: 'Playfair Display', serif;
+  margin-bottom: 1.5rem;
+}
+
+.modal-content input {
+  width: 100%;
+  padding: 0.8rem;
+  margin-bottom: 1rem;
+  background: var(--black);
+  border: 1px solid var(--emerald);
+  color: var(--cream);
+}
+
+.modal-content button {
+  background: var(--emerald);
+  color: var(--cream);
+  border: none;
+  padding: 0.8rem 1.5rem;
+  margin: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.modal-content button:hover {
+  background: var(--emerald-light);
+  color: var(--black);
+}
+
+.error-message {
+  background: var(--burgundy);
+  color: var(--cream);
+  padding: 1rem;
+  margin: 1rem 0;
+  text-align: center;
+  border-radius: 4px;
+}
+
+@keyframes neonPulse {
+  from {
+    text-shadow: 
+      0 0 5px var(--emerald),
+      0 0 10px var(--emerald),
+      0 0 20px var(--emerald-light),
+      0 0 40px var(--emerald-light);
+  }
+  to {
+    text-shadow: 
+      0 0 10px var(--emerald),
+      0 0 20px var(--emerald),
+      0 0 40px var(--emerald-light),
+      0 0 80px var(--emerald-light);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(45deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .neon-title {
+    font-size: 3rem;
+  }
+
+  .app-title {
+    font-size: 1.2rem;
+  }
+
+  .app-subtitle {
+    font-size: 1.5rem;
+  }
+
+  .body-text {
+    font-size: 1rem;
+    padding: 1.5rem;
+  }
+
+  .app-header::before,
+  .app-header::after {
+    width: 100px;
+    height: 100px;
+  }
+}

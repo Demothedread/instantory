@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "framework": "create-react-app",
+  "public": true,
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "headers": { "cache-control": "s-maxage=31536000, immutable" },
+      "dest": "/static/$1"
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/manifest.json"
+    },
+    {
+      "src": "/(.*)",
+      "headers": { 
+        "cache-control": "s-maxage=0",
+        "Access-Control-Allow-Origin": "https://instantory.onrender.com",
+        "Access-Control-Allow-Methods": "GET,PUT,POST,DELETE,OPTIONS,PATCH",
+        "Access-Control-Allow-Headers": "Content-Type,Authorization,Accept,Origin,X-Requested-With",
+        "Access-Control-Allow-Credentials": "true"
+      },
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "REACT_APP_BACKEND_URL": "https://instantory.onrender.com",
+    "DATABASE_URL": "postgresql://instantory_db_user:dOnjIofuc6rPHqSCPQ3Pi5btjBcizIPu@dpg-ctbqgrrtq21c73deq7ng-a.oregon-postgres.render.com/instantory_db",
+    "BLOB_READ_WRITE_TOKEN": "vercel_blob_rw_s5xuxXH6T3fDx9Oz_AdnmR7yE2uQjnt1cWInfUzpXQdtrpS"
+  }
+}

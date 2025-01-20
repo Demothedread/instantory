@@ -1,0 +1,202 @@
+/* DocumentSearch.css */
+
+/* Importing custom fonts */
+@font-face {
+  font-family: 'bodega-sans';
+  src: url('https://use.typekit.net/af/56d5a3/00000000000000003b9ae3c4/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n3&v=3');
+}
+
+@font-face {
+  font-family: 'swaak-centennial-mn';
+  src: url('https://use.typekit.net/af/b4a385/000000000000000077559585/30/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n4&v=3');
+}
+
+@font-face {
+  font-family: 'capitol';
+  src: url('https://use.typekit.net/af/13b4e6/00000000000000007735b446/30/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n3&v=3');
+}
+
+@font-face {
+  font-family: 'broadacre-thin-2';
+  src: url('https://use.typekit.net/af/fac79c/00000000000000007735e114/30/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n1&v=3');
+}
+
+body {
+  font-family: 'bodega-sans', sans-serif;
+  background-color: #0a0a0a; /* Lacquered black */
+  color: #e0e0e0; /* Metallic silver */
+}
+
+.document-search-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.title {
+  font-family: 'swaak-centennial-mn', 'capitol', serif;
+  font-size: 3em;
+  color: #7fffd4; /* Ice blue */
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.search-filter-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.search-input-group {
+  display: flex;
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 10px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #4b6e71; /* Emerald green */
+  background-color: #1a1a1a;
+  color: #e0e0e0;
+  font-family: 'bodega-sans', sans-serif;
+}
+
+.search-button {
+  background-color: #4b6e71; /* Emerald green */
+  color: #e0e0e0;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-family: 'bodega-sans', sans-serif;
+}
+
+.search-button:hover {
+  background-color: #7fffd4; /* Ice blue */
+  color: #0a0a0a;
+}
+
+.filter-menu-container {
+  position: relative;
+  margin-top: 10px;
+}
+
+.filter-menu-trigger {
+  background-color: #4b6e71;
+  color: #e0e0e0;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-family: 'bodega-sans', sans-serif;
+}
+
+.filter-menu-trigger:hover {
+  background-color: #7fffd4;
+  color: #0a0a0a;
+}
+
+.filter-dropdown {
+  position: absolute;
+  background-color: #0a0a0a;
+  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+  min-width: 200px;
+  margin-top: 5px;
+}
+
+.filter-dropdown button {
+  background: none;
+  border: none;
+  color: #e0e0e0;
+  padding: 10px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  font-family: 'bodega-sans', sans-serif;
+}
+
+.filter-dropdown button:hover {
+  background-color: #4b6e71;
+}
+
+.error-message {
+  color: #800020; /* Dark burgundy */
+  background-color: #1a1a1a;
+  padding: 10px;
+  margin: 20px 0;
+  border: 1px solid #800020;
+  text-align: center;
+  font-family: 'bodega-sans', sans-serif;
+}
+
+.search-results {
+  margin-top: 20px;
+}
+
+.subtitle {
+  font-family: 'swaak-centennial-mn', 'capitol', serif;
+  font-size: 2em;
+  color: #b8860b; /* Pale gold */
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.result-card {
+  background-color: #1a1a1a;
+  border: 1px solid #4b6e71;
+  padding: 20px;
+  margin-bottom: 20px;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.result-card h4 {
+  font-family: 'broadacre-thin-2', sans-serif;
+  color: #7fffd4;
+  margin-bottom: 10px;
+}
+
+.result-category {
+  font-family: 'bodega-sans', sans-serif;
+  color: #b8860b;
+  margin-bottom: 10px;
+}
+
+.result-summary {
+  font-family: 'bodega-sans', sans-serif;
+  color: #e0e0e0;
+  margin-bottom: 10px;
+}
+
+.result-metadata {
+  font-family: 'bodega-sans', sans-serif;
+  color: #e0e0e0;
+  font-size: 0.9em;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4b6e71;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #7fffd4;
+}

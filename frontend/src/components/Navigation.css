@@ -1,0 +1,221 @@
+.nav-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 300px;
+  height: 100vh;
+  background: linear-gradient(135deg,
+    rgba(26, 26, 26, 0.95) 0%,
+    rgba(26, 26, 26, 0.98) 100%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out;
+  z-index: 1500;
+  box-shadow: 
+    5px 0 30px rgba(0, 0, 0, 0.3),
+    inset 0 0 100px rgba(212, 175, 55, 0.1);
+  border-right: 1px solid rgba(212, 175, 55, 0.3);
+  overflow-y: auto;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.nav-container.open {
+  transform: translateX(0);
+}
+
+.nav-header {
+  padding: 2rem 1.5rem;
+  text-align: center;
+  position: relative;
+}
+
+.nav-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--gold-leaf),
+    transparent
+  );
+}
+
+.nav-logo {
+  font-family: 'Cinzel Decorative', serif;
+  color: var(--gold-leaf);
+  font-size: 2rem;
+  margin: 0;
+  text-shadow: 
+    0 0 10px rgba(212, 175, 55, 0.3),
+    0 0 20px rgba(26, 148, 133, 0.2);
+}
+
+.nav-menu {
+  padding: 2rem 1.5rem;
+}
+
+.nav-item {
+  margin-bottom: 1rem;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  color: var(--pearl-white);
+  text-decoration: none;
+  font-family: 'Josefin Sans', sans-serif;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  border-radius: 10px;
+  background: linear-gradient(135deg,
+    rgba(26, 148, 133, 0.05) 0%,
+    rgba(26, 148, 133, 0.02) 100%
+  );
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-link::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 175, 55, 0.1),
+    transparent
+  );
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+
+.nav-link:hover::before {
+  transform: translateX(100%);
+}
+
+.nav-link:hover {
+  background: linear-gradient(135deg,
+    rgba(26, 148, 133, 0.08) 0%,
+    rgba(26, 148, 133, 0.04) 100%
+  );
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    0 0 15px rgba(212, 175, 55, 0.1);
+}
+
+.nav-link.active {
+  background: var(--gold-gradient);
+  color: var(--black);
+  font-weight: 600;
+  box-shadow: 
+    0 4px 12px rgba(212, 175, 55, 0.2),
+    inset 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+.nav-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 1rem;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.nav-link:hover .nav-icon {
+  opacity: 1;
+}
+
+.nav-toggle {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--gold-gradient);
+  border: none;
+  cursor: pointer;
+  z-index: 1600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+.nav-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 
+    0 6px 15px rgba(212, 175, 55, 0.3),
+    inset 0 0 10px rgba(255, 255, 255, 0.4);
+}
+
+.nav-toggle-icon {
+  position: relative;
+  width: 24px;
+  height: 2px;
+  background: var(--black);
+  transition: all 0.3s ease;
+}
+
+.nav-toggle-icon::before,
+.nav-toggle-icon::after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 2px;
+  background: var(--black);
+  transition: all 0.3s ease;
+}
+
+.nav-toggle-icon::before {
+  transform: translateY(-8px);
+}
+
+.nav-toggle-icon::after {
+  transform: translateY(8px);
+}
+
+.nav-toggle.open .nav-toggle-icon {
+  background: transparent;
+}
+
+.nav-toggle.open .nav-toggle-icon::before {
+  transform: rotate(45deg);
+}
+
+.nav-toggle.open .nav-toggle-icon::after {
+  transform: rotate(-45deg);
+}
+
+@media (max-width: 768px) {
+  .nav-container {
+    width: 100%;
+  }
+
+  .nav-toggle {
+    top: 0.5rem;
+    left: 0.5rem;
+    width: 40px;
+    height: 40px;
+  }
+
+  .nav-toggle-icon,
+  .nav-toggle-icon::before,
+  .nav-toggle-icon::after {
+    width: 20px;
+  }
+}

@@ -1,0 +1,18 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Iceland&display=swap" rel="stylesheet">
+
+.iceland-regular {
+    font-family: "Iceland", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+ <link rel="stylesheet" href="https://use.typekit.net/fxe1mpz.css">
+
+ .am-udin {
+    font-family: "am-udine";
+    font-weight: 400;
+    font-style: normal;
+  }
+ 
