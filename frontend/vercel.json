@@ -30,7 +30,7 @@
   ],
   "env": {
     "REACT_APP_BACKEND_URL": "https://instantory.onrender.com",
-    "DATABASE_URL": "postgresql://instantory_db_user:dOnjIofuc6rPHqSCPQ3Pi5btjBcizIPu@dpg-ctbqgrrtq21c73deq7ng-a.oregon-postgres.render.com/instantory_db",
+    "DATABASE_URL": "postgresql://bartleby_sql_user:adc84Vezvc0nONldSZ2VvS5Z1MxXcul7@dpg-cu7jk4ij1k6c73flhb9g-a.oregon-postgres.render.com/bartleby_sq",
     "BLOB_READ_WRITE_TOKEN": "vercel_blob_rw_s5xuxXH6T3fDx9Oz_AdnmR7yE2uQjnt1cWInfUzpXQdtrpS"
   }
 }
