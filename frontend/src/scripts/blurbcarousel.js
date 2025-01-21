@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "../styles/blurb.css";
+import "./styles/blurb.css";
 import clickandone from "../assets/clickandone.png";
 import yippeekiAI from "../assets/yippeekiAI.png"; 
 
