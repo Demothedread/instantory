@@ -17,6 +17,7 @@ from backend.config import DATA_DIR, UPLOADS_DIR, INVENTORY_IMAGES_DIR, TEMP_DIR
 import PyPDF2
 from docx import Document
 import re
+import { SpeedInsights } from "@vercel/speed-insights/react"
 
 # Load environment variables
 load_dotenv()
