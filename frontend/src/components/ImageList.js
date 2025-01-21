@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import Masonry from 'react-masonry-css';
-import config from '../config';
 import './ImageList.css';
 
 function ImageList({ inventory = [] }) {

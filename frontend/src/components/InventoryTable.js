@@ -1,9 +1,20 @@
 import React, { useState } from 'react';
-import config from '../config';
 import './InventoryTable.css';
 import placeholderImage from '../assets/icons/placeholder.png';
 
 function InventoryTable({ inventory }) {
+  // Add CSS variables for consistent styling
+  const tableStyles = {
+    '--table-border-color': 'var(--gold)',
+    '--table-header-bg': 'rgba(26, 26, 26, 0.95)',
+    '--table-row-hover-bg': 'rgba(255, 0, 255, 0.1)',
+    '--table-border-radius': '15px',
+    '--table-shadow': `
+      0 0 30px var(--magenta-glow),
+      0 0 30px var(--cyan-glow),
+      inset 0 0 50px rgba(0, 0, 0, 0.5)
+    `
+  };
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState(null);
   const [filterCategory, setFilterCategory] = useState('');
@@ -29,9 +40,16 @@ function InventoryTable({ inventory }) {
 
   if (!Array.isArray(inventory) || inventory.length === 0) {
     return (
-      <div className="inventory-container">
-        <h2 className="title">Inventory</h2>
-        <p>No inventory data available.</p>
+      <div className="inventory-container" style={tableStyles}>
+        <h2 className="title">
+          <span className="title-text">Inventory</span>
+          <div className="title-underline"></div>
+        </h2>
+        <div className="empty-state">
+          <div className="empty-state-icon">📦</div>
+          <p className="empty-state-text">No inventory data available.</p>
+          <p className="empty-state-subtext">Upload some items to get started!</p>
+        </div>
       </div>
     );
   }
@@ -66,27 +84,34 @@ function InventoryTable({ inventory }) {
   });
 
   return (
-    <div className="inventory-container">
+    <div className="inventory-container" style={tableStyles}>
       <div className="header-section">
-        <h1 className="title">Inventory</h1>
+        <h1 className="title">
+          <span className="title-text">Inventory</span>
+          <div className="title-underline"></div>
+        </h1>
       </div>
 
       <div className="filter-section">
         <div className="search-filter">
-          <input 
-            type="text" 
-            placeholder="Search by name, description, material, or origin..." 
-            value={searchTerm} 
-            onChange={(e) => handleSearch(e.target.value)}
-            className="search-input"
-          />
+          <div className="search-input-wrapper">
+            <input 
+              type="text" 
+              placeholder="Search by name, description, material, or origin..." 
+              value={searchTerm} 
+              onChange={(e) => handleSearch(e.target.value)}
+              className="search-input"
+            />
+            <div className="search-icon">🔍</div>
+          </div>
         </div>
         <div className="filter-menu-container">
           <button 
-            className="filter-menu-trigger" 
+            className="filter-menu-trigger neo-decoroco-button" 
             onClick={() => setShowFilterMenu(!showFilterMenu)}
             onBlur={() => setTimeout(() => setShowFilterMenu(false), 200)}
           >
+            <span className="filter-icon">🏷️</span>
             Filter by Category
           </button>
           {showFilterMenu && (
@@ -103,8 +128,8 @@ function InventoryTable({ inventory }) {
         </div>
       </div>
 
-      <div className="table-container">
-        <table className="inventory-table">
+      <div className="table-container neo-decoroco-panel">
+        <table className="inventory-table" style={tableStyles}>
           <thead>
             <tr>
               <th onClick={() => handleSort('name')}>Name {sortColumn === 'name' && (sortDirection === 'asc' ? '▲' : '▼')}</th>
@@ -121,35 +146,42 @@ function InventoryTable({ inventory }) {
           </thead>
           <tbody>
             {sortedInventory.map((item, index) => (
-              <tr key={index}>
-                <td>{item?.name || ''}</td>
+              <tr key={index} className="inventory-row">
+                <td className="name-cell">{item?.name || ''}</td>
                 <td className="description-cell">
                   {(item?.description || '').split('. ').map((sentence, idx) => (
-                    <div key={idx}>{sentence.trim()}</div>
+                    <div key={idx} className="description-line">{sentence.trim()}</div>
                   ))}
                 </td>
                 <td className="image-cell">
-                  {item?.image_url && (
-                    <img 
-                      src={item.image_url} 
-                      alt={item?.name || 'Product'} 
-                      className="inventory-image"
-                      onError={(e) => {
-                        if (!e.target.dataset.retried) {
-                          e.target.dataset.retried = true;
-                          e.target.src = placeholderImage;
-                        }
-                      }}
-                    />
-                  )}
+                  <div className="image-wrapper">
+                    {item?.image_url && (
+                      <img 
+                        src={item.image_url} 
+                        alt={item?.name || 'Product'} 
+                        className="inventory-image"
+                        onError={(e) => {
+                          if (!e.target.dataset.retried) {
+                            e.target.dataset.retried = true;
+                            e.target.src = placeholderImage;
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
                 </td>   
-                <td>{item?.category || ''}</td>
-                <td>{item?.material || ''}</td>
-                <td>{item?.color || ''}</td>
-                <td>{item?.dimensions || ''}</td>
-                <td>{item?.origin_source || ''}</td>
-                <td>{item?.import_cost ? `$${Number(item.import_cost).toFixed(2)}` : ''}</td>
-                <td>{item?.retail_price ? `$${Number(item.retail_price).toFixed(2)}` : ''}</td>
+                <td className="category-cell">
+                  <span className="category-badge">{item?.category || ''}</span>
+                </td>
+                <td className="material-cell">{item?.material || ''}</td>
+                <td className="color-cell">
+                  <span className="color-dot" style={{ backgroundColor: item?.color || 'transparent' }}></span>
+                  {item?.color || ''}
+                </td>
+                <td className="dimensions-cell">{item?.dimensions || ''}</td>
+                <td className="origin-cell">{item?.origin_source || ''}</td>
+                <td className="price-cell">{item?.import_cost ? `$${Number(item.import_cost).toFixed(2)}` : ''}</td>
+                <td className="price-cell">{item?.retail_price ? `$${Number(item.retail_price).toFixed(2)}` : ''}</td>
               </tr>
             ))}
           </tbody>

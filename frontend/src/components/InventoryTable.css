@@ -1,250 +1,336 @@
-/* InventoryTable.css */
-
-/* Importing custom fonts */
-@font-face {
-  font-family:"bodega-sans";
-  src:url("https://use.typekit.net/af/56d5a3/00000000000000003b9ae3c4/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n3&v=3") 
-}
-
-@font-face {
-  font-family:"swaak-centennial-mn";
-  src:url("https://use.typekit.net/af/b4a385/000000000000000077559585/30/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n4&v=3") 
-}
-
-@font-face {
-  font-family:"capitol";
-  src:url("https://use.typekit.net/af/13b4e6/00000000000000007735b446/30/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n3&v=3") 
-}
-
-body {
-  font-family: 'bodega-sans', sans-serif;
-  background-color: #24002b; /* Lacquered black */
-  color: #e0e0e0; /* Metallic silver */
-  margin: 0;
-  padding: 0;
-}
-
 .inventory-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  padding: 2rem;
+  background: rgba(26, 26, 26, 0.85);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-radius: var(--table-border-radius);
+  border: 2px solid var(--gold);
+  box-shadow: var(--table-shadow);
+  margin: 2rem auto;
+  max-width: 1400px;
 }
 
 .title {
-  font-family: 'swaak-centennial-mn', 'capitol', serif;
-  font-size: 3em;
-  color: #7fffd4; /* Ice blue */
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 2rem;
+  position: relative;
 }
 
-.header-section {
-  margin-bottom: 40px;
+.title-text {
+  font-family: 'Rozha One', serif;
+  font-size: 3rem;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 
+    0 0 20px var(--magenta-glow),
+    0 0 20px var(--cyan-glow);
+}
+
+.title-underline {
+  width: 200px;
+  height: 3px;
+  background: var(--gold-gradient);
+  margin: 1rem auto;
+  box-shadow: 
+    0 0 10px var(--magenta-glow),
+    0 0 10px var(--cyan-glow);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: rgba(26, 26, 26, 0.5);
+  border-radius: var(--table-border-radius);
+  border: 1px solid var(--gold);
+}
+
+.empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+.empty-state-text {
+  font-family: 'Rozha One', serif;
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.empty-state-subtext {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.2rem;
+  color: var(--cream);
+  opacity: 0.8;
 }
 
 .filter-section {
   display: flex;
-  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
   align-items: center;
-  margin-bottom: 20px;
 }
 
-.search-filter {
+.search-input-wrapper {
+  position: relative;
   flex: 1;
-  margin-right: 10px;
 }
 
 .search-input {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #4b6e71; /* Emerald green */
-  background-color: #1a1a1a;
-  color: #e0e0e0;
+  padding: 1rem 3rem 1rem 1.5rem;
+  background: rgba(26, 26, 26, 0.7);
+  border: 1px solid var(--gold);
+  border-radius: 2rem;
+  color: var(--cream);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
 }
 
-.filter-menu-container {
-  position: relative;
+.search-input:focus {
+  outline: none;
+  border-color: var(--magenta);
+  box-shadow: 
+    0 0 15px var(--magenta-glow),
+    0 0 15px var(--cyan-glow);
+}
+
+.search-icon {
+  position: absolute;
+  right: 1.2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+  opacity: 0.7;
 }
 
 .filter-menu-trigger {
-  background-color: #4b6e71; /* Emerald green */
-  color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  background: var(--gold-gradient);
   border: none;
-  padding: 10px 20px;
+  border-radius: 2rem;
+  color: var(--black);
+  font-family: 'Rozha One', serif;
+  font-size: 1rem;
   cursor: pointer;
-  font-family: 'Bodega Sans', sans-serif;
+  transition: all 0.3s ease;
+  box-shadow: 
+    0 5px 15px rgba(0, 0, 0, 0.2),
+    0 0 20px var(--magenta-glow),
+    0 0 20px var(--cyan-glow);
 }
 
 .filter-menu-trigger:hover {
-  background-color: #7fffd4; /* Ice blue */
-  color: #0a0a0a;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 20px rgba(0, 0, 0, 0.3),
+    0 0 30px var(--magenta-glow),
+    0 0 30px var(--cyan-glow);
+}
+
+.filter-icon {
+  font-size: 1.2rem;
 }
 
 .filter-dropdown {
   position: absolute;
-  background-color: #0a0a0a;
-  box-shadow: 0px 8px 16px rgba(0,0,0,0.5);
-  z-index: 2;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: rgba(26, 26, 26, 0.95);
+  border: 1px solid var(--gold);
+  border-radius: 1rem;
+  overflow: hidden;
+  z-index: 10;
   min-width: 200px;
-  margin-top: 5px;
+  box-shadow: 
+    0 5px 15px rgba(0, 0, 0, 0.3),
+    0 0 20px var(--magenta-glow),
+    0 0 20px var(--cyan-glow);
 }
 
 .filter-dropdown button {
+  width: 100%;
+  padding: 1rem;
   background: none;
   border: none;
-  color: #e0e0e0;
-  padding: 10px;
+  color: var(--cream);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
   text-align: left;
-  width: 100%;
   cursor: pointer;
-  font-family: 'bodega-sans', sans-serif;
+  transition: all 0.3s ease;
 }
 
 .filter-dropdown button:hover {
-  background-color: #4b6e71;
+  background: rgba(255, 0, 255, 0.1);
+  color: var(--gold);
 }
 
 .table-container {
   overflow-x: auto;
+  border-radius: var(--table-border-radius);
+  border: 2px solid var(--gold);
+  background: rgba(26, 26, 26, 0.7);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
 .inventory-table {
   width: 100%;
   border-collapse: collapse;
-  animation: fadeIn 0.5s ease-in-out;
-}
-
-.inventory-table th,
-.inventory-table td {
-  padding: 15px;
-  border: 1px solid #4b6e71;
-  text-align: left;
+  font-family: 'Cormorant Garamond', serif;
 }
 
 .inventory-table th {
-  font-family: 'swaak-centennial-mn', 'Capitol', serif;
-  font-size: 1.2em;
-  background-color: #1a1a1a;
-  color: #b8860b; /* Pale gold */
-  position: sticky;
-  top: 0;
+  background: var(--table-header-bg);
+  color: var(--cream);
+  padding: 1.2rem 1rem;
+  text-align: left;
+  font-family: 'Rozha One', serif;
+  font-size: 1.1rem;
+  border-bottom: 2px solid var(--gold);
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.inventory-table tbody tr:nth-child(even) {
-  background-color: #0a0a0a;
+.inventory-table th:hover {
+  background: rgba(255, 0, 255, 0.1);
+  color: var(--gold);
 }
 
-.inventory-table tbody tr:hover {
-  background-color: #4b6e71;
-  color: #e0e0e0;
+.inventory-row {
+  transition: all 0.3s ease;
+}
+
+.inventory-row:hover {
+  background: var(--table-row-hover-bg);
+}
+
+.inventory-table td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  color: var(--cream);
+}
+
+.name-cell {
+  font-weight: 500;
+  color: var(--gold);
+}
+
+.description-cell {
+  max-width: 300px;
+}
+
+.description-line {
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
+.description-line:last-child {
+  margin-bottom: 0;
+}
+
+.image-wrapper {
+  width: 100px;
+  height: 100px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--gold);
 }
 
 .inventory-image {
-  width: 100px;
-  height: auto;
-  border: 1px solid #4b6e71;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
 }
 
-.description-cell div {
-  margin-bottom: 5px;
+.image-wrapper:hover .inventory-image {
+  transform: scale(1.1);
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.category-badge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: var(--gold-gradient);
+  border-radius: 2rem;
+  color: var(--black);
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
-/* Animation when switching between tables */
-.table-container {
-  animation: slideIn 0.5s ease-in-out;
+.color-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-@keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}        
+.color-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--gold);
+}
+
+.price-cell {
+  font-family: 'Rozha One', serif;
+  color: var(--gold);
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
 
 @media (max-width: 768px) {
-  .workflow-section {
-    grid-template-columns: 1fr;
+  .inventory-container {
+    padding: 1rem;
+    margin: 1rem;
+  }
+
+  .title-text {
+    font-size: 2rem;
   }
 
   .filter-section {
     flex-direction: column;
   }
 
-  .category-filter,
-  .search-filter {
-    margin: 10px 0;
+  .search-input {
+    padding: 0.8rem 2.5rem 0.8rem 1rem;
+  }
+
+  .filter-menu-trigger {
     width: 100%;
-  }
-
-  .header-section h1 {
-    font-size: 2em;
-  }
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .inventory-container {
-    background-color: #1a1a1a;
-    color: #ffffff;
-  }
-
-  .header-section h1 {
-    color: #ffffff;
-  }
-
-  .header-section p {
-    color: #cccccc;
-  }
-
-  .image-workflow,
-  .document-workflow,
-  .technology-section,
-  .filter-section {
-    background: #2d2d2d;
-  }
-
-  .category-filter select,
-  .search-filter input {
-    background-color: #3d3d3d;
-    border-color: #4d4d4d;
-    color: #ffffff;
-  }
-
-  .search-filter input {
-    background-image: url('/src/assets/borders/artdeco_transparentborder.png');
+    justify-content: center;
   }
 
   .table-container {
-    background: #2d2d2d;
+    margin-top: 1rem;
   }
 
-  th {
-    background-color: #2d2d2d;
-    color: #ffffff;
-    border-bottom-color: #4d4d4d;
+  .inventory-table th,
+  .inventory-table td {
+    padding: 0.8rem;
+    font-size: 0.9rem;
   }
 
-  th:hover {
-    background-color: #3d3d3d;
-  }
-
-  td {
-    border-bottom-color: #4d4d4d;
-    color: #ffffff;
-  }
-
-  tr:hover {
-    background-color: #3d3d3d;
-  }
-
-  .inventory-image {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-  }
-
-  .inventory-image:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+  .image-wrapper {
+    width: 60px;
+    height: 60px;
   }
 }

@@ -11,6 +11,12 @@
   --cream: #F5F2E9;
   --dark-green: #0A4B40;
   --black: #1A1A1A;
+  --magenta: #FF00FF;
+  --cyan: #00FFFF;
+  --magenta-glow: rgba(255, 0, 255, 0.3);
+  --cyan-glow: rgba(0, 255, 255, 0.3);
+  --gold-gradient: linear-gradient(45deg, var(--gold) 0%, #FFF5D4 50%, var(--gold) 100%);
+  --rococo-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
 }
 
 body {
@@ -18,17 +24,62 @@ body {
   padding: 0;
   background-color: var(--black);
   color: var(--cream);
-  font-family: 'Josefin Sans', sans-serif;
+  font-family: 'Cormorant Garamond', serif;
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+  max-height: 220vh;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('./assets/bakground_rococo.png');
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+  opacity: 0.15;
+  z-index: -1;
 }
 
 .app-container {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-image: url('./assets/borders/ArtDeco/EmeraldDeco7.png');
-  background-size: 100% auto;
-  background-repeat: no-repeat;
-  background-position: center top;
+  position: relative;
+}
+
+.app-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 150px;
+  background-image: url('./assets/border_rococo_wild.png');
+  background-size: contain;
+  background-repeat: repeat-x;
+  transform: rotate(180deg);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.app-container::after {
+  content: '';
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 150px;
+  background-image: url('./assets/border_rococo_wild.png');
+  background-size: contain;
+  background-repeat: repeat-x;
+  z-index: 10;
+  pointer-events: none;
 }
 
 .app-header {
@@ -62,24 +113,66 @@ body {
 }
 
 .neon-title {
-  font-family: 'Cinzel Decorative', cursive;
-  font-size: 4.5rem;
+  font-family: 'Rozha One', serif;
+  font-size: 5rem;
   margin: 0;
-  color: var(--emerald-light);
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   text-shadow: 
-    0 0 5px var(--emerald),
-    0 0 10px var(--emerald),
-    0 0 20px var(--emerald-light),
-    0 0 40px var(--emerald-light);
+    0 0 10px var(--magenta-glow),
+    0 0 20px var(--cyan-glow),
+    0 0 30px var(--magenta-glow),
+    0 0 50px var(--cyan-glow),
+    0 0 70px var(--gold);
   animation: neonPulse 1.5s ease-in-out infinite alternate;
+  position: relative;
+  z-index: 20;
+  letter-spacing: 0.1em;
+}
+
+.neon-title::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 2px;
+  background: var(--gold-gradient);
+  box-shadow: 
+    0 0 10px var(--magenta-glow),
+    0 0 20px var(--cyan-glow),
+    0 0 30px var(--gold);
+}
+
+.neon-title::before {
+  content: attr(data-text);
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: blur(15px);
+  opacity: 0.7;
 }
 
 .app-title {
-  font-family: 'Poiret One', cursive;
-  font-size: 1.5rem;
-  color: var(--gold);
+  font-family: 'La Belle Aurore', cursive;
+  font-size: 2rem;
+  background: var(--gold-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
   margin-top: 1rem;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
+  text-shadow: 0 0 10px var(--gold);
+  position: relative;
+  z-index: 20;
 }
 
 .app-subtitle {
@@ -166,16 +259,31 @@ body {
 }
 
 .menu-trigger {
-  background: var(--emerald);
-  color: var(--cream);
-  border: none;
-  padding: 1rem 2rem;
-  font-family: 'Poiret One', cursive;
+  background: var(--gold-gradient);
+  color: var(--black);
+  border: 2px solid var(--gold);
+  padding: 1.2rem 2.5rem;
+  font-family: 'Rozha One', serif;
   font-size: 1.2rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  border-radius: 2rem;
+  box-shadow: 
+    0 5px 15px rgba(0, 0, 0, 0.3),
+    0 0 20px var(--magenta-glow),
+    0 0 20px var(--cyan-glow);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.menu-trigger:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 8px 20px rgba(0, 0, 0, 0.4),
+    0 0 30px var(--magenta-glow),
+    0 0 30px var(--cyan-glow);
 }
 
 .menu-trigger::after {

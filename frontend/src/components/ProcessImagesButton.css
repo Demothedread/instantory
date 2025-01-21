@@ -43,25 +43,34 @@
 }
 
 .process-images-container {
-  padding: 2.5rem;
-  background: linear-gradient(135deg,
-    rgba(26, 148, 133, 0.08) 0%,
-    rgba(26, 148, 133, 0.04) 100%
-  );
-  border-radius: 1.5rem;
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(212, 175, 55, 0.3);
+  padding: 3rem;
+  background: rgba(26, 26, 26, 0.85);
+  border-radius: 2rem;
+  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: blur(15px);
+  border: 2px solid var(--gold);
   position: relative;
   overflow: hidden;
   box-shadow: 
-    0 10px 30px rgba(0, 0, 0, 0.3),
-    inset 0 0 40px rgba(212, 175, 55, 0.15),
-    0 0 20px rgba(212, 175, 55, 0.2),
-    0 0 40px rgba(26, 148, 133, 0.1);
-  transition: all 0.3s ease;
+    0 10px 30px rgba(0, 0, 0, 0.4),
+    inset 0 0 60px var(--magenta-glow),
+    inset 0 0 40px var(--cyan-glow),
+    0 0 30px var(--gold);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1;
-  margin: 2rem 0;
+  margin: 3rem 0;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.process-images-container:hover {
+  transform: translateY(-5px);
+  box-shadow: 
+    0 15px 40px rgba(0, 0, 0, 0.5),
+    inset 0 0 70px var(--magenta-glow),
+    inset 0 0 50px var(--cyan-glow),
+    0 0 40px var(--gold);
 }
 
 .process-images-container::before {
@@ -210,22 +219,43 @@
 .file-upload-label {
   display: inline-flex;
   align-items: center;
-  padding: 1.2rem 2.5rem;
+  padding: 1.5rem 3rem;
   background: var(--gold-gradient);
   color: var(--black);
-  border-radius: 2rem;
+  border-radius: 3rem;
   cursor: pointer;
-  font-family: 'Cinzel Decorative', serif;
-  font-size: 1rem;
+  font-family: 'Rozha One', serif;
+  font-size: 1.2rem;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  transition: all 0.3s ease;
+  letter-spacing: 2px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 
-    0 5px 15px rgba(0, 0, 0, 0.2),
-    inset 0 0 20px rgba(255, 255, 255, 0.3);
+    0 5px 20px rgba(0, 0, 0, 0.3),
+    inset 0 0 30px rgba(255, 255, 255, 0.4),
+    0 0 20px var(--magenta-glow),
+    0 0 20px var(--cyan-glow);
   white-space: nowrap;
   position: relative;
-  text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+  text-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+  border: 2px solid var(--gold);
+  animation: buttonGlow 2s infinite alternate;
+}
+
+@keyframes buttonGlow {
+  from {
+    box-shadow: 
+      0 5px 20px rgba(0, 0, 0, 0.3),
+      inset 0 0 30px rgba(255, 255, 255, 0.4),
+      0 0 20px var(--magenta-glow),
+      0 0 20px var(--cyan-glow);
+  }
+  to {
+    box-shadow: 
+      0 5px 25px rgba(0, 0, 0, 0.4),
+      inset 0 0 40px rgba(255, 255, 255, 0.5),
+      0 0 30px var(--magenta-glow),
+      0 0 30px var(--cyan-glow);
+  }
 }
 
 .file-upload-label::after {
@@ -493,26 +523,46 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem 3rem;
+  padding: 2rem 4rem;
   background: var(--gold-gradient);
   color: var(--black);
-  border-radius: 2rem;
-  font-family: 'Cinzel Decorative', serif;
+  border-radius: 3rem;
+  font-family: 'Rozha One', serif;
   font-weight: 700;
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   text-transform: uppercase;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.3em;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
   box-shadow: 
-    0 10px 30px rgba(0, 0, 0, 0.2),
-    inset 0 0 40px rgba(212, 175, 55, 0.15);
-  margin: 2rem auto;
-  width: 500px;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+    0 10px 30px rgba(0, 0, 0, 0.3),
+    inset 0 0 50px rgba(212, 175, 55, 0.2),
+    0 0 30px var(--magenta-glow),
+    0 0 30px var(--cyan-glow);
+  margin: 3rem auto;
+  width: 600px;
+  border: 2px solid var(--gold);
+  text-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+  animation: processButtonGlow 3s infinite alternate;
+}
+
+@keyframes processButtonGlow {
+  from {
+    box-shadow: 
+      0 10px 30px rgba(0, 0, 0, 0.3),
+      inset 0 0 50px rgba(212, 175, 55, 0.2),
+      0 0 30px var(--magenta-glow),
+      0 0 30px var(--cyan-glow);
+  }
+  to {
+    box-shadow: 
+      0 15px 40px rgba(0, 0, 0, 0.4),
+      inset 0 0 60px rgba(212, 175, 55, 0.3),
+      0 0 40px var(--magenta-glow),
+      0 0 40px var(--cyan-glow);
+  }
 }
 
 .process-button::before {
