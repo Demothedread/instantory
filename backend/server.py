@@ -14,7 +14,7 @@ import uuid
 from typing import Dict, List, Optional, Any, Tuple
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
-from openai import AsyncOpenAI
+from openai import OpenAI
 from PIL import Image
 from quart import Quart, jsonify, request, send_file, make_response
 from quart_cors import cors
@@ -276,7 +276,7 @@ async def initialize_database(pool: asyncpg.Pool) -> None:
 async def analyze_document(text: str) -> Dict[str, Any]:
     """Analyze document text using GPT-4 model."""
     try:
-        response = await client.chat.completions.create(
+        response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": """
@@ -424,7 +424,7 @@ async def get_db_pool():
         if pool:
             await pool.close()
 
-client = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # Initialize Quart app with CORS
 app = Quart(__name__)
@@ -717,7 +717,7 @@ class FileProcessor:
             """
             
             # Call GPT-4V
-            response = await client.chat.completions.create(
+            response = client.chat.completions.create(
                 model="gpt-4o", 
                 messages=[{
                     "role": "user",
