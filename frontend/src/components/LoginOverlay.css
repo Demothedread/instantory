@@ -42,16 +42,12 @@
   z-index: 1000;
   -webkit-backdrop-filter: blur(15px);
   backdrop-filter: blur(15px);
-  opacity: 0;
-  visibility: hidden;
+  opacity: 1;
+  visibility: visible;
   transition: opacity var(--animation-speed-normal) var(--animation-curve),
               visibility var(--animation-speed-normal) var(--animation-curve);
   will-change: opacity, visibility;
-}
-
-.login-overlay.visible {
-  opacity: 1;
-  visibility: visible;
+  background-color: rgba(0, 0, 0, 0.5);
 }
 
 .login-modal {

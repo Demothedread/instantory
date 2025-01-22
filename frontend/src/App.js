@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+ import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import InventoryTable from './components/InventoryTable';
@@ -29,18 +29,25 @@ function App() {
     const savedUser = localStorage.getItem('user');
     if (savedUser) {
       try {
-        setUser(JSON.parse(savedUser));
-        setShowLogin(false);
+        const userData = JSON.parse(savedUser);
+        setUser(userData);
+        // Only hide login if we have valid user data
+        if (userData && userData.id) {
+          setShowLogin(false);
+        }
       } catch (e) {
         localStorage.removeItem('user');
+        setShowLogin(true);
       }
     }
   }, []);
 
   const handleLogin = useCallback((userData) => {
-    setUser(userData);
-    setShowLogin(false);
-    localStorage.setItem('user', JSON.stringify(userData));
+    if (userData && userData.id) {
+      setUser(userData);
+      setShowLogin(false);
+      localStorage.setItem('user', JSON.stringify(userData));
+    }
   }, []);
 
   const [inventory, setInventory] = useState([]);
@@ -265,7 +272,11 @@ function App() {
   };
 
   return (
-    <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
+    <GoogleOAuthProvider 
+      clientId={config.googleClientId}
+      onScriptLoadError={() => console.error('Google Script failed to load')}
+      onScriptLoadSuccess={() => console.log('Google Script loaded successfully')}
+    >
       <Router>
         <div className="app-container">
           <Navigation />

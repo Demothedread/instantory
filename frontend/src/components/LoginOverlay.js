@@ -86,7 +86,11 @@ function LoginOverlay({ isVisible, onLogin, onGoogleLogin }) {
               theme="filled_black"
               shape="pill"
               text="continue_with"
-              useOneTap
+              useOneTap={false}
+              flow="implicit"
+              auto_select={false}
+              context="signin"
+              ux_mode="popup"
             />
           </div>
           
