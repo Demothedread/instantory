@@ -50,7 +50,10 @@ const LoginAnimation = ({ isVisible, children }) => {
 
   return (
     <div ref={containerRef} className="login-overlay">
-      {children}
+      <div className="background-overlay"></div>
+      <div className="login-modal">
+        {children}
+      </div>
     </div>
   );
 };

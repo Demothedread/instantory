@@ -11,10 +11,12 @@ import LoginAnimation from './scripts/LoginAnimation';
 import UserMenu from './components/UserMenu';
 import BlurbCarousel from './scripts/blurbcarousel';
 import Navigation from './components/Navigation';
+import Landing from './pages/Landing';
 import Home from './pages/Home';
 import About from './pages/About';
 import Kaboodles from './pages/Kaboodles';
 import Resources from './pages/Resources';
+import Terms from './pages/Terms';
 import config from './config';
 import './App.css';
 
@@ -40,6 +42,7 @@ function App() {
     setShowLogin(false);
     localStorage.setItem('user', JSON.stringify(userData));
   }, []);
+
   const [inventory, setInventory] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,13 +64,14 @@ function App() {
 
   const generateTiles = () => {
     const container = document.querySelector('.background-container');
-    const totalTiles = Math.ceil(window.innerWidth / 100) * Math.ceil(window.innerHeight / 100);
-
-    container.innerHTML = '';
-    for (let i = 0; i < totalTiles; i++) {
-      const tile = document.createElement('div');
-      tile.classList.add('tile');
-      container.appendChild(tile);
+    if (container) {
+      const totalTiles = Math.ceil(window.innerWidth / 100) * Math.ceil(window.innerHeight / 100);
+      container.innerHTML = '';
+      for (let i = 0; i < totalTiles; i++) {
+        const tile = document.createElement('div');
+        tile.classList.add('tile');
+        container.appendChild(tile);
+      }
     }
   };
 
@@ -263,240 +267,243 @@ function App() {
   return (
     <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
       <Router>
-      <div className="app-container">
-        <Navigation />
-        <div className="background-container">
-          <div className="neo-decoroco-pattern"></div>
-          <div className="neo-decoroco-overlay"></div>
-        </div>                                                                   
-        <header className="app-header">
-          {user && <UserMenu user={user} onLogout={() => setUser(null)} />}
-          <div className="header-content">
-            <div className="title-wrapper">
-              <div className="title-row">
-                <div className="header-mascot left"></div>
-                <h1 className="neon-title">BARTLEBY</h1>
-                <div className="header-mascot right"></div>
-              </div>
-              <div className="title-underline"></div>
-              <div className="subtitle-carousel">
-                <BlurbCarousel />
+        <div className="app-container">
+          <Navigation />
+          <div className="background-container">
+            <div className="neo-decoroco-pattern"></div>
+            <div className="neo-decoroco-overlay"></div>
+          </div>
+          
+          <header className="app-header">
+            {user && <UserMenu user={user} onLogout={() => setUser(null)} />}
+            <div className="header-content">
+              <div className="title-wrapper">
+                <div className="title-row">
+                  <div className="header-mascot left"></div>
+                  <h1 className="neon-title">BARTLEBY</h1>
+                  <div className="header-mascot right"></div>
+                </div>
+                <div className="title-underline"></div>
+                <div className="subtitle-carousel">
+                  <BlurbCarousel />
+                </div>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        <main className="main-section">
-          <div className="top-bar neo-decoroco-panel">
-            <button 
-              className="diamond-button neo-decoroco-button"
-              onClick={() => setShowHowTo(true)}
-            >
-              How To Use
-            </button>
-            
-            <nav className="menu-container">
+          <main className="main-section">
+            <div className="top-bar neo-decoroco-panel">
               <button 
-                className="diamond-button neo-decoroco-button" 
-                onClick={() => setShowMainMenu(!showMainMenu)}
+                className="diamond-button neo-decoroco-button"
+                onClick={() => setShowHowTo(true)}
               >
-                Menu
+                How To Use
               </button>
-              {showMainMenu && (
-                <div className="menu-dropdown neo-decoroco-panel">
-                  <Link to="/" className="neo-decoroco-link">Inventory Overview</Link>
-                  <Link to="/images" className="neo-decoroco-link">Image Gallery</Link>
-                  <Link to="/documents" className="neo-decoroco-link">Document Library</Link>
-                  <div className="dropdown-divider"></div>
-                  <div className="submenu">
+              
+              <nav className="menu-container">
+                <button 
+                  className="diamond-button neo-decoroco-button" 
+                  onClick={() => setShowMainMenu(!showMainMenu)}
+                >
+                  Menu
+                </button>
+                {showMainMenu && (
+                  <div className="menu-dropdown neo-decoroco-panel">
+                    <Link to="/home" className="neo-decoroco-link">Inventory Overview</Link>
+                    <Link to="/images" className="neo-decoroco-link">Image Gallery</Link>
+                    <Link to="/documents" className="neo-decoroco-link">Document Library</Link>
+                    <div className="dropdown-divider"></div>
+                    <div className="submenu">
+                      <button 
+                        className="neo-decoroco-button"
+                        onClick={() => setShowInventoryDropdown(!showInventoryDropdown)}
+                      >
+                        Manage Inventory
+                      </button>
+                      {showInventoryDropdown && (
+                        <div className="submenu-dropdown neo-decoroco-panel">
+                          <button onClick={() => handleExport('csv', 'inventory')}>
+                            Download As CSV
+                          </button>
+                          <button onClick={() => handleExport('xls', 'inventory')}>
+                            Download As Excel 
+                          </button>
+                          <button onClick={handleResetInventory} className="danger">
+                            Clear All Data
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="submenu">
+                      <button 
+                        className="neo-decoroco-button"
+                        onClick={() => setShowDocumentsDropdown(!showDocumentsDropdown)}
+                      >
+                        Manage Documents
+                      </button>
+                      {showDocumentsDropdown && (
+                        <div className="submenu-dropdown neo-decoroco-panel">
+                          <button onClick={() => handleExport('csv', 'documents')}>
+                            Download CSV Report
+                          </button>
+                          <button onClick={() => handleExport('xls', 'documents')}>
+                            Download Excel Report
+                          </button>
+                          <button onClick={handleResetDocuments} className="danger">
+                            Clear All Documents
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     <button 
                       className="neo-decoroco-button"
-                      onClick={() => setShowInventoryDropdown(!showInventoryDropdown)}
+                      onClick={() => setShowNewTableDialog(true)}
                     >
-                      Manage Inventory
+                      Create Custom Inventory
                     </button>
-                    {showInventoryDropdown && (
-                      <div className="submenu-dropdown neo-decoroco-panel">
-                        <button onClick={() => handleExport('csv', 'inventory')}>
-                          Download As CSV
-                        </button>
-                        <button onClick={() => handleExport('xls', 'inventory')}>
-                          Download As Excel 
-                        </button>
-                        <button onClick={handleResetInventory} className="danger">
-                          Clear All Data
-                        </button>
-                      </div>
-                    )}
                   </div>
-                  <div className="submenu">
-                    <button 
-                      className="neo-decoroco-button"
-                      onClick={() => setShowDocumentsDropdown(!showDocumentsDropdown)}
+                )}
+              </nav>
+            </div>
+
+            {error && <div className="error-message neo-decoroco-panel">{error}</div>}
+
+            <section className="content-section">
+              <LoginAnimation isVisible={showLogin}>
+                <LoginOverlay 
+                  isVisible={showLogin} 
+                  onLogin={handleLogin}
+                  onGoogleLogin={handleLogin}
+                />
+              </LoginAnimation>
+              
+              {!showInventory ? (
+                <div className={`upload-section neo-decoroco-panel ${isExpanded ? 'expanded' : ''}`}>
+                  <ProcessImagesButton 
+                    onProcess={handleProcessFiles}
+                    isAuthenticated={!!user}
+                  />
+                </div>
+              ) : (
+                <div className="content-area neo-decoroco-panel">
+                  <div className="slider-nav">
+                    <Link 
+                      to="/home" 
+                      className={`slider-link ${activeTab === 'inventory' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('inventory')}
                     >
-                      Manage Documents
-                    </button>
-                    {showDocumentsDropdown && (
-                      <div className="submenu-dropdown neo-decoroco-panel">
-                        <button onClick={() => handleExport('csv', 'documents')}>
-                          Download CSV Report
-                        </button>
-                        <button onClick={() => handleExport('xls', 'documents')}>
-                          Download Excel Report
-                        </button>
-                        <button onClick={handleResetDocuments} className="danger">
-                          Clear All Documents
-                        </button>
-                      </div>
-                    )}
+                      <span className="slider-icon inventory-icon"></span>
+                      Inventory
+                    </Link>
+                    <Link 
+                      to="/images" 
+                      className={`slider-link ${activeTab === 'images' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('images')}
+                    >
+                      <span className="slider-icon gallery-icon"></span>
+                      Gallery
+                    </Link>
+                    <Link 
+                      to="/documents" 
+                      className={`slider-link ${activeTab === 'documents' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('documents')}
+                    >
+                      <span className="slider-icon documents-icon"></span>
+                      Documents
+                    </Link>
                   </div>
-                  <button 
-                    className="neo-decoroco-button"
-                    onClick={() => setShowNewTableDialog(true)}
-                  >
-                    Create Custom Inventory
-                  </button>
+                  
+                  <div className="content-display">
+                    <Routes>
+                      <Route path="/" element={<Landing />} />
+                      <Route path="/home" element={<Home />} />
+                      <Route path="/about" element={<About />} />
+                      <Route path="/kaboodles" element={<Kaboodles />} />
+                      <Route path="/resources" element={<Resources />} />
+                      <Route path="/terms" element={<Terms />} />
+                      <Route path="/privacy" element={
+                        <iframe 
+                          src="/privacy.html" 
+                          style={{
+                            width: '100%', 
+                            height: '100vh', 
+                            border: 'none',
+                            background: 'transparent'
+                          }}
+                          title="Privacy Policy"
+                        />
+                      } />
+                      <Route 
+                        path="/inventory" 
+                        element={
+                          loading ? (
+                            <div className="loading-spinner">Loading inventory...</div>
+                          ) : (
+                            <InventoryTable inventory={inventory} />
+                          )
+                        } 
+                      />
+                      <Route 
+                        path="/images" 
+                        element={
+                          loading ? (
+                            <div className="loading-spinner">Loading images...</div>
+                          ) : (
+                            <ImageList inventory={inventory} />
+                          )
+                        } 
+                      />
+                      <Route 
+                        path="/documents" 
+                        element={
+                          loading ? (
+                            <div className="loading-spinner">Loading documents...</div>
+                          ) : (
+                            <DocumentsTable documents={documents} />
+                          )
+                        } 
+                      />
+                    </Routes>
+                  </div>
                 </div>
               )}
-            </nav>
-          </div>
+            </section>
 
-          {error && <div className="error-message neo-decoroco-panel">{error}</div>}
-
-          <section className="content-section">
-            <LoginAnimation isVisible={showLogin}>
-              <LoginOverlay 
-                isVisible={showLogin} 
-                onLogin={handleLogin}
-                onGoogleLogin={handleLogin}
-              />
-            </LoginAnimation>
-            
-            {!showInventory ? (
-              <div className={`upload-section neo-decoroco-panel ${isExpanded ? 'expanded' : ''}`}>
-                <ProcessImagesButton 
-                  onProcess={handleProcessFiles}
-                  isAuthenticated={!!user}
-                />
-              </div>
-            ) : (
-              <div className="content-area neo-decoroco-panel">
-                <div className="slider-nav">
-                  <Link 
-                    to="/" 
-                    className={`slider-link ${activeTab === 'inventory' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('inventory')}
-                  >
-                    <span className="slider-icon inventory-icon"></span>
-                    Inventory
-                  </Link>
-                  <Link 
-                    to="/images" 
-                    className={`slider-link ${activeTab === 'images' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('images')}
-                  >
-                    <span className="slider-icon gallery-icon"></span>
-                    Gallery
-                  </Link>
-                  <Link 
-                    to="/documents" 
-                    className={`slider-link ${activeTab === 'documents' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('documents')}
-                  >
-                    <span className="slider-icon documents-icon"></span>
-                    Documents
-                  </Link>
-                </div>
-                
-          <div className="content-display">
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/kaboodles" element={<Kaboodles />} />
-              <Route path="/resources" element={<Resources />} />
-              <Route path="/privacy" element={
-                <iframe 
-                  src="/privacy.html" 
-                  style={{
-                    width: '100%', 
-                    height: '100vh', 
-                    border: 'none',
-                    background: 'transparent'
-                  }}
-                  title="Privacy Policy"
-                />
-              } />
-              <Route 
-                path="/inventory" 
-                element={
-                  loading ? (
-                    <div className="loading-spinner">Loading inventory...</div>
-                  ) : (
-                    <InventoryTable inventory={inventory} />
-                  )
-                } 
-              />
-              <Route 
-                path="/images" 
-                element={
-                  loading ? (
-                    <div className="loading-spinner">Loading images...</div>
-                  ) : (
-                    <ImageList inventory={inventory} />
-                  )
-                } 
-              />
-              <Route 
-                path="/documents" 
-                element={
-                  loading ? (
-                    <div className="loading-spinner">Loading documents...</div>
-                  ) : (
-                    <DocumentsTable documents={documents} />
-                  )
-                } 
-              />
-            </Routes>
+            {showNewTableDialog && (
+              <div className="modal">
+                <div className="modal-content neo-decoroco-panel">
+                  <h3>Create Custom Inventory Table</h3>
+                  <input
+                    type="text"
+                    value={newTableName}
+                    onChange={(e) => setNewTableName(e.target.value)}
+                    placeholder="Enter a name for your inventory"
+                    className="neo-decoroco-input"
+                  />
+                  <div className="modal-buttons">
+                    <button 
+                      onClick={handleCreateNewTable}
+                      className="neo-decoroco-button"
+                    >
+                      Create Table
+                    </button>
+                    <button 
+                      onClick={() => setShowNewTableDialog(false)}
+                      className="neo-decoroco-button secondary"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
-          </section>
+          </main>
 
-          {showNewTableDialog && (
-            <div className="modal">
-              <div className="modal-content neo-decoroco-panel">
-                <h3>Create Custom Inventory Table</h3>
-                <input
-                  type="text"
-                  value={newTableName}
-                  onChange={(e) => setNewTableName(e.target.value)}
-                  placeholder="Enter a name for your inventory"
-                  className="neo-decoroco-input"
-                />
-                <div className="modal-buttons">
-                  <button 
-                    onClick={handleCreateNewTable}
-                    className="neo-decoroco-button"
-                  >
-                    Create Table
-                  </button>
-                  <button 
-                    onClick={() => setShowNewTableDialog(false)}
-                    className="neo-decoroco-button secondary"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </main>
-
-        <HowToUseOverlay 
-          isOpen={showHowTo} 
-          onClose={() => setShowHowTo(false)} 
-        />
-      </div>
+          <HowToUseOverlay 
+            isOpen={showHowTo} 
+            onClose={() => setShowHowTo(false)} 
+          />
+        </div>
       </Router>
     </GoogleOAuthProvider>
   );

@@ -71,8 +71,8 @@ class TableManager:
     def __init__(self):
         self.reserved_names = {'products', 'document_vault'}
     
-    async def create_custom_table(self, conn: asyncpg.Connection, table_name: str, columns: List[Dict[str, str]]) -> bool:
-        """Create a new custom table with specified columns."""
+    async def create_custom_table(self, conn: asyncpg.Connection, table_name: str, columns: List[Dict[str, str]], instruction: Optional[str] = None) -> bool:
+        """Create a new custom table with specified columns and optional instruction."""
         try:
             # Sanitize table name
             table_name = re.sub(r'[^a-zA-Z0-9_]', '', table_name.lower())
@@ -86,20 +86,23 @@ class TableManager:
                 col_type = col['type'].upper()
                 if col_type not in ('TEXT', 'INTEGER', 'REAL', 'BOOLEAN', 'TIMESTAMP'):
                     col_type = 'TEXT'
-                column_defs.append(f"{col_name} {col_type}")
+                column_defs.append(f"{col_name} {col_type} NOT NULL DEFAULT ''")
             
-            # Add standard columns
+            # Add standard columns and instruction
             column_defs.extend([
                 "id SERIAL PRIMARY KEY",
                 "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
-                "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+                "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "instruction TEXT"
             ])
             
-            # Create table
+            # Create table with instruction
             query = f"""
                 CREATE TABLE IF NOT EXISTS {table_name} (
                     {', '.join(column_defs)}
-                )
+                );
+                
+                COMMENT ON TABLE {table_name} IS $${instruction or 'Custom inventory table'}$$;
             """
             await conn.execute(query)
             
@@ -273,30 +276,50 @@ async def initialize_database(pool: asyncpg.Pool) -> None:
         await conn.execute('CREATE INDEX IF NOT EXISTS idx_document_category ON document_vault(category)')
         await conn.execute('CREATE INDEX IF NOT EXISTS idx_document_content ON document_vault USING gin(to_tsvector(\'english\', extracted_text))')
 
-async def analyze_document(text: str) -> Dict[str, Any]:
-    """Analyze document text using GPT-4 model."""
+async def analyze_document(text: str, table_schema: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
+    """Analyze document text using GPT-4 model with dynamic schema support."""
     try:
+        # Build dynamic prompt based on table schema if provided
+        if table_schema:
+            fields_prompt = "\n".join([
+                f"{i+1}. \"{col['column_name']}\": {col['data_type']} field"
+                for i, col in enumerate(table_schema)
+                if col['column_name'] not in ['id', 'created_at', 'updated_at', 'instruction']
+            ])
+            system_prompt = f"""
+            Analyze this document and provide a JSON object with the following fields:
+            {fields_prompt}
+            
+            For all fields, provide best inference if not explicitly stated.
+            Ensure text fields are concise and informative.
+            Convert values to appropriate types based on column definitions.
+            Provide response in valid JSON format only, no additional text.
+            """
+        else:
+            # Default prompt for document_vault table
+            system_prompt = """
+            Analyze this document and provide a JSON object with the following fields:
+            1. "title": Document title (required)
+            2. "author": Author names if available (required)
+            3. "category": Document type (e.g., Research Paper, Technical Report) (required)
+            4. "field": Primary field or subject area (required)
+            5. "publication_year": Publication year as integer if available
+            6. "journal_publisher": Journal or publisher name if available
+            7. "thesis": Clear, concise thesis statement (required)
+            8. "issue": Main question or problem addressed (required)
+            9. "summary": Comprehensive summary in 400 characters or less (required)
+            10. "influenced_by": 1-3 relevant persons, papers, cases, institutions, etc.
+            11. "hashtags": 3-5 relevant keyword tags for categorization
+            
+            Focus on accuracy and conciseness. For required fields, provide best inference if not explicitly stated.
+            Ensure summary is under 400 characters while capturing key points.
+            Provide response in valid JSON format only, no additional text.
+            """
+
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": """
-                Analyze this document and provide a JSON object with the following fields:
-                1. "title": Document title (required)
-                2. "author": Author names if available (required)
-                3. "category": Document type (e.g., Research Paper, Technical Report) (required)
-                4. "field": Primary field or subject area (required)
-                5. "publication_year": Publication year as integer if available
-                6. "journal_publisher": Journal or publisher name if available
-                7. "thesis": Clear, concise thesis statement (required)
-                8. "issue": Main question or problem addressed (required)
-                9. "summary": Comprehensive summary in 400 characters or less (required)
-                10. "influenced_by": 1-3 relevant persons, papers, cases, institutions, etc.
-                11. "hashtags": 3-5 relevant keyword tags for categorization
-                
-                Focus on accuracy and conciseness. For required fields, provide best inference if not explicitly stated.
-                Ensure summary is under 400 characters while capturing key points.
-                Provide response in valid JSON format only, no additional text.
-                """},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": text}
             ],
             max_tokens=1600,

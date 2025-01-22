@@ -92,13 +92,31 @@ function ProcessImagesButton({ onProcess, isAuthenticated }) {
       const uploadedFiles = await Promise.all(uploadPromises);
       setUploadProgress(100);
 
-      // Send blob URLs to backend
+      // Send blob URLs and metadata to backend
       const response = await axios.post(`${config.apiUrl}/process-files`, {
         files: uploadedFiles,
-        instruction: instruction,
+        instruction: instruction || defaultInstruction,
         fileTypes: {
-          images: uploadedFiles.filter(f => f.fileType === 'image').map(f => ({ originalName: f.originalName, blobUrl: f.blobUrl })),
-          documents: uploadedFiles.filter(f => f.fileType === 'document').map(f => ({ originalName: f.originalName, blobUrl: f.blobUrl }))
+          images: uploadedFiles.filter(f => f.fileType === 'image').map(f => ({ 
+            originalName: f.originalName, 
+            blobUrl: f.blobUrl,
+            metadata: {
+              timestamp: new Date().toISOString(),
+              size: selectedFiles.find(sf => sf.name === f.originalName)?.size,
+              type: selectedFiles.find(sf => sf.name === f.originalName)?.type,
+              lastModified: selectedFiles.find(sf => sf.name === f.originalName)?.lastModified
+            }
+          })),
+          documents: uploadedFiles.filter(f => f.fileType === 'document').map(f => ({ 
+            originalName: f.originalName, 
+            blobUrl: f.blobUrl,
+            metadata: {
+              timestamp: new Date().toISOString(),
+              size: selectedFiles.find(sf => sf.name === f.originalName)?.size,
+              type: selectedFiles.find(sf => sf.name === f.originalName)?.type,
+              lastModified: selectedFiles.find(sf => sf.name === f.originalName)?.lastModified
+            }
+          }))
         }
       }, {
         headers: {
