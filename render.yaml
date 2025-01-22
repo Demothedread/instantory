@@ -10,7 +10,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: PORT
-        value: "10000"  # Default port that Render will override at runtime
+        sync: false
 
       # Database configuration (managed by Render)
       - key: DATABASE_URL
@@ -36,8 +36,7 @@ services:
 
       # Vercel Blob Storage
       - key: BLOB_READ_WRITE_TOKEN
-        value: "vercel_blob_rw_s5xuxXH6T3fDx9Oz_AdnmR7yE2uQjnt1cWInfUzpXQdtrpS"
-
+        sync: false
       # OpenAI Configuration (required for AI processing)
       - key: OPENAI_API_KEY
         sync: false  # This will prompt for the value during deployment
@@ -47,3 +46,5 @@ databases:
     databaseName: bartleby_sql
     plan: free
     ipAllowList: []  # Allow all IPs for development
+
+healthCheckPath: /healthz

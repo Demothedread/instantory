@@ -424,34 +424,82 @@ class CORSConfig:
 
 @asynccontextmanager
 async def get_db_pool():
-    """Create and manage PostgreSQL connection pool."""
+    """Create and manage PostgreSQL connection pool with improved error handling."""
     pool = None
     try:
         database_url = os.getenv('DATABASE_URL')
         if not database_url:
-            logger.critical("DATABASE_URL environment variable is not set. Terminating application. ")
+            logger.critical("DATABASE_URL environment variable is not set. Terminating application.")
             raise ValueError("DATABASE_URL environment variable is required")
-        url = urlparse.urlparse(database_url)
-        pool = await asyncpg.create_pool(
-            user=url.username,
-            password=url.password,
-            database=url.path[1:],
-            host=url.hostname,
-            port=url.port,
-            ssl='require',
-            min_size=1,
-            max_size=10
-        )
+        
+        # Parse database URL and handle potential errors
+        try:
+            url = urlparse.urlparse(database_url)
+            if not all([url.username, url.password, url.hostname, url.path]):
+                raise ValueError("Invalid database URL format")
+        except Exception as e:
+            logger.critical(f"Failed to parse DATABASE_URL: {e}")
+            raise ValueError("Invalid database URL format") from e
+        
+        # Create connection pool with retry logic
+        retries = 3
+        retry_delay = 1  # seconds
+        last_error = None
+        
+        for attempt in range(retries):
+            try:
+                pool = await asyncpg.create_pool(
+                    user=url.username,
+                    password=url.password,
+                    database=url.path[1:],
+                    host=url.hostname,
+                    port=url.port,
+                    ssl='require',
+                    min_size=2,
+                    max_size=20,
+                    command_timeout=60,
+                    max_inactive_connection_lifetime=300,
+                    setup=lambda conn: conn.execute('SET statement_timeout = 30000;')  # 30 second query timeout
+                )
+                logger.info("Successfully established database connection pool")
+                break
+            except Exception as e:
+                last_error = e
+                if attempt < retries - 1:
+                    logger.warning(f"Database connection attempt {attempt + 1} failed: {e}")
+                    await asyncio.sleep(retry_delay * (2 ** attempt))  # Exponential backoff
+                else:
+                    logger.critical(f"Failed to establish database connection after {retries} attempts")
+                    raise ValueError(f"Could not establish database connection: {str(last_error)}") from last_error
+        
         yield pool
     finally:
         if pool:
             await pool.close()
+            logger.info("Database connection pool closed")
 
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-# Initialize Quart app with CORS
+# Initialize Quart app with CORS and health check
 app = Quart(__name__)
 cors(app, allow_origin=CORSConfig.get_origins(), allow_credentials=True)
+
+@app.route('/healthz', methods=['GET'])
+async def health_check():
+    """Health check endpoint for Render"""
+    try:
+        # Test database connection
+        async with get_db_pool() as pool:
+            async with pool.acquire() as conn:
+                await conn.execute('SELECT 1')
+        return jsonify({'status': 'healthy', 'database': 'connected'}), 200
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({
+            'status': 'unhealthy',
+            'database': 'disconnected',
+            'error': str(e)
+        }), 500
 
 @app.before_serving
 async def startup():
@@ -1114,11 +1162,11 @@ app.route('/api/documents/<int:doc_id>/file', methods=['GET'])(DocumentAPI.get_d
 app.route('/api/documents/search', methods=['POST'])(DocumentAPI.search_documents)
 app.route('/api/inventory', methods=['GET'])(InventoryAPI.get_inventory)
 
-@app.route('/api/process-inventory', methods=['POST'])
-async def process_inventory():
-    """Process inventory images from Vercel Blob URLs"""
+@app.route('/process-files', methods=['POST'])
+async def process_files():
+    """Process both images and documents from Vercel Blob URLs"""
     try:
-        logger.info("Received inventory processing request")
+        logger.info("Received file processing request")
         
         data = await request.get_json()
         if not data or 'files' not in data:
@@ -1126,81 +1174,68 @@ async def process_inventory():
             return jsonify({'error': 'No files provided'}), 400
         
         files = data['files']
-        instruction = data.get('instruction', "Catalog, categorize and describe the inventory item.")
-        logger.info(f"Processing {len(files)} inventory items with instruction: {instruction}")
-        
-        # Validate files are images
-        image_files = []
-        for file_data in files:
-            if not FileValidator.is_allowed_file(file_data['originalName']):
-                logger.error(f"Invalid file type: {file_data['originalName']}")
-                continue
-            
-            if FileValidator.get_file_type(file_data['originalName']) == 'images':
-                image_files.append({
-                    'url': file_data['blobUrl'],
-                    'name': file_data['originalName']
-                })
-        
-        if not image_files:
-            logger.error("No valid image files provided")
-            return jsonify({'error': 'No valid image files provided'}), 400
+        instruction = data.get('instruction', "Analyze and catalog the files.")
+        logger.info(f"Processing {len(files)} files with instruction: {instruction}")
         
         # Create task
         task_id = str(uuid.uuid4())
         task_manager.add_task(task_id)
         
-        # Process images in batches
-        asyncio.create_task(process_inventory_async(image_files, instruction, task_id))
-        
-        return jsonify({'status': 'success', 'task_id': task_id}), 202
-        
-    except Exception as e:
-        logger.error(f"Error processing inventory: {e}")
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/process-documents', methods=['POST'])
-async def process_documents():
-    """Process documents from Vercel Blob URLs"""
-    try:
-        logger.info("Received document processing request")
-        
-        data = await request.get_json()
-        if not data or 'files' not in data:
-            logger.error("No files found in request")
-            return jsonify({'error': 'No files provided'}), 400
-        
-        files = data['files']
-        instruction = data.get('instruction', "Analyze and catalog the document.")
-        logger.info(f"Processing {len(files)} documents with instruction: {instruction}")
-        
-        # Validate files are documents
+        # Separate files by type
+        image_files = []
         doc_files = []
         for file_data in files:
             if not FileValidator.is_allowed_file(file_data['originalName']):
                 logger.error(f"Invalid file type: {file_data['originalName']}")
                 continue
             
-            if FileValidator.get_file_type(file_data['originalName']) == 'documents':
+            file_type = FileValidator.get_file_type(file_data['originalName'])
+            if file_type == 'images':
+                image_files.append({
+                    'url': file_data['blobUrl'],
+                    'name': file_data['originalName']
+                })
+            elif file_type == 'documents':
                 doc_files.append({
                     'url': file_data['blobUrl'],
                     'name': file_data['originalName']
                 })
         
-        if not doc_files:
-            logger.error("No valid document files provided")
-            return jsonify({'error': 'No valid document files provided'}), 400
+        if not image_files and not doc_files:
+            logger.error("No valid files provided")
+            return jsonify({'error': 'No valid files provided'}), 400
         
-        # Create task
-        task_id = str(uuid.uuid4())
-        task_manager.add_task(task_id)
+        # Process both types of files asynchronously
+        async def process_all():
+            try:
+                async with get_db_pool() as pool:
+                    async with pool.acquire() as conn:
+                        if image_files:
+                            await FileProcessor.process_image_batch(image_files, instruction, conn)
+                        if doc_files:
+                            for doc in doc_files:
+                                await FileProcessor.process_document(doc, instruction, conn)
+                task_manager.update_task(
+                    task_id,
+                    status='completed',
+                    progress=100,
+                    message='All files processed successfully'
+                )
+            except Exception as e:
+                logger.error(f"Error in processing task: {e}")
+                task_manager.update_task(
+                    task_id,
+                    status='failed',
+                    message=f'Error: {str(e)}',
+                    progress=100
+                )
         
-        # Process documents
-        asyncio.create_task(process_documents_async(doc_files, instruction, task_id))
+        # Start processing
+        asyncio.create_task(process_all())
         return jsonify({'status': 'success', 'task_id': task_id}), 202
         
     except Exception as e:
-        logger.error(f"Error processing documents: {e}")
+        logger.error(f"Error processing files: {e}")
         return jsonify({'error': str(e)}), 500
 
 async def process_inventory_async(images: List[Dict[str, str]], instruction: str, task_id: str) -> None:
