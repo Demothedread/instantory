@@ -2,16 +2,18 @@ import React, { useState, useEffect } from "react";
 import "./styles/blurb.css";
 import clickandone from "../assets/clickandone.png";
 import yippeekiAI from "../assets/yippeekiAI.png"; 
+import adequate from "../assets/adequate.png";
 
 const blurbs = [
   { id: 1, type: "text", text: "Flawless filing filed in a fast" },
   { id: 2, type: "quote", text: "Carefully crafted colorful content catalogued cleanly." },
-  { id: 3, type: "text", text: "Ok quality with an average attitude." },
-  { id: 4, type: "tip", text: "Condense dense documents into nicely concise summaries." },
-  { id: 5, type: "quote", text: "an all-around acceptable performance" },
-  { id: 6, type: "image", img: yippeekiAI },
-  { id: 7, type: "text", text: "Click and one, done!" },
-  { id: 8, type: "image", img: clickandone },
+  { id: 3, type: "image", img: adequate },
+  { id: 4, type: "text", text: "Ok quality with an average attitude." },
+  { id: 5, type: "tip", text: "Condense dense documents into nicely concise summaries." },
+  { id: 6, type: "quote", text: "an all-around acceptable performance" },
+  { id: 7, type: "image", img: yippeekiAI },
+  { id: 8, type: "text", text: "Click and one, done!" },
+  { id: 9, type: "image", img: clickandone },
 ];
 
 const BlurbCarousel = () => {
