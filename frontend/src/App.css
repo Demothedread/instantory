@@ -59,8 +59,8 @@ body::before {
   top: 0;
   left: 0;
   right: 0;
-  height: 150px;
-  background-image: url('./assets/border_rococo_wild.png');
+  height: 60px;
+  background-image: url('./assets/borders/border-rocometal-pinkgreen-xl.png');
   background-size: contain;
   background-repeat: repeat-x;
   transform: rotate(180deg);
@@ -74,8 +74,8 @@ body::before {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 150px;
-  background-image: url('./assets/border_rococo_wild.png');
+  height: 60px;
+  background-image: url('./assets/borders/border-rocometal-pinkgreen-xl.png');
   background-size: contain;
   background-repeat: repeat-x;
   z-index: 10;
@@ -93,8 +93,8 @@ body::before {
 .app-header::after {
   content: '';
   position: absolute;
-  width: 150px;
-  height: 150px;
+  width: 100px;
+  height: 85px;
   background-image: url('./assets/borders/ArtDeco/EmeraldDeco1.png');
   background-size: contain;
   background-repeat: no-repeat;

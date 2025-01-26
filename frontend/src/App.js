@@ -5,6 +5,7 @@ import InventoryTable from './components/InventoryTable';
 import ImageList from './components/ImageList';
 import ProcessImagesButton from './components/ProcessImagesButton';
 import DocumentsTable from './components/DocumentsTable';
+import RolodexToggle from './components/RolodexToggle';
 import HowToUseOverlay from './components/HowToUseOverlay';
 import LoginOverlay from './components/LoginOverlay';
 import LoginAnimation from './scripts/LoginAnimation';
@@ -52,6 +53,7 @@ function App() {
 
   const [inventory, setInventory] = useState([]);
   const [documents, setDocuments] = useState([]);
+  const [showRolodex, setShowRolodex] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newTableName, setNewTableName] = useState('');
@@ -60,7 +62,6 @@ function App() {
   const [showDocumentsDropdown, setShowDocumentsDropdown] = useState(false);
   const [showMainMenu, setShowMainMenu] = useState(false);
   const [showHowTo, setShowHowTo] = useState(false);
-  const [showInventory, setShowInventory] = useState(false);
   const [isExpanded, setIsExpanded] = useState(true);
   const [activeTab, setActiveTab] = useState('inventory');
 
@@ -154,7 +155,7 @@ function App() {
 
   const handleProcessFiles = async () => {
     await fetchData();
-    setShowInventory(true);
+    setShowRolodex(true);
     setIsExpanded(false);
   };
 
@@ -388,7 +389,7 @@ function App() {
                 />
               </LoginAnimation>
               
-              {!showInventory ? (
+              {!showRolodex ? (
                 <div className={`upload-section neo-decoroco-panel ${isExpanded ? 'expanded' : ''}`}>
                   <ProcessImagesButton 
                     onProcess={handleProcessFiles}
@@ -396,6 +397,9 @@ function App() {
                   />
                 </div>
               ) : (
+                <div className="rolodex-section neo-decoroco-panel">
+                  <RolodexToggle inventory={inventory} documents={documents} />
+                </div>,
                 <div className="content-area neo-decoroco-panel">
                   <div className="slider-nav">
                     <Link 

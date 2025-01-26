@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import './InventoryTable.css';
+import styles from './InventoryTable.css';
 import placeholderImage from '../assets/icons/placeholder.png';
 
 function InventoryTable({ inventory }) {

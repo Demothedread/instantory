@@ -1,0 +1,79 @@
+.rolodex-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  perspective: 1000px;
+  margin: 20px auto;
+  width: 80%;
+}
+
+.rolodex-controls {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.rolodex-title {
+  font-size: 1.5rem;
+  margin: 0 20px;
+}
+
+.prev-button,
+.next-button {
+  background: var(--cyan-glow);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  font-size: 1.5rem;
+  height: 40px;
+  width: 40px;
+  box-shadow: 0 0 15px var(--cyan-glow);
+  transition: transform 0.2s;
+}
+
+.prev-button:hover,
+.next-button:hover {
+  transform: scale(1.1);
+}
+
+.rolodex-view {
+  width: 100%;
+  height: 500px;
+  position: relative;
+}
+
+.rolodex-carousel {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform-style: preserve-3d;
+  transition: transform 0.8s cubic-bezier(0.25, 0.1, 0.25, 1);
+  width: 100%;
+  height: 100%;
+}
+
+.rolodex-item {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.8s ease-in-out;
+}
+
+.rolodex-item.active {
+  opacity: 1;
+}
+
+.rolodex-item:nth-child(1) {
+  background: var(--table-header-bg);
+}
+
+.rolodex-item:nth-child(2) {
+  background: var(--table-row-hover-bg);
+}
+
+.rolodex-item:nth-child(3) {
+  background: var(--table-border-color);
+}
