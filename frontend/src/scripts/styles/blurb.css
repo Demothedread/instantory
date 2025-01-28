@@ -11,7 +11,6 @@
   font-family: 'forgotten-futurist-shadow', 'wilko-highlight', sans-serif;
   font-size: 2rem;
   overflow: hidden;
-  position: relative;
   border-radius: 20px;
 }
 
@@ -56,17 +55,17 @@
   color: var(--gold-leaf);
   background: var(--jewel-gradient);
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  mix-blend-mode: screen;
-  outline:hsl(from white 30px 20px 90);
+  --webkit-text-fill-color: transparent;
+  mix-blend-mode: overlay;
+  outline:hsl(from white 10px 10px 90);
   text-shadow: 
     2 -2 3px var(--deep-abyss),
     2 -2 5px var(--yellow-shock);
   padding: 0.5rem;
-  border: 1px solid var(--gold-leaf);
-  border-radius: 15px;
+  border: 1.2px solid var(--gold-leaf);
+  border-radius: 6px;
   box-shadow: 
-    0 5px 15px rgba(0, 0, 0, 0.2),
+    0 5px 15px rgba(237, 230, 230, 0.2),
     inset 0 0 10px rgba(255, 255, 255, 0.2);
 }
 

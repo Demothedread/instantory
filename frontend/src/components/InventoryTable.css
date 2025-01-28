@@ -154,8 +154,8 @@
     min-width: 200px;
     box-shadow: 
       0 5px 15px rgba(0, 0, 0, 0.3),
-      0 0 20px var(--magenta-glow),
-      0 0 20px var(--cyan-glow);
+      0 10px 20px var(--magenta-glow),
+      0 5px 30px var(--cyan-glow);
   }
 
   .filter-dropdown button {
