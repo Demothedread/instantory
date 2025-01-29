@@ -1,4 +1,5 @@
- import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { SpeedInsights } from "@vercel/speed-insights/react" 
 import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import InventoryTable from './components/InventoryTable';
@@ -518,6 +519,7 @@ function App() {
             isOpen={showHowTo} 
             onClose={() => setShowHowTo(false)} 
           />
+          <SpeedInsights />
         </div>
       </Router>
     </GoogleOAuthProvider>
