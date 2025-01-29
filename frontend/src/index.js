@@ -1,8 +1,5 @@
 import React from 'react';
-import { SpeedInsights } from "@vercel/speed-insights/react"
-import { createRoot } from 'react-dom/client';
-import './index.css';
-import App from './App';
+import { SpeedInsights } from "@vercel/speed-insights/react" 
 import reportWebVitals from './reportWebVitals';
 
 const container = document.getElementById('root');
