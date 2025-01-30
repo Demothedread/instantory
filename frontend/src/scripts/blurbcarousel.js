@@ -36,8 +36,6 @@ const BlurbCarousel = () => {
     }, 1000); // Match the CSS transition duration
   };
 
-  const currentBlurb = blurbs[currentBlurbIndex];
-
   return (
     <div className="blurb-container">
       {blurbs.map((blurb, index) => (

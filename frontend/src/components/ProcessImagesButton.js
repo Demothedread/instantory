@@ -73,14 +73,20 @@ function ProcessImagesButton({ onProcess, isAuthenticated }) {
     try {
       // Upload files to Vercel Blob
       const uploadPromises = selectedFiles.map(async (file) => {
-        const blob = await put(file.name, file, {
-          access: 'public',
-          token: process.env.REACT_APP_BLOB_READ_WRITE_TOKEN,
-          handleUploadUrl: (url) => {
-            console.log('Upload URL:', url);
-            return url;
-          },
+        // Get blob upload URL from backend
+        const blobResponse = await axios.post(`${config.apiUrl}/api/blob-upload`, {
+          filename: file.name,
+          contentType: file.type
+        }, {
+          withCredentials: true
         });
+
+        // Upload directly to Vercel Blob
+        const blob = await put(blobResponse.data.url, file, {
+          access: 'public',
+          token: blobResponse.data.token
+        });
+        
         return { 
           originalName: file.name, 
           blobUrl: blob.url,
@@ -92,47 +98,23 @@ function ProcessImagesButton({ onProcess, isAuthenticated }) {
       const uploadedFiles = await Promise.all(uploadPromises);
       setUploadProgress(100);
 
-      // Send blob URLs and metadata to backend
-      const response = await axios.post(`${config.apiUrl}/process-files`, {
+      // Send files for processing
+      const response = await axios.post(`${config.apiUrl}/api/process-files`, {
         files: uploadedFiles,
-        instruction: instruction || defaultInstruction,
-        fileTypes: {
-          images: uploadedFiles.filter(f => f.fileType === 'image').map(f => ({ 
-            originalName: f.originalName, 
-            blobUrl: f.blobUrl,
-            metadata: {
-              timestamp: new Date().toISOString(),
-              size: selectedFiles.find(sf => sf.name === f.originalName)?.size,
-              type: selectedFiles.find(sf => sf.name === f.originalName)?.type,
-              lastModified: selectedFiles.find(sf => sf.name === f.originalName)?.lastModified
-            }
-          })),
-          documents: uploadedFiles.filter(f => f.fileType === 'document').map(f => ({ 
-            originalName: f.originalName, 
-            blobUrl: f.blobUrl,
-            metadata: {
-              timestamp: new Date().toISOString(),
-              size: selectedFiles.find(sf => sf.name === f.originalName)?.size,
-              type: selectedFiles.find(sf => sf.name === f.originalName)?.type,
-              lastModified: selectedFiles.find(sf => sf.name === f.originalName)?.lastModified
-            }
-          }))
-        }
+        instruction: instruction || defaultInstruction
       }, {
         headers: {
-          ...config.headers,
           'Content-Type': 'application/json'
         },
         withCredentials: true
       });
 
-      if (response.data.status === 'success') {
+      if (response.data.task_id) {
         setTaskId(response.data.task_id);
-        setUploadProgress(100);
         setProcessingStatus('Processing files...');
         pollProcessingStatus(response.data.task_id);
       } else {
-        throw new Error(response.data.message || 'An error occurred during file processing.');
+        throw new Error('No task ID received from server');
       }
     } catch (error) {
       console.error('Error processing files:', error);
@@ -146,40 +128,38 @@ function ProcessImagesButton({ onProcess, isAuthenticated }) {
     }
   };
 
-  const pollProcessingStatus = (taskID) => {
+  const pollProcessingStatus = (taskId) => {
     const interval = setInterval(async () => {
       try {
-        const statusResponse = await axios.get(`${config.apiUrl}/processing-status/${taskID}`, {
-          headers: {
-            ...config.headers
-          },
+        const statusResponse = await axios.get(`${config.apiUrl}/api/processing-status/${taskId}`, {
           withCredentials: true
         });
 
-        if (statusResponse.data.status === 'completed') {
+        const { status, progress, message } = statusResponse.data;
+
+        if (status === 'completed') {
           setProcessingProgress(100);
           setProcessingStatus('Processing complete!');
           clearInterval(interval);
-          alert('Files processed successfully!');
+          
+          // Fetch updated data
           if (onProcess) {
             await onProcess();
           }
+          
           setSelectedFiles(null);
           document.getElementById('file-upload').value = '';
           setUploadProgress(0);
           setProcessingProgress(0);
           setProcessingStatus('');
           setIsUploading(false);
-          // Auto-reload the page
-          window.location.reload();
-        } else if (statusResponse.data.status === 'failed') {
-          setErrorMessage('An error occurred during processing.');
+        } else if (status === 'failed') {
+          setErrorMessage(message || 'An error occurred during processing.');
           clearInterval(interval);
           setIsUploading(false);
         } else {
-          // Update processing progress and status
-          setProcessingProgress(statusResponse.data.progress);
-          setProcessingStatus(statusResponse.data.message);
+          setProcessingProgress(progress);
+          setProcessingStatus(message);
         }
       } catch (error) {
         console.error('Error getting processing status:', error);

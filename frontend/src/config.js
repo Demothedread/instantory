@@ -8,7 +8,10 @@ const config = {
       'Access-Control-Allow-Credentials': 'true'
     },
     credentials: 'include',
-    googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID
+    googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+    blobStore: {
+      token: process.env.REACT_APP_BLOB_READ_WRITE_TOKEN
+    }
   },
   // Production API URL
   production: {
@@ -19,7 +22,10 @@ const config = {
       'Access-Control-Allow-Credentials': 'true'
     },
     credentials: 'include',
-    googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID 
+    googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+    blobStore: {
+      token: process.env.REACT_APP_BLOB_READ_WRITE_TOKEN
+    }
   }
 };
 

@@ -158,6 +158,7 @@ function App() {
     await fetchData();
     setShowRolodex(true);
     setIsExpanded(false);
+    setActiveTab('inventory');
   };
 
   const handleResetInventory = async () => {
@@ -235,7 +236,7 @@ function App() {
       await fetchData();
       setShowNewTableDialog(false);
       setNewTableName('');
-      alert('New inventory table created successfully!');
+      alert('New table created successfully!');
     } catch (error) {
       console.error('Error creating new table:', error);
       setError('Failed to create new table. Please try again later.');
@@ -276,8 +277,8 @@ function App() {
   return (
     <GoogleOAuthProvider 
       clientId={config.googleClientId}
-      onScriptLoadError={() => console.error('Google Script failed to load')}
-      onScriptLoadSuccess={() => console.log('Google Script loaded successfully')}
+      onScriptLoadError={() => console.error('Google Auth Script failed to load')}
+      onScriptLoadSuccess={() => console.log('Google AuthScript loaded successfully')}
     >
       <Router>
         <div className="app-container">
@@ -399,9 +400,6 @@ function App() {
               
               {showRolodex && (
                 <div className="content-display-wrapper">
-                  <div className="rolodex-section neo-decoroco-panel">
-                    <RolodexToggle inventory={inventory} documents={documents} />
-                  </div>
                   <div className="content-area neo-decoroco-panel">
                     <div className="slider-nav">
                       <Link 

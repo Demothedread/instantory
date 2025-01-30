@@ -484,6 +484,19 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 app = Quart(__name__)
 cors(app, allow_origin=CORSConfig.get_origins(), allow_credentials=True)
 
+# Serve static files
+@app.route('/data/<path:filename>')
+async def serve_file(filename):
+    """Serve static files from data directory"""
+    try:
+        return await send_file(
+            os.path.join(DATA_DIR, filename),
+            conditional=True
+        )
+    except Exception as e:
+        logger.error(f"Error serving file {filename}: {e}")
+        return jsonify({'error': 'File not found'}), 404
+
 @app.route('/healthz', methods=['GET'])
 async def health_check():
     """Health check endpoint for Render"""
@@ -1147,13 +1160,6 @@ async def add_user_export():
     except Exception as e:
         logger.error(f"Error adding user export: {e}")
         return jsonify({'error': 'Failed to add export'}), 500
-                
-    except Exception as e:
-        logger.error(f"Login error: {e}")
-        return jsonify({
-            'success': False,
-            'message': 'An error occurred during login'
-        }), 500
 
 # Register routes
 app.route('/api/documents', methods=['GET'])(DocumentAPI.get_documents)
@@ -1162,81 +1168,150 @@ app.route('/api/documents/<int:doc_id>/file', methods=['GET'])(DocumentAPI.get_d
 app.route('/api/documents/search', methods=['POST'])(DocumentAPI.search_documents)
 app.route('/api/inventory', methods=['GET'])(InventoryAPI.get_inventory)
 
-@app.route('/process-files', methods=['POST'])
+@app.route('/api/blob-upload', methods=['POST'])
+async def get_blob_url():
+    """Get Vercel Blob upload URL"""
+    try:
+        data = await request.get_json()
+        filename = data.get('filename')
+        content_type = data.get('contentType')
+
+        if not filename or not content_type:
+            return jsonify({'error': 'Filename and content type are required'}), 400
+
+        # Validate file type
+        if not FileValidator.is_allowed_file(filename):
+            return jsonify({'error': 'Invalid file type'}), 400
+
+        # Get Vercel Blob token from environment
+        blob_token = os.getenv('BLOB_READ_WRITE_TOKEN')
+        if not blob_token:
+            return jsonify({'error': 'Blob storage not configured'}), 500
+
+        # Generate unique filename
+        unique_filename = f"{uuid.uuid4()}_{filename}"
+
+        return jsonify({
+            'url': f"https://api.vercel.com/v1/blobs/{unique_filename}",
+            'token': blob_token
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error generating blob URL: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/process-files', methods=['POST'])
 async def process_files():
     """Process both images and documents from Vercel Blob URLs"""
     try:
-        logger.info("Received file processing request")
-        
         data = await request.get_json()
         if not data or 'files' not in data:
-            logger.error("No files found in request")
             return jsonify({'error': 'No files provided'}), 400
         
         files = data['files']
         instruction = data.get('instruction', "Analyze and catalog the files.")
-        logger.info(f"Processing {len(files)} files with instruction: {instruction}")
         
         # Create task
         task_id = str(uuid.uuid4())
         task_manager.add_task(task_id)
         
-        # Separate files by type
-        image_files = []
-        doc_files = []
-        for file_data in files:
-            if not FileValidator.is_allowed_file(file_data['originalName']):
-                logger.error(f"Invalid file type: {file_data['originalName']}")
-                continue
-            
-            file_type = FileValidator.get_file_type(file_data['originalName'])
-            if file_type == 'images':
-                image_files.append({
-                    'url': file_data['blobUrl'],
-                    'name': file_data['originalName']
-                })
-            elif file_type == 'documents':
-                doc_files.append({
-                    'url': file_data['blobUrl'],
-                    'name': file_data['originalName']
-                })
+        # Process files asynchronously
+        asyncio.create_task(process_files_async(files, instruction, task_id))
         
-        if not image_files and not doc_files:
-            logger.error("No valid files provided")
-            return jsonify({'error': 'No valid files provided'}), 400
-        
-        # Process both types of files asynchronously
-        async def process_all():
-            try:
-                async with get_db_pool() as pool:
-                    async with pool.acquire() as conn:
-                        if image_files:
-                            await FileProcessor.process_image_batch(image_files, instruction, conn)
-                        if doc_files:
-                            for doc in doc_files:
-                                await FileProcessor.process_document(doc, instruction, conn)
-                task_manager.update_task(
-                    task_id,
-                    status='completed',
-                    progress=100,
-                    message='All files processed successfully'
-                )
-            except Exception as e:
-                logger.error(f"Error in processing task: {e}")
-                task_manager.update_task(
-                    task_id,
-                    status='failed',
-                    message=f'Error: {str(e)}',
-                    progress=100
-                )
-        
-        # Start processing
-        asyncio.create_task(process_all())
-        return jsonify({'status': 'success', 'task_id': task_id}), 202
-        
+        return jsonify({
+            'status': 'success',
+            'task_id': task_id,
+            'message': 'File processing started'
+        }), 202
     except Exception as e:
         logger.error(f"Error processing files: {e}")
         return jsonify({'error': str(e)}), 500
+
+async def process_files_async(files, instruction, task_id):
+    """Process files asynchronously with progress updates"""
+    try:
+        # Validate and categorize files
+        image_files = []
+        doc_files = []
+        for file_data in files:
+            if not FileValidator.is_allowed_file(file_data['name']):
+                continue
+            
+            file_type = FileValidator.get_file_type(file_data['name'])
+            if file_type == 'images':
+                image_files.append({
+                    'url': file_data['url'],
+                    'name': file_data['name']
+                })
+            elif file_type == 'documents':
+                doc_files.append({
+                    'url': file_data['url'],
+                    'name': file_data['name']
+                })
+
+        total_files = len(image_files) + len(doc_files)
+        processed_files = 0
+
+        async with get_db_pool() as pool:
+            async with pool.acquire() as conn:
+                # Process images
+                if image_files:
+                    for image in image_files:
+                        try:
+                            await FileProcessor.process_image_batch([image], instruction, conn)
+                            processed_files += 1
+                            progress = int((processed_files / total_files) * 100)
+                            task_manager.update_task(
+                                task_id,
+                                status='processing',
+                                progress=progress,
+                                message=f'Processing image {processed_files}/{total_files}'
+                            )
+                        except Exception as e:
+                            logger.error(f"Error processing image {image['name']}: {e}")
+                            continue
+
+                # Process documents
+                if doc_files:
+                    for doc in doc_files:
+                        try:
+                            await FileProcessor.process_document(doc, instruction, conn)
+                            processed_files += 1
+                            progress = int((processed_files / total_files) * 100)
+                            task_manager.update_task(
+                                task_id,
+                                status='processing',
+                                progress=progress,
+                                message=f'Processing document {processed_files}/{total_files}'
+                            )
+                        except Exception as e:
+                            logger.error(f"Error processing document {doc['name']}: {e}")
+                            continue
+
+        # Update final status
+        if processed_files == total_files:
+            task_manager.update_task(
+                task_id,
+                status='completed',
+                progress=100,
+                message='All files processed successfully'
+            )
+        else:
+            task_manager.update_task(
+                task_id,
+                status='completed_with_errors',
+                progress=100,
+                message=f'Processed {processed_files}/{total_files} files'
+            )
+
+    except Exception as e:
+        logger.error(f"Error in processing task: {e}")
+        task_manager.update_task(
+            task_id,
+            status='failed',
+            message=f'Error: {str(e)}',
+            progress=100
+        )
 
 async def process_inventory_async(images: List[Dict[str, str]], instruction: str, task_id: str) -> None:
     """Process inventory images asynchronously in batches"""
@@ -1333,6 +1408,13 @@ async def processing_status(task_id: str):
     return jsonify(task)
 
 @app.before_serving
+async def setup_task_cleanup():
+    """Periodic cleanup of expired tasks."""
+    async def cleanup_loop():
+        while True:
+            await asyncio.sleep(3600)
+            task_manager.cleanup()
+    asyncio.create_task(cleanup_loop())
 async def setup_task_cleanup():
     """Periodic cleanup of expired tasks."""
     async def cleanup_loop():
