@@ -390,96 +390,98 @@ function App() {
                 />
               </LoginAnimation>
               
-              {!showRolodex ? (
-                <div className={`upload-section neo-decoroco-panel ${isExpanded ? 'expanded' : ''}`}>
-                  <ProcessImagesButton 
-                    onProcess={handleProcessFiles}
-                    isAuthenticated={!!user}
-                  />
-                </div>
-              ) : (
-                <div className="rolodex-section neo-decoroco-panel">
-                  <RolodexToggle inventory={inventory} documents={documents} />
-                </div>,
-                <div className="content-area neo-decoroco-panel">
-                  <div className="slider-nav">
-                    <Link 
-                      to="/home" 
-                      className={`slider-link ${activeTab === 'inventory' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('inventory')}
-                    >
-                      <span className="slider-icon inventory-icon"></span>
-                      Inventory
-                    </Link>
-                    <Link 
-                      to="/images" 
-                      className={`slider-link ${activeTab === 'images' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('images')}
-                    >
-                      <span className="slider-icon gallery-icon"></span>
-                      Gallery
-                    </Link>
-                    <Link 
-                      to="/documents" 
-                      className={`slider-link ${activeTab === 'documents' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('documents')}
-                    >
-                      <span className="slider-icon documents-icon"></span>
-                      Documents
-                    </Link>
+              <div className={`upload-section neo-decoroco-panel ${!showRolodex ? 'expanded' : 'minimized'}`}>
+                <ProcessImagesButton 
+                  onProcess={handleProcessFiles}
+                  isAuthenticated={!!user}
+                />
+              </div>
+              
+              {showRolodex && (
+                <div className="content-display-wrapper">
+                  <div className="rolodex-section neo-decoroco-panel">
+                    <RolodexToggle inventory={inventory} documents={documents} />
                   </div>
-                  
-                  <div className="content-display">
-                    <Routes>
-                      <Route path="/" element={<Landing />} />
-                      <Route path="/home" element={<Home />} />
-                      <Route path="/about" element={<About />} />
-                      <Route path="/kaboodles" element={<Kaboodles />} />
-                      <Route path="/resources" element={<Resources />} />
-                      <Route path="/terms" element={<Terms />} />
-                      <Route path="/privacy" element={
-                        <iframe 
-                          src="/privacy.html" 
-                          style={{
-                            width: '100%', 
-                            height: '100vh', 
-                            border: 'none',
-                            background: 'transparent'
-                          }}
-                          title="Privacy Policy"
+                  <div className="content-area neo-decoroco-panel">
+                    <div className="slider-nav">
+                      <Link 
+                        to="/home" 
+                        className={`slider-link ${activeTab === 'inventory' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('inventory')}
+                      >
+                        <span className="slider-icon inventory-icon"></span>
+                        Inventory
+                      </Link>
+                      <Link 
+                        to="/images" 
+                        className={`slider-link ${activeTab === 'images' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('images')}
+                      >
+                        <span className="slider-icon gallery-icon"></span>
+                        Gallery
+                      </Link>
+                      <Link 
+                        to="/documents" 
+                        className={`slider-link ${activeTab === 'documents' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('documents')}
+                      >
+                        <span className="slider-icon documents-icon"></span>
+                        Documents
+                      </Link>
+                    </div>
+                    
+                    <div className="content-display">
+                      <Routes>
+                        <Route path="/" element={<Landing />} />
+                        <Route path="/home" element={<Home />} />
+                        <Route path="/about" element={<About />} />
+                        <Route path="/kaboodles" element={<Kaboodles />} />
+                        <Route path="/resources" element={<Resources />} />
+                        <Route path="/terms" element={<Terms />} />
+                        <Route path="/privacy" element={
+                          <iframe 
+                            src="/privacy.html" 
+                            style={{
+                              width: '100%', 
+                              height: '100vh', 
+                              border: 'none',
+                              background: 'transparent'
+                            }}
+                            title="Privacy Policy"
+                          />
+                        } />
+                        <Route 
+                          path="/inventory" 
+                          element={
+                            loading ? (
+                              <div className="loading-spinner">Loading inventory...</div>
+                            ) : (
+                              <InventoryTable inventory={inventory} />
+                            )
+                          } 
                         />
-                      } />
-                      <Route 
-                        path="/inventory" 
-                        element={
-                          loading ? (
-                            <div className="loading-spinner">Loading inventory...</div>
-                          ) : (
-                            <InventoryTable inventory={inventory} />
-                          )
-                        } 
-                      />
-                      <Route 
-                        path="/images" 
-                        element={
-                          loading ? (
-                            <div className="loading-spinner">Loading images...</div>
-                          ) : (
-                            <ImageList inventory={inventory} />
-                          )
-                        } 
-                      />
-                      <Route 
-                        path="/documents" 
-                        element={
-                          loading ? (
-                            <div className="loading-spinner">Loading documents...</div>
-                          ) : (
-                            <DocumentsTable documents={documents} />
-                          )
-                        } 
-                      />
-                    </Routes>
+                        <Route 
+                          path="/images" 
+                          element={
+                            loading ? (
+                              <div className="loading-spinner">Loading images...</div>
+                            ) : (
+                              <ImageList inventory={inventory} />
+                            )
+                          } 
+                        />
+                        <Route 
+                          path="/documents" 
+                          element={
+                            loading ? (
+                              <div className="loading-spinner">Loading documents...</div>
+                            ) : (
+                              <DocumentsTable documents={documents} />
+                            )
+                          } 
+                        />
+                      </Routes>
+                    </div>
                   </div>
                 </div>
               )}
