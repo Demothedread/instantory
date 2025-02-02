@@ -8,9 +8,8 @@ import logging
 import os
 import re
 import sys
-from pathlib import Path
-import urllib.parse as urlparse
 import uuid
+from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
@@ -18,6 +17,8 @@ from openai import OpenAI
 from PIL import Image
 from quart import Quart, jsonify, request, send_file, make_response
 from quart_cors import cors
+from .auth_routes import auth_bp
+from .db import get_db_pool
 
 # Configure logging
 logging.basicConfig(
@@ -127,8 +128,14 @@ class TableManager:
             
             return True
             
+        except asyncpg.PostgresError as e:
+            logger.error(f"Database error creating custom table: {e}")
+            return False
+        except ValueError as e:
+            logger.error(f"Value error creating custom table: {e}")
+            return False
         except Exception as e:
-            logger.error(f"Error creating custom table: {e}")
+            logger.error(f"Unexpected error creating custom table: {e}")
             return False
     
     async def get_table_schema(self, conn: asyncpg.Connection, table_name: str) -> List[Dict[str, str]]:
@@ -422,68 +429,12 @@ class CORSConfig:
             'expose_headers': ['Content-Type', 'Authorization', 'Content-Length']
         }
 
-@asynccontextmanager
-async def get_db_pool():
-    """Create and manage PostgreSQL connection pool with improved error handling."""
-    pool = None
-    try:
-        database_url = os.getenv('DATABASE_URL')
-        if not database_url:
-            logger.critical("DATABASE_URL environment variable is not set. Terminating application.")
-            raise ValueError("DATABASE_URL environment variable is required")
-        
-        # Parse database URL and handle potential errors
-        try:
-            url = urlparse.urlparse(database_url)
-            if not all([url.username, url.password, url.hostname, url.path]):
-                raise ValueError("Invalid database URL format")
-        except Exception as e:
-            logger.critical(f"Failed to parse DATABASE_URL: {e}")
-            raise ValueError("Invalid database URL format") from e
-        
-        # Create connection pool with retry logic
-        retries = 3
-        retry_delay = 1  # seconds
-        last_error = None
-        
-        for attempt in range(retries):
-            try:
-                pool = await asyncpg.create_pool(
-                    user=url.username,
-                    password=url.password,
-                    database=url.path[1:],
-                    host=url.hostname,
-                    port=url.port,
-                    ssl='require',
-                    min_size=2,
-                    max_size=20,
-                    command_timeout=60,
-                    max_inactive_connection_lifetime=300,
-                    setup=lambda conn: conn.execute('SET statement_timeout = 30000;')  # 30 second query timeout
-                )
-                logger.info("Successfully established database connection pool")
-                break
-            except Exception as e:
-                last_error = e
-                if attempt < retries - 1:
-                    logger.warning(f"Database connection attempt {attempt + 1} failed: {e}")
-                    await asyncio.sleep(retry_delay * (2 ** attempt))  # Exponential backoff
-                else:
-                    logger.critical(f"Failed to establish database connection after {retries} attempts")
-                    raise ValueError(f"Could not establish database connection: {str(last_error)}") from last_error
-        
-        yield pool
-    finally:
-        if pool:
-            await pool.close()
-            logger.info("Database connection pool closed")
-
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # Initialize Quart app with CORS and health check
 app = Quart(__name__)
 cors(app, allow_origin=CORSConfig.get_origins(), allow_credentials=True)
-
+app.register_blueprint(auth_bp, url_prefix="/api/auth")
 # Serve static files
 @app.route('/data/<path:filename>')
 async def serve_file(filename):
@@ -977,190 +928,11 @@ class FileProcessor:
         except Exception as e:
             logger.error(f"Error processing document {doc['name']}: {e}")
             raise
-
-# Auth routes
-@app.route('/api/auth/google', methods=['POST'])
-async def google_auth():
-    """Handle Google OAuth authentication"""
-    try:
-        data = await request.get_json()
-        google_token = data.get('token')
-        
-        if not google_token:
-            return jsonify({'success': False, 'message': 'Google token is required'}), 400
-            
-        # Verify Google token and get user info
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                'https://www.googleapis.com/oauth2/v3/userinfo',
-                headers={'Authorization': f'Bearer {google_token}'}
-            ) as resp:
-                if resp.status != 200:
-                    return jsonify({'success': False, 'message': 'Invalid Google token'}), 401
-                google_user = await resp.json()
-        
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
-                # Check if user exists
-                user = await conn.fetchrow(
-                    'SELECT * FROM users WHERE google_id = $1 OR email = $2',
-                    google_user['sub'], google_user['email']
-                )
-                
-                if not user:
-                    # Create new user
-                    user = await conn.fetchrow('''
-                        INSERT INTO users (
-                            email, name, picture_url, auth_provider, google_id
-                        ) VALUES ($1, $2, $3, 'google', $4)
-                        RETURNING id, email, name, picture_url, created_at
-                    ''', google_user['email'], google_user['name'],
-                        google_user['picture'], google_user['sub'])
-                else:
-                    # Update existing user
-                    user = await conn.fetchrow('''
-                        UPDATE users 
-                        SET name = $2, picture_url = $3, last_login = CURRENT_TIMESTAMP,
-                            google_id = COALESCE(google_id, $4)
-                        WHERE id = $1
-                        RETURNING id, email, name, picture_url, created_at
-                    ''', user['id'], google_user['name'],
-                        google_user['picture'], google_user['sub'])
-                
-                return jsonify({
-                    'success': True,
-                    'user': {
-                        'id': user['id'],
-                        'email': user['email'],
-                        'name': user['name'],
-                        'picture_url': user['picture_url'],
-                        'created_at': user['created_at'].isoformat() if user['created_at'] else None
-                    }
-                })
-                
-    except Exception as e:
-        logger.error(f"Google auth error: {e}")
-        return jsonify({
-            'success': False,
-            'message': 'An error occurred during Google authentication'
-        }), 500
-
-@app.route('/api/auth/login', methods=['POST'])
-async def login():
-    """Handle email login/registration"""
-    try:
-        data = await request.get_json()
-        email = data.get('email')
-        
-        if not email:
-            return jsonify({'success': False, 'message': 'Email is required'}), 400
-        
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
-                # Check if user exists
-                user = await conn.fetchrow(
-                    'SELECT * FROM users WHERE email = $1 AND auth_provider = \'email\'',
-                    email.lower()
-                )
-                
-                if not user:
-                    # Create new user
-                    user = await conn.fetchrow('''
-                        INSERT INTO users (email, auth_provider)
-                        VALUES ($1, 'email')
-                        RETURNING id, email, name, picture_url, created_at
-                    ''', email.lower())
-                else:
-                    # Update last login
-                    user = await conn.fetchrow('''
-                        UPDATE users 
-                        SET last_login = CURRENT_TIMESTAMP 
-                        WHERE id = $1
-                        RETURNING id, email, name, picture_url, created_at
-                    ''', user['id'])
-                
-                return jsonify({
-                    'success': True,
-                    'user': {
-                        'id': user['id'],
-                        'email': user['email'],
-                        'name': user['name'],
-                        'picture_url': user['picture_url'],
-                        'created_at': user['created_at'].isoformat() if user['created_at'] else None
-                    }
-                })
-                
-    except Exception as e:
-        logger.error(f"Login error: {e}")
-        return jsonify({
-            'success': False,
-            'message': 'An error occurred during login'
-        }), 500
-
-@app.route('/api/user/exports', methods=['GET'])
-async def get_user_exports():
-    """Get user's export history"""
-    try:
-        user_id = request.args.get('user_id')
-        if not user_id:
-            return jsonify({'error': 'User ID is required'}), 400
-            
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
-                exports = await conn.fetch('''
-                    SELECT * FROM user_exports
-                    WHERE user_id = $1
-                    ORDER BY created_at DESC
-                ''', int(user_id))
-                
-                return jsonify([{
-                    'id': export['id'],
-                    'file_name': export['file_name'],
-                    'file_url': export['file_url'],
-                    'file_type': export['file_type'],
-                    'export_type': export['export_type'],
-                    'created_at': export['created_at'].isoformat()
-                } for export in exports])
-                
-    except Exception as e:
-        logger.error(f"Error fetching user exports: {e}")
-        return jsonify({'error': 'Failed to fetch exports'}), 500
-
-@app.route('/api/user/exports', methods=['POST'])
-async def add_user_export():
-    """Add a new export to user's history"""
-    try:
-        data = await request.get_json()
-        user_id = data.get('user_id')
-        file_name = data.get('file_name')
-        file_url = data.get('file_url')
-        file_type = data.get('file_type')
-        export_type = data.get('export_type')
-        
-        if not all([user_id, file_name, file_url, file_type, export_type]):
-            return jsonify({'error': 'Missing required fields'}), 400
-            
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
-                export = await conn.fetchrow('''
-                    INSERT INTO user_exports (
-                        user_id, file_name, file_url, file_type, export_type
-                    ) VALUES ($1, $2, $3, $4, $5)
-                    RETURNING id, created_at
-                ''', int(user_id), file_name, file_url, file_type, export_type)
-                
-                return jsonify({
-                    'success': True,
-                    'export': {
-                        'id': export['id'],
-                        'created_at': export['created_at'].isoformat()
-                    }
-                })
-                
-    except Exception as e:
-        logger.error(f"Error adding user export: {e}")
-        return jsonify({'error': 'Failed to add export'}), 500
-
+# Set File Sizes Maximums        
+MAX_SINGLE_FILE_SIZE_MB = 4.5
+MAX_SINGLE_FILE_BYTES = MAX_SINGLE_FILE_SIZE_MB * 1024 * 1024
+MAX_FILE_SIZE_MB = 25
+MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 # Register routes
 app.route('/api/documents', methods=['GET'])(DocumentAPI.get_documents)
 app.route('/api/documents/<int:doc_id>/text', methods=['GET'])(DocumentAPI.get_document_text)
@@ -1175,6 +947,7 @@ async def get_blob_url():
         data = await request.get_json()
         filename = data.get('filename')
         content_type = data.get('contentType')
+        file_size = data.get('fileSize', 0)
 
         if not filename or not content_type:
             return jsonify({'error': 'Filename and content type are required'}), 400
@@ -1182,6 +955,9 @@ async def get_blob_url():
         # Validate file type
         if not FileValidator.is_allowed_file(filename):
             return jsonify({'error': 'Invalid file type'}), 400
+        
+        if file_size > MAX_FILE_SIZE_BYTES:
+            return jsonify({'error': f'File size exceeds {MAX_FILE_SIZE_MB}MB limit'}), 413
 
         # Get Vercel Blob token from environment
         blob_token = os.getenv('BLOB_READ_WRITE_TOKEN')
@@ -1191,10 +967,17 @@ async def get_blob_url():
         # Generate unique filename
         unique_filename = f"{uuid.uuid4()}_{filename}"
 
-        return jsonify({
-            'url': f"https://api.vercel.com/v1/blobs/{unique_filename}",
-            'token': blob_token
-        }), 200
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://api.vercel.com/v9/blob/upload",
+                headers={"Authorization": f"Bearer {blob_token}"},
+                json={"filename": unique_filename, "contentType": content_type}
+            ) as response:
+                if response.status != 200:
+                    return jsonify({'error': 'Failed to get Vercel upload URL'}), 500
+                upload_data = await response.json()
+        
+        return jsonify({'url': upload_data['url']}), 200
 
     except Exception as e:
         logger.error(f"Error generating blob URL: {e}")
@@ -1408,13 +1191,6 @@ async def processing_status(task_id: str):
     return jsonify(task)
 
 @app.before_serving
-async def setup_task_cleanup():
-    """Periodic cleanup of expired tasks."""
-    async def cleanup_loop():
-        while True:
-            await asyncio.sleep(3600)
-            task_manager.cleanup()
-    asyncio.create_task(cleanup_loop())
 async def setup_task_cleanup():
     """Periodic cleanup of expired tasks."""
     async def cleanup_loop():

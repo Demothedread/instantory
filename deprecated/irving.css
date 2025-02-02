@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Rye&display=swap');
+
+body {
+    background-color: #a5a593;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: 'Rye', cursive;
+}
+
+.border-container {
+    width: 600px;
+    height: 850px;
+    background: #c0bfae;
+    border: 10px solid #575740;
+    position: relative;
+    text-align: center;
+    padding: 20px;
+}
+
+.header-text {
+    font-size: 2.5rem;
+    color: #6d2f2f;
+    text-shadow: 2px 2px 0px #000;
+    padding-top: 20px;
+}
+
+.decorative-frame {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 50px;
+    position: relative;
+}
+
+.left-panel, .right-panel {
+    width: 80px;
+    height: 300px;
+    background: linear-gradient(to bottom, #9b9b85, #706f5f);
+    border: 2px solid #6d2f2f;
+    position: relative;
+}
+
+.central-panel {
+    width: 300px;
+    height: 350px;
+    background: linear-gradient(to bottom, #c5c5af, #a5a593);
+    border: 2px solid #6d2f2f;
+    clip-path: ellipse(60% 50% at center top);
+    position: relative;
+}
+
+.floral-wreath {
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, #8c2f2f 30%, transparent 50%);
+    border-radius: 50%;
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.signature {
+    font-size: 1.5rem;
+    font-style: italic; 
+    color: #6d2f2f;
+    margin-top: 30px;
+}
+
+.script {
+    font-family: 'Great Vibes', cursive;
+    font-size: 2rem;
+}
+
+.publisher {
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    border: 2px solid #6d2f2f;
+    display: inline-block;
+    padding: 5px;
+    margin-top: 40px;
+    background: #e0d9c8;
+}
