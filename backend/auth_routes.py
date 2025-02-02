@@ -3,7 +3,7 @@ import asyncpg
 import os
 import logging
 from quart import Blueprint, request, jsonify
-from .db import get_db_pool  # Ensure this import is correct
+from db import get_db_pool  # Ensure this import is correct
 
 logger = logging.getLogger(__name__)
 
