@@ -17,8 +17,8 @@ from openai import OpenAI
 from PIL import Image
 from quart import Quart, jsonify, request, send_file, make_response
 from quart_cors import cors
-from .auth_routes import auth_bp
-from .db import get_db_pool
+from auth_routes import auth_bp
+from db import get_db_pool
 
 # Configure logging
 logging.basicConfig(
