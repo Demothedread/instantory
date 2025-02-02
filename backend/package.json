@@ -50,7 +50,10 @@
     "@vercel/blob": "0.27.1",
     "node-cache": "^5.1.2",
     "pg": "^8.11.3",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "dotenv": "^10.0.0",
+    "@neondatabase/serverless": "^0.10.0",
+    "@types/pg": "8.11.11"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"
