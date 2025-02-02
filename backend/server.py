@@ -35,6 +35,8 @@ logger = logging.getLogger(__name__)
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(ROOT_DIR)
 
+PORT = int(os.getenv("PORT", 5000))  # Use Render's assigned port
+
 try:
     import PyPDF2
 except ImportError:
