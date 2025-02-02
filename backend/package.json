@@ -2,10 +2,10 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "Instantory Backend API",
-  "main": "server.js",
+  "main": "server.py",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
+    "start": python server.py,
     "dev": "nodemon server.js"
   },
   "keywords": [],

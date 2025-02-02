@@ -4,7 +4,7 @@ const cors = require('cors');
 const NodeCache = require('node-cache');
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT;
 
 // Initialize cache with 5 minute TTL
 const cache = new NodeCache({ stdTTL: 300 });
