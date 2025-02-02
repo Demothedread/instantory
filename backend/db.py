@@ -1,11 +1,11 @@
 # db.py
-import asyncpg
 import os
 import urllib.parse as urlparse
 import logging
 import asyncio
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+from asyncpg import create_pool
 
 logger = logging.getLogger(__name__)
 
@@ -27,12 +27,8 @@ async def get_db_pool():
                 raise ValueError("DATABASE_URL environment variable is required")
             
             url = urlparse.urlparse(database_url)
-            pool = await asyncpg.create_pool(
-                user=url.username,
-                password=url.password,
-                database=url.path[1:],
-                host=url.hostname,
-                port=url.port,
+            pool = await create_pool(
+                dsn=database_url,
                 ssl='require',
                 min_size=2,
                 max_size=20,
@@ -57,5 +53,3 @@ async def get_db_pool():
         if pool:
             await pool.close()
             logger.info("Database connection pool closed")
-      
-        

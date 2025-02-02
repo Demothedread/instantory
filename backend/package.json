@@ -4,7 +4,9 @@
   "description": "Instantory Backend API",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "Pseudø",
@@ -12,7 +14,7 @@
   "dependencies": {
     "express": "^4.17.1",
     "mongoose": "^5.9.7",
-    "asyncio":"^3.4.3",
+    "asyncio": "^3.4.3",
     "asyncpg": ">=0.29.0",
     "pyPDF": ">=2.0.1",
     "python-docx": ">=0.8.11",
@@ -45,6 +47,12 @@
     "tqdm": ">=4.66.1",
     "wsproto": ">=1.2.0",
     "yarl": ">=1.9.4",
-    "@vercel/blob":"0.27.1"
+    "@vercel/blob": "0.27.1",
+    "node-cache": "^5.1.2",
+    "pg": "^8.11.3",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
   }
 }

@@ -19,6 +19,8 @@ from quart import Quart, jsonify, request, send_file, make_response
 from quart_cors import cors
 from auth_routes import auth_bp
 from db import get_db_pool
+from neon import neon
+
 
 # Configure logging
 logging.basicConfig(
@@ -278,12 +280,112 @@ async def initialize_database(pool: asyncpg.Pool) -> None:
             )
         ''')
 
-        # Create indexes for improved query performance
-        await conn.execute('CREATE INDEX IF NOT EXISTS idx_products_category ON products(category)')
-        await conn.execute('CREATE INDEX IF NOT EXISTS idx_products_name ON products(name)')
-        await conn.execute('CREATE INDEX IF NOT EXISTS idx_document_title ON document_vault(title)')
-        await conn.execute('CREATE INDEX IF NOT EXISTS idx_document_category ON document_vault(category)')
-        await conn.execute('CREATE INDEX IF NOT EXISTS idx_document_content ON document_vault USING gin(to_tsvector(\'english\', extracted_text))')
+        # Create optimized indexes for improved query performance
+        await conn.execute('''
+            -- Product indexes for efficient filtering and sorting
+            CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);
+            CREATE INDEX IF NOT EXISTS idx_products_name ON products(name);
+            CREATE INDEX IF NOT EXISTS idx_products_material ON products(material);
+            CREATE INDEX IF NOT EXISTS idx_products_color ON products(color);
+            CREATE INDEX IF NOT EXISTS idx_products_origin ON products(origin_source);
+            CREATE INDEX IF NOT EXISTS idx_products_composite ON products(category, name, material);
+            
+            -- Document indexes for full-text search and filtering
+            CREATE INDEX IF NOT EXISTS idx_document_title ON document_vault(title);
+            CREATE INDEX IF NOT EXISTS idx_document_category ON document_vault(category);
+            CREATE INDEX IF NOT EXISTS idx_document_content ON document_vault USING gin(to_tsvector('english', extracted_text));
+            CREATE INDEX IF NOT EXISTS idx_document_metadata ON document_vault(publication_year, author);
+            
+            -- Timestamp indexes for sorting
+            CREATE INDEX IF NOT EXISTS idx_products_created ON products(created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_document_created ON document_vault(created_at DESC);
+        ''')
+        
+        # Create materialized view for frequently accessed inventory data
+        await conn.execute('''
+            CREATE MATERIALIZED VIEW IF NOT EXISTS inventory_summary AS
+            SELECT 
+                id,
+                name,
+                category,
+                material,
+                color,
+                origin_source,
+                import_cost,
+                retail_price,
+                created_at
+            FROM products
+            ORDER BY created_at DESC
+            WITH DATA;
+            
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_summary_id ON inventory_summary(id);
+        ''')
+
+# Neon integration
+
+async def create_comment(comment: str) -> None:
+    sql = neon(os.getenv('DATABASE_URL'))
+    await sql('INSERT INTO comments (comment) VALUES ($1)', [comment])
+
+async def create_custom_table_neon(table_name: str, columns: List[Dict[str, str]], instruction: Optional[str] = None) -> bool:
+    sql = neon(os.getenv('DATABASE_URL'))
+    try:
+        # Sanitize table name
+        table_name = re.sub(r'[^a-zA-Z0-9_]', '', table_name.lower())
+        if not table_name or table_name in {'products', 'document_vault'}:
+            raise ValueError("Invalid table name")
+        
+        # Build column definitions
+        column_defs = []
+        for col in columns:
+            col_name = re.sub(r'[^a-zA-Z0-9_]', '', col['name'].lower())
+            col_type = col['type'].upper()
+            if col_type not in ('TEXT', 'INTEGER', 'REAL', 'BOOLEAN', 'TIMESTAMP'):
+                col_type = 'TEXT'
+            column_defs.append(f"{col_name} {col_type} NOT NULL DEFAULT ''")
+        
+        # Add standard columns and instruction
+        column_defs.extend([
+            "id SERIAL PRIMARY KEY",
+            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+            "instruction TEXT"
+        ])
+        
+        # Create table with instruction
+        query = f"""
+            CREATE TABLE IF NOT EXISTS {table_name} (
+                {', '.join(column_defs)}
+            );
+            
+            COMMENT ON TABLE {table_name} IS $${instruction or 'Custom inventory table'}$$;
+        """
+        await sql(query)
+        
+        # Create updated_at trigger
+        trigger_query = f"""
+            CREATE OR REPLACE FUNCTION update_updated_at_column()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                NEW.updated_at = CURRENT_TIMESTAMP;
+                RETURN NEW;
+            END;
+            $$ language 'plpgsql';
+
+            DROP TRIGGER IF EXISTS update_updated_at_trigger ON {table_name};
+            
+            CREATE TRIGGER update_updated_at_trigger
+                BEFORE UPDATE ON {table_name}
+                FOR EACH ROW
+                EXECUTE FUNCTION update_updated_at_column();
+        """
+        await sql(trigger_query)
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error creating custom table with Neon: {e}")
+        return False
 
 async def analyze_document(text: str, table_schema: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
     """Analyze document text using GPT-4 model with dynamic schema support."""
