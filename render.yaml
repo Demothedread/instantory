@@ -1,7 +1,7 @@
 services:
   # Python backend service
   - type: web
-    name: quart-server
+    name: instantory
     runtime: python
     buildCommand: "cd backend && pip install -r requirements.txt"
     startCommand: "hypercorn backend.server:app --bind 0.0.0.0:${PORT:-5000} --access-log -"

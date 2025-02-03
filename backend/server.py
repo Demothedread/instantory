@@ -25,6 +25,7 @@ from db import get_db_pool
 
 # Load environment variables
 load_dotenv()
+DB_URL = os.getenv("DATABASE_URL")
 
 # Required environment variables
 REQUIRED_ENV_VARS = {
@@ -84,7 +85,8 @@ except ImportError:
 
 # Directory paths with proper error handling
 try:
-    DATA_DIR = Path(os.getenv('DATA_DIR', '/data'))
+    # Use /tmp (ephemeral storage) if DATA_DIR is not set
+    DATA_DIR = Path(os.getenv('DATA_DIR', '/tmp/instantory'))
     PATHS = {
         'UPLOADS_DIR': DATA_DIR / 'uploads',
         'INVENTORY_IMAGES_DIR': DATA_DIR / 'images' / 'inventory',
@@ -94,7 +96,10 @@ try:
 
     # Create directories with proper permissions
     for directory in PATHS.values():
+    try:
         directory.mkdir(parents=True, exist_ok=True, mode=0o755)
+    except PermissionError:
+        print(f"⚠️ WARNING: Could not create directory {directory}. Check permissions.")
 except Exception as e:
     logger.error(f"Failed to create data directories: {e}")
     raise RuntimeError("Unable to initialize required directories")
