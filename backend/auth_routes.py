@@ -16,8 +16,19 @@ except ImportError:
     logger.warning("Google Auth libraries not installed. Google authentication will be disabled.")
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+import logging
+
+# Configure logging if not already set
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()]
+)
+
+logger = logging.getLogger(__name__)  # Define logger at module level
+
+# Example usage:
+logger.info("Auth Routes initialized")
 
 auth_bp = Blueprint('auth', __name__)
 
