@@ -4,7 +4,7 @@ services:
     name: instantory
     runtime: python
     buildCommand: "cd backend && pip install -r requirements.txt"
-    startCommand: "hypercorn backend.server:app --bind 0.0.0.0:${PORT:-5000} --access-log -"
+    startCommand: "hypercorn backend.server:app --bind 0.0.0.0:${PORT} --access-log -"
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
@@ -25,7 +25,7 @@ services:
         value: https://bartleby.vercel.app
       - key: PUBLIC_BACKEND_URL
         value: https://instantory.onrender.com
-      - key: VERCEL_URL
+      - key: FRONTEND_URL
         value: "https://bartleby.vercel.app"
       - key: BLOB_READ_WRITE_TOKEN
         sync: false

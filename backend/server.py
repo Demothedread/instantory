@@ -25,13 +25,13 @@ from quart_cors import cors
 
 
 # Ensure backend folder is in Python's path
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+# Ensure backend folder is in Python's path
 
 # Import the auth_routes module correctly
 from backend.auth_routes import auth_bp  # Adjust if needed
 from backend.db import get_db_pool
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'instantory/backend/routes')))
+# Ensure backend folder is in Python's path
 
 from inventory import inventory_bp
 from documents import documents_bp
@@ -392,7 +392,7 @@ async def health_check():
             'status': 'healthy',
             'database': 'connected',
             'storage': 'accessible',
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(datetime.timezone.utc).isoformat()
         })
     except Exception as e:
         logger.error(f"Health check failed: {e}")
@@ -450,5 +450,6 @@ async def after_request(response):
 
 # ✅ **Ensure Render Binds the Correct Port**
 if __name__ == "__main__":
-    PORT = int(os.getenv("PORT", 5000))
-    asyncio.run(app.run_task(host="0.0.0.0", port=PORT))
+    PORT = int(os.getenv("PORT", 1000))
+    app.run(host="0.0.0.0", port=PORT)
+    print(f"Server is running on port {PORT}")
