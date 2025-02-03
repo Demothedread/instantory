@@ -1,24 +1,38 @@
-const express = require('express');
-const { Pool } = require('pg');
-const cors = require('cors');
-const NodeCache = require('node-cache');
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { Pool } from 'pg';
+import { neon } from '@neondatabase/serverless';
+import NodeCache from 'node-cache';
+import { WebSocket } from 'ws';
+
+dotenv.config();
 
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 5000;
 
 // Initialize cache with 5 minute TTL
 const cache = new NodeCache({ stdTTL: 300 });
 
-// Configure database connection with optimized pool settings
-const pool = new Pool({
+// Configure Render PostgreSQL pool
+const renderPool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? {
     rejectUnauthorized: false
   } : false,
-  max: 20, // Maximum number of clients in the pool
+  max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 });
+
+// Configure Neon connection for read operations
+const neonConfig = {
+  webSocketConstructor: WebSocket,
+  pipelineConnect: 'auto',
+  useSecureWebSocket: true
+};
+
+const neonDb = neon(process.env.NEON_DATABASE_URL);
 
 // Configure CORS
 app.use(cors({
@@ -26,110 +40,12 @@ app.use(cors({
   credentials: true
 }));
 
-// Add error handling for database connection
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
-});
+app.use(express.json());
 
-// Refresh materialized view
-async function refreshInventoryView() {
-  const client = await pool.connect();
-  try {
-    await client.query('REFRESH MATERIALIZED VIEW inventory_summary');
-    console.log('Refreshed inventory_summary view');
-  } catch (err) {
-    console.error('Error refreshing materialized view:', err);
-  } finally {
-    client.release();
-  }
-}
-
-// Schedule view refresh every 5 minutes
-setInterval(refreshInventoryView, 5 * 60 * 1000);
-
-// API Routes
-app.get('/api/inventory', async (req, res) => {
-  try {
-    const cacheKey = 'inventory_list';
-    const cachedData = cache.get(cacheKey);
-    
-    if (cachedData) {
-      return res.json(cachedData);
-    }
-
-    // Use materialized view for better performance
-    const result = await pool.query(`
-      SELECT 
-        i.id,
-        i.name,
-        p.description,
-        p.image_url,
-        i.category,
-        i.material,
-        i.color,
-        p.dimensions,
-        i.origin_source,
-        i.import_cost,
-        i.retail_price,
-        p.key_tags
-      FROM inventory_summary i
-      LEFT JOIN products p ON i.id = p.id
-      ORDER BY i.created_at DESC
-      LIMIT 1000
-    `);
-
-    cache.set(cacheKey, result.rows);
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
-  }
-});
-
-// Search endpoint with optimized query
-app.get('/api/inventory/search', async (req, res) => {
-  try {
-    const { query, category } = req.query;
-    const searchQuery = `
-      SELECT 
-        p.id,
-        p.name,
-        p.description,
-        p.image_url,
-        p.category,
-        p.material,
-        p.color,
-        p.dimensions,
-        p.origin_source,
-        p.import_cost,
-        p.retail_price,
-        p.key_tags
-      FROM products p
-      WHERE 
-        ($1::text IS NULL OR p.category = $1)
-        AND (
-          $2::text IS NULL 
-          OR p.name ILIKE $3 
-          OR p.description ILIKE $3
-          OR p.material ILIKE $3
-          OR p.origin_source ILIKE $3
-        )
-      ORDER BY p.created_at DESC
-      LIMIT 100
-    `;
-    
-    const result = await pool.query(searchQuery, [
-      category || null,
-      query || null,
-      query ? `%${query}%` : null
-    ]);
-    
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server error');
-  }
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Internal server error' });
 });
 
 // Health check endpoint
@@ -137,14 +53,185 @@ app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
-// Clear cache when inventory is updated
-app.post('/api/inventory/cache/clear', (req, res) => {
-  cache.del('inventory_list');
-  res.status(200).send('Cache cleared');
+// Get user's inventory with caching
+app.get('/api/inventory/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const cacheKey = `inventory_${userId}`;
+    
+    // Check cache first
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      return res.json(cachedData);
+    }
+    
+    // Query Neon for read operations
+    const result = await neonDb`
+      SELECT i.*, p.description, p.image_url
+      FROM user_inventory i
+      LEFT JOIN products p ON i.id = p.id
+      WHERE i.user_id = ${userId}
+      ORDER BY i.created_at DESC
+      LIMIT 1000
+    `;
+    
+    // Cache the results
+    cache.set(cacheKey, result);
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
 });
 
+// Search inventory with server-side filtering
+app.get('/api/inventory/:userId/search', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const { query, category } = req.query;
+    
+    const result = await neonDb`
+      SELECT i.*, p.description, p.image_url
+      FROM user_inventory i
+      LEFT JOIN products p ON i.id = p.id
+      WHERE i.user_id = ${userId}
+      ${category ? neonDb`AND i.category = ${category}` : neonDb``}
+      ${query ? neonDb`
+        AND (
+          i.name ILIKE ${'%' + query + '%'} OR
+          p.description ILIKE ${'%' + query + '%'} OR
+          i.material ILIKE ${'%' + query + '%'} OR
+          i.origin_source ILIKE ${'%' + query + '%'}
+        )
+      ` : neonDb``}
+      ORDER BY i.created_at DESC
+      LIMIT 100
+    `;
+    
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
+
+// Create new inventory item
+app.post('/api/inventory/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const item = req.body;
+    
+    // Use Render DB for write operations
+    const result = await renderPool.query(
+      `INSERT INTO user_inventory (
+        user_id, name, description, category, material,
+        color, dimensions, origin_source, import_cost, retail_price
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING *`,
+      [
+        userId, item.name, item.description, item.category,
+        item.material, item.color, item.dimensions,
+        item.origin_source, item.import_cost, item.retail_price
+      ]
+    );
+    
+    // Clear cache for this user
+    cache.del(`inventory_${userId}`);
+    
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
+
+// Update inventory item
+app.put('/api/inventory/:userId/:itemId', async (req, res) => {
+  try {
+    const { userId, itemId } = req.params;
+    const updates = req.body;
+    
+    // Use Render DB for write operations
+    const result = await renderPool.query(
+      `UPDATE user_inventory
+       SET name = $1, description = $2, category = $3,
+           material = $4, color = $5, dimensions = $6,
+           origin_source = $7, import_cost = $8, retail_price = $9,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $10 AND user_id = $11
+       RETURNING *`,
+      [
+        updates.name, updates.description, updates.category,
+        updates.material, updates.color, updates.dimensions,
+        updates.origin_source, updates.import_cost, updates.retail_price,
+        itemId, userId
+      ]
+    );
+    
+    // Clear cache for this user
+    cache.del(`inventory_${userId}`);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
+
+// Delete inventory item
+app.delete('/api/inventory/:userId/:itemId', async (req, res) => {
+  try {
+    const { userId, itemId } = req.params;
+    
+    // Use Render DB for write operations
+    const result = await renderPool.query(
+      'DELETE FROM user_inventory WHERE id = $1 AND user_id = $2 RETURNING *',
+      [itemId, userId]
+    );
+    
+    // Clear cache for this user
+    cache.del(`inventory_${userId}`);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    
+    res.json({ message: 'Item deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
+
+// Clear cache endpoint
+app.post('/api/cache/clear', (req, res) => {
+  const userId = req.body.userId;
+  if (userId) {
+    cache.del(`inventory_${userId}`);
+  } else {
+    cache.flushAll();
+  }
+  res.json({ message: 'Cache cleared successfully' });
+});
+
+// Error handler for database connection
+renderPool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+  process.exit(-1);
+});
+
+// Start server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
-  // Initial refresh of materialized view
-  refreshInventoryView();
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received. Shutting down gracefully...');
+  await renderPool.end();
+  process.exit(0);
 });

@@ -1,72 +1,97 @@
-# Service configuration for the backend API
 services:
+  # Python backend service
   - type: web
-    name: instantory # Service name on Render
+    name: instantory-python
     runtime: python
-    buildCommand: cd backend && pip install -r requirements.txt  # Install dependencies
-    startCommand: cd backend && hypercorn server:app --bind 0.0.0.0:$PORT --access-log -  # Start server
+    buildCommand: cd backend && pip install -r requirements.txt
+    startCommand: cd backend && hypercorn server:app --bind 0.0.0.0:$PORT --access-log -
+    healthCheckPath: /health
     envVars:
-      # Runtime configuration
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: PORT
         sync: false
-
-      # Database configuration (managed by Render)
       - key: DATABASE_URL
         fromDatabase:
           name: instantory_sql
           property: connectionString
-      - key: PGSSLMODE
-        value: require
-
-      # Security and CORS settings
+      - key: NEON_DATABASE_URL
+        sync: false  # Set in dashboard
       - key: CORS_ENABLED
         value: "true"
       - key: ALLOW_CREDENTIALS
         value: "true"
       - key: CORS_ORIGIN
         value: https://bartleby.vercel.app
-      - key: ALLOW_CREDENTIALS
-        value: "true"
-
-      # API configuration
       - key: PUBLIC_BACKEND_URL
         value: https://instantory.onrender.com
-
-      # Frontend URL for CORS
-      - key: VERCEL_URL
-        value: "https://bartleby.vercel.app"
-
-      # Vercel Blob Storage
-      - key: BLOB_READ_WRITE_TOKEN
-        sync: false
-      # OpenAI Configuration (required for AI processing)
-      - key: OPENAI_API_KEY
-        sync: false  # This will prompt for the value during deployment
- - name: node-server
-    type: web
-    env: node
-    buildCommand: "cd backend && npm install"
-    startCommand: "cd backend && node server.js"
-    envVars:  
-      - key: PUBLIC_BACKEND_URL
-        value: https://instantory.onrender.com
-      - key: OPENAI_API_KEY
-        sync: false
       - key: VERCEL_URL
         value: "https://bartleby.vercel.app"
       - key: BLOB_READ_WRITE_TOKEN
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
+
+  # Node.js backend service
+  - type: web
+    name: instantory-node
+    runtime: node
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 18.0.0
       - key: PORT
         sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: instantory_sql
           property: connectionString
+      - key: NEON_DATABASE_URL
+        sync: false  # Set in dashboard
+      - key: CORS_ORIGIN
+        value: https://bartleby.vercel.app
+      - key: NODE_ENV
+        value: production
+
 databases:
+  # Main PostgreSQL database on Render
   - name: instantory_sql
-    databaseName: bartleby_sql
+    databaseName: instantory_db
+    user: instantory_db_user
     plan: free
     ipAllowList: []  # Allow all IPs for development
-healthCheckPath: /healthz
+
+# Shared environment variables for all services
+envVarGroups:
+  - name: instantory-shared
+    envVars:
+      - key: DATA_DIR
+        value: /data
+      - key: UPLOADS_DIR
+        value: /data/uploads
+      - key: INVENTORY_IMAGES_DIR
+        value: /data/images/inventory
+      - key: EXPORTS_DIR
+        value: /data/exports
+      - key: DOCUMENT_DIRECTORY
+        value: /data/documents
+      - key: LOG_LEVEL
+        value: info
+      - key: LOG_FILE
+        value: /data/logs/instantory.log
+      - key: CACHE_TTL
+        value: "300"
+      - key: MAX_CACHE_SIZE
+        value: "100"
