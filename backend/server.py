@@ -22,8 +22,14 @@ from quart import Quart, jsonify, request, send_file, make_response
 import asyncio
 from quart import Quart, request, jsonify, make_response
 from quart_cors import cors
-from auth_routes import auth_bp
-from db import get_db_pool
+
+
+# Ensure backend folder is in Python's path
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
+# Import the auth_routes module correctly
+from backend.auth_routes import auth_bp  # Adjust if needed
+from backend.db import get_db_pool
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'instantory/backend/routes')))
 

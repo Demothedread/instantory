@@ -226,6 +226,7 @@ renderPool.on('error', (err) => {
   process.exit(-1);
 });
 
+const port = process.env.NODE_PORT || 1001;
 // Start server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
