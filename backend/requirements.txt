@@ -12,6 +12,8 @@ click==8.1.7
 distro==1.8.0
 frozenlist==1.4.1
 google-auth==2.27.0
+google-auth-oauthlib>=0.6.0
+google-auth-httplib2>=0.1.0
 h11==0.14.0
 httpx==0.25.2
 hypercorn>=0.15.0

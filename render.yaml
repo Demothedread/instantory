@@ -1,16 +1,16 @@
 services:
   # Python backend service
   - type: web
-    name: instantory
+    name: quart-server
     runtime: python
-    buildCommand: cd backend && pip install -r requirements.txt
-    startCommand: cd backend && hypercorn server:app --bind 0.0.0.0:${PORT:-10000} --access-log -
+    buildCommand: "cd backend && pip install -r requirements.txt"
+    startCommand: "hypercorn backend.server:app --bind 0.0.0.0:${PORT:-5000} --access-log -"
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: PORT
-        value: "10000"
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: instantory_sql

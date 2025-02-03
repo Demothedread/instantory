@@ -3,8 +3,12 @@ from db import get_db_pool, ensure_user_directories, get_user_data_path
 import logging
 import os
 import shutil
-from typing import Optional, Dict, Any
+import google.auth
 import json
+from google.auth.transport import requests
+from google.oauth2 import id_token
+from google_auth_oauthlib.flow import Flow
+from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 
 try:
