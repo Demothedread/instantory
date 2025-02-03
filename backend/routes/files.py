@@ -1,5 +1,5 @@
 from quart import Blueprint, jsonify, request, send_file
-from db import get_db_pool
+from ..db import get_db_pool
 import aiohttp
 import logging
 import os

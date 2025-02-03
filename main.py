@@ -417,7 +417,7 @@ async def analyze_image(base64_image: str, instruction: str) -> Dict[str, Any]:
     """Analyze an image using OpenAI's GPT-4 model and return product features."""
     try:
         response = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[
                 {
                     "role": "system",

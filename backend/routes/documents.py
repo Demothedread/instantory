@@ -1,5 +1,5 @@
 from quart import Blueprint, jsonify, request
-from db import get_db_pool
+from ..db import get_db_pool
 import logging
 
 logger = logging.getLogger(__name__)
