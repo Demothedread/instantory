@@ -1,5 +1,5 @@
 from quart import Blueprint, request, jsonify, make_response
-from db import get_db_pool, ensure_user_directories, get_user_data_path
+from .db import get_db_pool, ensure_user_directories, get_user_data_path
 import logging
 import os
 import shutil

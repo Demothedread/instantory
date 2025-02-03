@@ -19,10 +19,71 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from PIL import Image
 from quart import Quart, jsonify, request, send_file, make_response
+import asyncio
+from quart import Quart, request, jsonify, make_response
 from quart_cors import cors
 from auth_routes import auth_bp
 from db import get_db_pool
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'instantory/backend/routes')))
+
+from inventory import inventory_bp
+from documents import documents_bp
+from files import files_bp
+
+# Initialize OpenAI client with error handling
+try:
+    from openai import OpenAI
+    client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+except Exception as e:
+    raise RuntimeError(f"Failed to initialize OpenAI client: {e}")
+
+# Initialize Quart app
+app = Quart(__name__)
+app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))  # 16MB default
+
+# CORS Configuration
+cors_config = {
+    'allow_origin': [
+        "https://instantory.vercel.app",
+        "https://instantory.onrender.com",
+        "https://bartleby.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ],
+    'allow_credentials': True,
+    'allow_methods': ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'PATCH'],
+    'allow_headers': ['Content-Type', 'Authorization']
+}
+
+# Apply CORS settings to the app
+cors(app, **cors_config)
+
+# Register blueprints for API endpoints
+app.register_blueprint(auth_bp, url_prefix="/api/auth")
+app.register_blueprint(inventory_bp, url_prefix="/api/inventory")
+app.register_blueprint(documents_bp, url_prefix="/api/documents")
+app.register_blueprint(files_bp, url_prefix="/api/files")
+
+# ✅ **Preflight (OPTIONS) Handling for Inventory & Documents**
+@app.before_request
+async def before_request():
+    """Handle preflight requests and apply CORS settings."""
+    if request.method == "OPTIONS":
+        response = await make_response()
+        origin = request.headers.get('Origin')
+
+        # Allow CORS for `inventory` and `documents` APIs
+        allowed_endpoints = ["/api/inventory", "/api/documents"]
+        if any(request.path.startswith(ep) for ep in allowed_endpoints) and origin in cors_config['allow_origin']:
+            response.headers.update({
+                'Access-Control-Allow-Origin': origin,
+                'Access-Control-Allow-Methods': ', '.join(cors_config['allow_methods']),
+                'Access-Control-Allow-Headers': ', '.join(cors_config['allow_headers']),
+                'Access-Control-Allow-Credentials': 'true',
+                'Access-Control-Max-Age': '86400'
+            })
+        return response
 # Load environment variables
 load_dotenv()
 DB_URL = os.getenv("DATABASE_URL")
@@ -96,10 +157,10 @@ try:
 
     # Create directories with proper permissions
     for directory in PATHS.values():
-    try:
-        directory.mkdir(parents=True, exist_ok=True, mode=0o755)
-    except PermissionError:
-        print(f"⚠️ WARNING: Could not create directory {directory}. Check permissions.")
+        try:
+            directory.mkdir(parents=True, exist_ok=True, mode=0o755)
+        except PermissionError:
+            print(f"⚠️ WARNING: Could not create directory {directory}. Check permissions.")
 except Exception as e:
     logger.error(f"Failed to create data directories: {e}")
     raise RuntimeError("Unable to initialize required directories")
@@ -253,7 +314,7 @@ app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024
 
 # Configure CORS with secure defaults
 cors_config = {
-    'allow_origins': os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(','),
+    'allow_origins': os.getenv('CORS_ORIGINS', 'http://localhost:1000').split(','),
     'allow_credentials': True,
     'allow_methods': ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     'allow_headers': ['Content-Type', 'Authorization'],
@@ -357,29 +418,31 @@ async def server_error(e):
     logger.error(f"Internal server error: {e}")
     return jsonify({'error': 'Internal server error'}), 500
 
-# Security headers middleware
+# ✅ **Ensure CORS Headers Are Applied to All Responses**
 @app.after_request
-async def add_security_headers(response):
-    """Add security headers to all responses."""
+async def after_request(response):
+    """Add security and CORS headers to all responses."""
+    origin = request.headers.get('Origin')
+    if origin in cors_config['allow_origin']:
+        response.headers.update({
+            'Access-Control-Allow-Origin': origin,
+            'Access-Control-Allow-Methods': ', '.join(cors_config['allow_methods']),
+            'Access-Control-Allow-Headers': ', '.join(cors_config['allow_headers']),
+            'Access-Control-Allow-Credentials': 'true',
+        })
+
+    # Security headers
     response.headers.update({
         'X-Content-Type-Options': 'nosniff',
         'X-Frame-Options': 'DENY',
         'X-XSS-Protection': '1; mode=block',
         'Content-Security-Policy': "default-src 'self'",
         'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-        'Referrer-Policy': 'strict-origin-when-cross-origin'
+        'Vary': 'Origin'
     })
     return response
 
-# API Routes
-from routes.inventory import inventory_bp
-from routes.documents import documents_bp
-from routes.files import files_bp
-
-app.register_blueprint(inventory_bp, url_prefix="/api/inventory")
-app.register_blueprint(documents_bp, url_prefix="/api/documents")
-app.register_blueprint(files_bp, url_prefix="/api/files")
-
+# ✅ **Ensure Render Binds the Correct Port**
 if __name__ == "__main__":
-    PORT = int(os.getenv("PORT", 5000))  
+    PORT = int(os.getenv("PORT", 5000))
     asyncio.run(app.run_task(host="0.0.0.0", port=PORT))
