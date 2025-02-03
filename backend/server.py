@@ -376,4 +376,4 @@ app.register_blueprint(documents_bp, url_prefix="/api/documents")
 app.register_blueprint(files_bp, url_prefix="/api/files")
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=PORT)
+    asyncio.run(app.run_task(host="0.0.0.0", port=PORT))

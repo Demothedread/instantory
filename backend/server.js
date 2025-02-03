@@ -1,12 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { Pool } from 'pg';
 import { neon } from '@neondatabase/serverless';
 import NodeCache from 'node-cache';
 import { WebSocket } from 'ws';
+import pkg from 'pg';
+const { Pool } = pkg;
 
 dotenv.config();
+
 
 const app = express();
 const port = process.env.PORT || 5000;
