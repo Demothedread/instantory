@@ -16,6 +16,7 @@ h11==0.14.0
 hypercorn>=0.15.0
 idna==3.6
 multidict==6.0.4
+openai>=1.59.8
 priority==2.0.0
 pydantic>=2.5.3
 pydantic_core==2.14.6
