@@ -539,6 +539,10 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 app = Quart(__name__)
 cors(app, allow_origin=CORSConfig.get_origins(), allow_credentials=True)
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
+@app.route('/')
+async def home():
+    return jsonify({'message': 'Welcome to Instantory API!'})
+
 # Serve static files
 @app.route('/data/<path:filename>')
 async def serve_file(filename):
@@ -1302,3 +1306,35 @@ async def setup_task_cleanup():
             await asyncio.sleep(3600)
             task_manager.cleanup()
     asyncio.create_task(cleanup_loop())
+
+@app.route('/api/process-inventory', methods=['POST'])
+async def process_inventory():
+    """Process inventory images from Vercel Blob URLs"""
+    try:
+        data = await request.get_json()
+        if not data or 'images' not in data:
+            return jsonify({'error': 'No images provided'}), 400
+        
+        images = data['images']
+        instruction = data.get('instruction', "Analyze and catalog the images.")
+        
+        # Create task
+        task_id = str(uuid.uuid4())
+        task_manager.add_task(task_id)
+        
+        # Process images asynchronously
+        asyncio.create_task(process_inventory_async(images, instruction, task_id))
+        
+        return jsonify({
+            'status': 'success',
+            'task_id': task_id,
+            'message': 'Inventory processing started'
+        }), 202
+    except Exception as e:
+        logger.error(f"Error processing inventory: {e}")
+        return jsonify({'error': str(e)}), 500  
+
+
+if __name__ == "__main__":
+    PORT = int(os.environ.get('PORT', 5000))  # Default to 5000 if PORT is not set
+    app.run(host='0.0.0.0', port=PORT)
