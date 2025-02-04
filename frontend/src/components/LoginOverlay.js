@@ -1,127 +1,116 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState, useContext, useEffect } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
-import config from '../config';
-import LoginAnimation from '../scripts/LoginAnimation';
+import AuthContext from '../contexts/AuthContext';
 import './LoginOverlay.css';
 
-function LoginOverlay({ isVisible, onLogin, onGoogleLogin }) {
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+const LoginOverlay = ({ isVisible }) => {
+    const { handleLogin, handleGoogleLogin, error, clearError } = useContext(AuthContext);
+    const [email, setEmail] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [showAnimation, setShowAnimation] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-
-    if (!email || !email.includes('@')) {
-      setError('Please enter a valid email address');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const response = await axios.post(`${config.apiUrl}/api/auth/login`, 
-        { email },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          withCredentials: true
+    useEffect(() => {
+        if (isVisible) {
+            setShowAnimation(true);
         }
-      );
+    }, [isVisible]);
 
-      if (response.data.success) {
-        onLogin(response.data.user);
-      } else {
-        setError(response.data.message || 'Login failed');
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'An error occurred during login');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    if (!isVisible) return null;
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    try {
-      const response = await axios.post(`${config.apiUrl}/api/auth/google`,
-        { token: credentialResponse.credential },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          withCredentials: true
+    const handleEmailLogin = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+        try {
+            await handleLogin({ email });
+        } catch (error) {
+            console.error('Login failed:', error);
+        } finally {
+            setIsLoading(false);
         }
-      );
+    };
 
-      if (response.data.success) {
-        onGoogleLogin(response.data.user);
-      } else {
-        setError(response.data.message || 'Google login failed');
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'An error occurred during Google login');
-    }
-  };
+    const handleGoogleSuccess = async (credentialResponse) => {
+        try {
+            await handleGoogleLogin(credentialResponse.credential);
+        } catch (error) {
+            console.error('Google login failed:', error);
+        }
+    };
 
-  const handleGoogleError = () => {
-    setError('Google sign in was unsuccessful');
-  };
-
-  return (
-    <LoginAnimation isVisible={isVisible}>
-      <div className="login-modal neo-decoroco-panel">
-        <h2>Welcome to Bartleby</h2>
-        <p>Please sign in to continue</p>
-        
-        <div className="login-options">
-          <div className="google-login">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              theme="filled_black"
-              shape="pill"
-              text="continue_with"
-              useOneTap={false}
-              flow="implicit"
-              auto_select={false}
-              context="signin"
-              ux_mode="popup"
-            />
-          </div>
-          
-          <div className="divider">
-            <span>or</span>
-          </div>
-          
-          <form onSubmit={handleSubmit} className="login-form">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
-              className="neo-decoroco-input"
-              required
-            />
-            
-            <button 
-              type="submit" 
-              className="neo-decoroco-button"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Signing in...' : 'Sign In with Email'}
-            </button>
-          </form>
+    return (
+        <div className={`login-overlay ${showAnimation ? 'show' : ''}`}>
+            <div className="login-panel">
+                <div className="login-decoration top-left"></div>
+                <div className="login-decoration top-right"></div>
+                <div className="login-decoration bottom-left"></div>
+                <div className="login-decoration bottom-right"></div>
+                
+                <h2 className="login-title">
+                    <span className="title-text">Welcome to Bartleby</span>
+                    <div className="title-underline"></div>
+                </h2>
+                
+                {error && (
+                    <div className="error-message" onClick={clearError}>
+                        <div className="error-icon">!</div>
+                        {error}
+                        <div className="error-close">×</div>
+                    </div>
+                )}
+                
+                <div className="login-options">
+                    <div className="google-login-wrapper">
+                        <GoogleLogin
+                            onSuccess={handleGoogleSuccess}
+                            onError={() => console.error('Google Login Failed')}
+                            theme="filled_black"
+                            shape="pill"
+                            text="continue_with"
+                            useOneTap
+                            width="300px"
+                        />
+                    </div>
+                    
+                    <div className="divider">
+                        <div className="divider-line"></div>
+                        <span className="divider-text">or</span>
+                        <div className="divider-line"></div>
+                    </div>
+                    
+                    <form onSubmit={handleEmailLogin} className="email-form">
+                        <div className="input-wrapper">
+                            <input
+                                type="email"
+                                className="email-input"
+                                placeholder="Enter your email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                            <div className="input-decoration"></div>
+                        </div>
+                        
+                        <button
+                            type="submit"
+                            className={`email-login-button ${isLoading ? 'loading' : ''}`}
+                            disabled={isLoading}
+                        >
+                            <span className="button-text">
+                                {isLoading ? 'Logging in...' : 'Continue with Email'}
+                            </span>
+                            <div className="button-decoration"></div>
+                        </button>
+                    </form>
+                </div>
+                
+                <div className="login-footer">
+                    <div className="footer-decoration left"></div>
+                    <div className="footer-text">Secure Authentication</div>
+                    <div className="footer-decoration right"></div>
+                </div>
+            </div>
         </div>
-        
-        {error && <div className="error-message">{error}</div>}
-      </div>
-    </LoginAnimation>
-  );
-}
+    );
+};
 
 export default LoginOverlay;

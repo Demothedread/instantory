@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { SpeedInsights } from "@vercel/speed-insights/react";
-import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import { GoogleOAuthProvider } from '@react-oauth/google';
-import AuthContext, { AuthProvider } from './contexts/AuthContext';
+import AuthContext from './contexts/AuthContext';
 import InventoryTable from './components/InventoryTable';
 import ImageList from './components/ImageList';
 import ProcessImagesButton from './components/ProcessImagesButton';
@@ -24,24 +24,21 @@ import config from './config';
 import './App.css';
 
 function App() {
-    const { user, loading, handleLogin } = useContext(AuthContext);
+    const { user, loading } = useContext(AuthContext);
     const [showRolodex, setShowRolodex] = useState(false);
     const [isExpanded, setIsExpanded] = useState(true);
     const [activeTab, setActiveTab] = useState('inventory');
     const [inventory, setInventory] = useState([]);
     const [documents, setDocuments] = useState([]);
     const [showHowTo, setShowHowTo] = useState(false);
-    const [showNewTableDialog, setShowNewTableDialog] = useState(false);
-    const [newTableName, setNewTableName] = useState('');
-    const [showMainMenu, setShowMainMenu] = useState(false);
-    const [showInventoryDropdown, setShowInventoryDropdown] = useState(false);
-    const [showDocumentsDropdown, setShowDocumentsDropdown] = useState(false);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        fetchData();
+        if (user) {
+            fetchData();
+        }
         generateTiles();
-    }, []);
+    }, [user]);
 
     const generateTiles = () => {
         const container = document.querySelector('.background-container');
@@ -133,43 +130,59 @@ function App() {
         }
     };
 
-    if (loading) return <div>Loading...</div>;
+    if (loading) {
+        return (
+            <div className="loading-container neo-decoroco-panel">
+                <div className="loading-spinner"></div>
+                <div className="loading-text">Loading...</div>
+            </div>
+        );
+    }
 
     return (
-        <AuthProvider>
-            <GoogleOAuthProvider clientId={config.googleClientId}>
-                <Router>
-                    <div className="app-container">
-                        <Navigation />
-                        <header className="app-header">
-                            {user && <UserMenu user={user} />}
-                        </header>
+        <div className="app-container">
+            <Navigation />
+            <header className="app-header">
+                {user && <UserMenu user={user} />}
+            </header>
 
-                        <main className="main-section">
-                            {error && <div className="error-message neo-decoroco-panel">{error}</div>}
+            <main className="main-section">
+                {error && <div className="error-message neo-decoroco-panel">{error}</div>}
 
-                            <LoginAnimation isVisible={!user}>
-                                <LoginOverlay isVisible={!user} onLogin={handleLogin} />
-                            </LoginAnimation>
+                <LoginAnimation isVisible={!user}>
+                    <LoginOverlay isVisible={!user} />
+                </LoginAnimation>
 
-                            <div className={`upload-section neo-decoroco-panel ${!showRolodex ? 'expanded' : 'minimized'}`}>
-                                <ProcessImagesButton onProcess={handleProcessFiles} isAuthenticated={!!user} />
+                {user && (
+                    <>
+                        <div className={`upload-section neo-decoroco-panel ${!showRolodex ? 'expanded' : 'minimized'}`}>
+                            <ProcessImagesButton onProcess={handleProcessFiles} isAuthenticated={true} />
+                        </div>
+
+                        {showRolodex && (
+                            <div className="content-display-wrapper">
+                                <RolodexToggle inventory={inventory} documents={documents} />
                             </div>
+                        )}
+                    </>
+                )}
+            </main>
 
-                            {showRolodex && (
-                                <div className="content-display-wrapper">
-                                    <RolodexToggle inventory={inventory} documents={documents} />
-                                </div>
-                            )}
-                        </main>
-
-                        <HowToUseOverlay isOpen={showHowTo} onClose={() => setShowHowTo(false)} />
-                        <SpeedInsights />
-                    </div>
-                </Router>
-            </GoogleOAuthProvider>
-        </AuthProvider>
+            <HowToUseOverlay isOpen={showHowTo} onClose={() => setShowHowTo(false)} />
+            <SpeedInsights />
+        </div>
     );
 }
 
-export default App;
+// Wrap the app with necessary providers
+function AppWrapper() {
+    return (
+        <GoogleOAuthProvider clientId={config.googleClientId}>
+            <Router>
+                <App />
+            </Router>
+        </GoogleOAuthProvider>
+    );
+}
+
+export default AppWrapper;

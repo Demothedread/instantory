@@ -23,14 +23,50 @@
         "Access-Control-Allow-Origin": "https://instantory.onrender.com",
         "Access-Control-Allow-Methods": "GET,PUT,POST,DELETE,OPTIONS,PATCH",
         "Access-Control-Allow-Headers": "Content-Type,Authorization,Accept,Origin,X-Requested-With",
-        "Access-Control-Allow-Credentials": "true"
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400"
       },
       "dest": "/index.html"
     }
   ],
   "env": {
     "REACT_APP_BACKEND_URL": "https://instantory.onrender.com",
-    "DATABASE_URL": "postgresql://bartleby_sql_user:adc84Vezvc0nONldSZ2VvS5Z1MxXcul7@dpg-cu7jk4ij1k6c73flhb9g-a.oregon-postgres.render.com/bartleby_sq",
-    "BLOB_READ_WRITE_TOKEN": "vercel_blob_rw_s5xuxXH6T3fDx9Oz_AdnmR7yE2uQjnt1cWInfUzpXQdtrpS"
-  }
+    "REACT_APP_GOOGLE_CLIENT_ID": "700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com",
+    "BLOB_READ_WRITE_TOKEN": "vercel_blob_rw_s5xuxXH6T3fDx9Oz_AdnmR7yE2uQjnt1cWInfUzpXQdtrpS",
+    "NODE_ENV": "production"
+  },
+  "build": {
+    "env": {
+      "REACT_APP_BACKEND_URL": "https://instantory.onrender.com",
+      "REACT_APP_GOOGLE_CLIENT_ID": "700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com",
+      "NODE_ENV": "production"
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://instantory.onrender.com"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,PUT,POST,DELETE,OPTIONS,PATCH"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type,Authorization,Accept,Origin,X-Requested-With"
+        },
+        {
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
+        },
+        {
+          "key": "Access-Control-Max-Age",
+          "value": "86400"
+        }
+      ]
+    }
+  ]
 }

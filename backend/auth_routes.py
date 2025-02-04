@@ -5,10 +5,11 @@ import os
 import shutil
 import google.auth
 import json
+import jwt
 from google.auth.transport import requests
 from google.oauth2 import id_token
 from google_auth_oauthlib.flow import Flow
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from datetime import datetime, timedelta
 
 try:
@@ -20,19 +21,60 @@ except ImportError:
     logger.warning("Google Auth libraries not installed. Google authentication will be disabled.")
 
 # Configure logging
-import logging
-
-# Configure logging if not already set
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler()]
 )
 
-logger = logging.getLogger(__name__)  # Define logger at module level
+logger = logging.getLogger(__name__)
 
-# Example usage:
-logger.info("Auth Routes initialized")
+# JWT Configuration
+JWT_ACCESS_EXPIRES = timedelta(minutes=15)
+JWT_REFRESH_EXPIRES = timedelta(days=7)
+JWT_ALGORITHM = "HS256"
+
+def create_tokens(user_data: dict) -> Tuple[str, str]:
+    """Create access and refresh tokens."""
+    access_token = jwt.encode(
+        {
+            **user_data,
+            "exp": datetime.utcnow() + JWT_ACCESS_EXPIRES,
+            "type": "access"
+        },
+        os.getenv('JWT_SECRET'),
+        algorithm=JWT_ALGORITHM
+    )
+    
+    refresh_token = jwt.encode(
+        {
+            "user_id": user_data["id"],
+            "exp": datetime.utcnow() + JWT_REFRESH_EXPIRES,
+            "type": "refresh"
+        },
+        os.getenv('JWT_SECRET'),
+        algorithm=JWT_ALGORITHM
+    )
+    
+    return access_token, refresh_token
+
+def verify_token(token: str, token_type: str = "access") -> dict:
+    """Verify JWT token and return payload."""
+    try:
+        payload = jwt.decode(
+            token,
+            os.getenv('JWT_SECRET'),
+            algorithms=[JWT_ALGORITHM]
+        )
+        
+        if payload.get("type") != token_type:
+            raise jwt.InvalidTokenError("Invalid token type")
+            
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise jwt.InvalidTokenError("Token has expired")
+    except jwt.InvalidTokenError as e:
+        raise jwt.InvalidTokenError(f"Invalid token: {str(e)}")
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -122,8 +164,29 @@ async def google_auth():
             google_id=idinfo['sub']
         )
         
-        return jsonify({'user': user})
-    
+        # Create JWT tokens
+        access_token, refresh_token = create_tokens(user)
+        
+        response = jsonify({'user': user})
+        response.set_cookie(
+            'access_token',
+            access_token,
+            httponly=True,
+            secure=True,
+            samesite='Strict',
+            max_age=JWT_ACCESS_EXPIRES.total_seconds()
+        )
+        response.set_cookie(
+            'refresh_token',
+            refresh_token,
+            httponly=True,
+            secure=True,
+            samesite='Strict',
+            max_age=JWT_REFRESH_EXPIRES.total_seconds()
+        )
+        
+        return response
+        
     except Exception as e:
         logger.error(f"Google auth error: {e}")
         return jsonify({'error': 'Authentication failed'}), 401
@@ -132,27 +195,134 @@ async def google_auth():
 async def check_session():
     """Check if user is authenticated."""
     try:
-        # Get session token from cookie
-        session_token = request.cookies.get('session')
-        if not session_token:
+        access_token = request.cookies.get('access_token')
+        if not access_token:
             return jsonify({'authenticated': False}), 401
         
-        # Verify session token and get user info
-        # This is a placeholder - implement your session verification logic
-        user = {'authenticated': True}  # Replace with actual user data
-        
-        return jsonify(user)
-    
+        # Verify access token
+        try:
+            payload = verify_token(access_token, "access")
+            
+            # Get fresh user data
+            async with get_db_pool() as pool:
+                async with pool.acquire() as conn:
+                    user = await conn.fetchrow(
+                        """
+                        SELECT id, email, name, picture_url, auth_provider
+                        FROM users WHERE id = $1
+                        """,
+                        payload["id"]
+                    )
+            
+            if not user:
+                raise jwt.InvalidTokenError("User not found")
+                
+            return jsonify({'user': dict(user)})
+            
+        except jwt.InvalidTokenError:
+            # Try to refresh using refresh token
+            refresh_token = request.cookies.get('refresh_token')
+            if not refresh_token:
+                return jsonify({'authenticated': False}), 401
+                
+            payload = verify_token(refresh_token, "refresh")
+            
+            # Get fresh user data and create new tokens
+            async with get_db_pool() as pool:
+                async with pool.acquire() as conn:
+                    user = await conn.fetchrow(
+                        """
+                        SELECT id, email, name, picture_url, auth_provider
+                        FROM users WHERE id = $1
+                        """,
+                        payload["user_id"]
+                    )
+            
+            if not user:
+                return jsonify({'authenticated': False}), 401
+                
+            access_token, refresh_token = create_tokens(dict(user))
+            
+            response = jsonify({'user': dict(user)})
+            response.set_cookie(
+                'access_token',
+                access_token,
+                httponly=True,
+                secure=True,
+                samesite='Strict',
+                max_age=JWT_ACCESS_EXPIRES.total_seconds()
+            )
+            response.set_cookie(
+                'refresh_token',
+                refresh_token,
+                httponly=True,
+                secure=True,
+                samesite='Strict',
+                max_age=JWT_REFRESH_EXPIRES.total_seconds()
+            )
+            
+            return response
+            
     except Exception as e:
         logger.error(f"Session check error: {e}")
         return jsonify({'error': 'Session verification failed'}), 401
+
+@auth_bp.route('/refresh', methods=['POST'])
+async def refresh_token():
+    """Refresh access token using refresh token."""
+    try:
+        refresh_token = request.cookies.get('refresh_token')
+        if not refresh_token:
+            return jsonify({'error': 'No refresh token provided'}), 401
+            
+        payload = verify_token(refresh_token, "refresh")
+        
+        async with get_db_pool() as pool:
+            async with pool.acquire() as conn:
+                user = await conn.fetchrow(
+                    """
+                    SELECT id, email, name, picture_url, auth_provider
+                    FROM users WHERE id = $1
+                    """,
+                    payload["user_id"]
+                )
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 401
+            
+        access_token, new_refresh_token = create_tokens(dict(user))
+        
+        response = jsonify({'user': dict(user)})
+        response.set_cookie(
+            'access_token',
+            access_token,
+            httponly=True,
+            secure=True,
+            samesite='Strict',
+            max_age=JWT_ACCESS_EXPIRES.total_seconds()
+        )
+        response.set_cookie(
+            'refresh_token',
+            new_refresh_token,
+            httponly=True,
+            secure=True,
+            samesite='Strict',
+            max_age=JWT_REFRESH_EXPIRES.total_seconds()
+        )
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Token refresh error: {e}")
+        return jsonify({'error': 'Token refresh failed'}), 401
 
 @auth_bp.route('/logout', methods=['POST'])
 async def logout():
     """Handle user logout."""
     try:
         response = await make_response(jsonify({'message': 'Logged out successfully'}))
-        response.delete_cookie('session')
+        response.delete_cookie('access_token')
+        response.delete_cookie('refresh_token')
         return response
     
     except Exception as e:
@@ -163,13 +333,15 @@ async def logout():
 async def get_user_data():
     """Get user's data directory information."""
     try:
-        # Get user ID from session
-        user_id = request.args.get('user_id')
-        if not user_id:
-            return jsonify({'error': 'User ID required'}), 400
+        access_token = request.cookies.get('access_token')
+        if not access_token:
+            return jsonify({'error': 'Authentication required'}), 401
+            
+        payload = verify_token(access_token, "access")
+        user_id = payload["id"]
         
         # Get user's data paths
-        paths = get_user_data_path(int(user_id))
+        paths = get_user_data_path(user_id)
         
         return jsonify({
             'paths': {
@@ -180,6 +352,8 @@ async def get_user_data():
             }
         })
     
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Invalid token'}), 401
     except Exception as e:
         logger.error(f"Error getting user data: {e}")
         return jsonify({'error': 'Failed to get user data'}), 500
@@ -188,11 +362,12 @@ async def get_user_data():
 async def reset_user_data():
     """Reset user's inventory and documents."""
     try:
-        data = await request.get_json()
-        user_id = data.get('user_id')
-        
-        if not user_id:
-            return jsonify({'error': 'User ID required'}), 400
+        access_token = request.cookies.get('access_token')
+        if not access_token:
+            return jsonify({'error': 'Authentication required'}), 401
+            
+        payload = verify_token(access_token, "access")
+        user_id = payload["id"]
         
         async with get_db_pool() as pool:
             async with pool.acquire() as conn:
@@ -219,7 +394,7 @@ async def reset_user_data():
                     )
                     
                     # Clear user's data directories
-                    paths = get_user_data_path(int(user_id))
+                    paths = get_user_data_path(user_id)
                     for path in paths.values():
                         if path.exists():
                             for item in path.iterdir():
@@ -229,7 +404,7 @@ async def reset_user_data():
                                     shutil.rmtree(item)
                     
                     # Recreate directories
-                    ensure_user_directories(int(user_id))
+                    ensure_user_directories(user_id)
                     
                     await conn.execute('COMMIT')
                     return jsonify({'message': 'User data reset successfully'})
@@ -238,6 +413,8 @@ async def reset_user_data():
                     await conn.execute('ROLLBACK')
                     raise
     
+    except jwt.InvalidTokenError:
+        return jsonify({'error': 'Invalid token'}), 401
     except Exception as e:
         logger.error(f"Error resetting user data: {e}")
         return jsonify({'error': 'Failed to reset user data'}), 500
