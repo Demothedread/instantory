@@ -4,13 +4,18 @@ services:
     name: instantory
     runtime: python
     buildCommand: "cd backend && pip install -r requirements.txt"
-    startCommand: "hypercorn backend.server:app --bind 0.0.0.0:${PORT} --access-log -"
+    startCommand: "hypercorn backend.server:app --bind 0.0.0.0:${PORT} --access-log - --workers 4"
     healthCheckPath: /health
+    autoDeploy: true
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: PORT
         sync: false
+      - key: HYPERCORN_WORKERS
+        value: "4"
+      - key: HYPERCORN_KEEP_ALIVE
+        value: "120"
       - key: DATABASE_URL
         fromDatabase:
           name: instantory_sql
@@ -42,18 +47,18 @@ services:
       - key: COOKIE_SECRET
         generateValue: true
 
-  # Node.js backend service
-  - type: web
+  # Node.js backend service (worker)
+  - type: worker
     name: instantory-node
     runtime: node
     buildCommand: cd backend && npm install
     startCommand: cd backend && node server.js
-    healthCheckPath: /health
+    autoDeploy: true
     envVars:
       - key: NODE_VERSION
         value: 18.0.0
-      - key: NODE_PORT
-        value: "10001"
+      - key: NODE_ENV
+        value: production
       - key: DATABASE_URL
         fromDatabase:
           name: instantory_sql

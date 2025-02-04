@@ -44,13 +44,13 @@ try:
 except Exception as e:
     raise RuntimeError(f"Failed to initialize OpenAI client: {e}")
 
-# Initialize Quart app
+# Initialize Quart app with proper configuration
 app = Quart(__name__)
 app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))  # 16MB default
 
 # CORS Configuration
 cors_config = {
-    'allow_origin': [
+    'allow_origins': [
         "https://instantory.vercel.app",
         "https://instantory.onrender.com",
         "https://bartleby.vercel.app",
@@ -59,11 +59,16 @@ cors_config = {
     ],
     'allow_credentials': True,
     'allow_methods': ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'PATCH'],
-    'allow_headers': ['Content-Type', 'Authorization']
+    'allow_headers': ['Content-Type', 'Authorization'],
+    'max_age': 3600
 }
 
 # Apply CORS settings to the app
-cors(app, **cors_config)
+cors(app, allow_origins=cors_config['allow_origins'],
+     allow_credentials=cors_config['allow_credentials'],
+     allow_methods=cors_config['allow_methods'],
+     allow_headers=cors_config['allow_headers'],
+     max_age=cors_config['max_age'])
 
 # Register blueprints for API endpoints
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -314,22 +319,6 @@ except Exception as e:
     logger.error(f"Failed to initialize OpenAI client: {e}")
     raise RuntimeError("OpenAI client initialization failed")
 
-# Initialize Quart app with proper configuration
-app = Quart(__name__)
-app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))  # 16MB default
-
-# Configure CORS with secure defaults
-cors_config = {
-    'allow_origins': os.getenv('CORS_ORIGINS', 'http://localhost:1000').split(','),
-    'allow_credentials': True,
-    'allow_methods': ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    'allow_headers': ['Content-Type', 'Authorization'],
-    'max_age': 3600
-}
-cors(app, **cors_config)
-
-# Register blueprints
-app.register_blueprint(auth_bp, url_prefix="/api/auth")
 
 # Initialize database connection pool
 @app.before_serving
@@ -448,8 +437,14 @@ async def after_request(response):
     })
     return response
 
-# ✅ **Ensure Render Binds the Correct Port**
+# Server startup configuration
 if __name__ == "__main__":
-    PORT = int(os.getenv("PORT", 1000))
-    app.run(host="0.0.0.0", port=PORT)
-    print(f"Server is running on port {PORT}")
+    # Use PORT from environment with fallback to 5000 (non-privileged port)
+    port = int(os.getenv("PORT", 5000))
+    
+    # Log startup information
+    logger.info(f"Starting server on port {port}")
+    logger.info(f"CORS origins: {cors_config['allow_origins']}")
+    
+    # Note: We don't call app.run() here because we're using hypercorn
+    # The Procfile handles server startup with: hypercorn server:app --bind 0.0.0.0:$PORT
