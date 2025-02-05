@@ -33,9 +33,9 @@ from .db import get_db_pool
 
 # Ensure backend folder is in Python's path
 
-from routes.inventory import inventory_bp
-from routes.documents import documents_bp
-from routes.files import files_bp
+from .routes.inventory import inventory_bp
+from .routes.documents import documents_bp
+from .routes.files import files_bp
 
 # Initialize OpenAI client with error handling
 try:
