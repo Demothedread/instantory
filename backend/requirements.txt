@@ -18,7 +18,7 @@ h11==0.14.0
 httpx==0.25.2
 hypercorn>=0.15.0
 idna==3.6
-jsonwebtoken>=9.0.0
+jsonwebtoken>=7.0.0
 multidict==6.0.4
 openai>=1.59.8
 Pillow>=10.1.0
