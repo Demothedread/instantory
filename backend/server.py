@@ -67,8 +67,7 @@ cors_config = {
 cors(app, allow_origins=cors_config['allow_origins'],
      allow_credentials=cors_config['allow_credentials'],
      allow_methods=cors_config['allow_methods'],
-     allow_headers=cors_config['allow_headers'],
-     max_age=cors_config['max_age'])
+     allow_headers=cors_config['allow_headers'])
 
 # Register blueprints for API endpoints
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
