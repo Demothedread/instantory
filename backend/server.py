@@ -28,14 +28,14 @@ from quart_cors import cors
 # Ensure backend folder is in Python's path
 
 # Import the auth_routes module correctly
-from backend.auth_routes import auth_bp  # Adjust if needed
-from backend.db import get_db_pool
+from .auth_routes import auth_bp  # Adjust if needed
+from .db import get_db_pool
 
 # Ensure backend folder is in Python's path
 
-from inventory import inventory_bp
-from documents import documents_bp
-from files import files_bp
+from routes.inventory import inventory_bp
+from routes.documents import documents_bp
+from routes.files import files_bp
 
 # Initialize OpenAI client with error handling
 try:
