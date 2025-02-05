@@ -5,7 +5,7 @@ import os
 import shutil
 import google.auth
 import json
-import jsonwebtoken as jwt
+import jwt
 from google.auth.transport import requests
 from google.oauth2 import id_token
 from google_auth_oauthlib.flow import Flow
