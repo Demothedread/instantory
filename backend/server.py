@@ -50,7 +50,7 @@ app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024
 
 # CORS Configuration
 cors_config = {
-    'allow_origins': [
+    'allow_origin': [
         "https://instantory.vercel.app",
         "https://instantory.onrender.com",
         "https://bartleby.vercel.app",
@@ -64,7 +64,7 @@ cors_config = {
 }
 
 # Apply CORS settings to the app
-cors(app, allow_origins=cors_config['allow_origins'],
+cors(app, allow_origin=cors_config['allow_origin'],
      allow_credentials=cors_config['allow_credentials'],
      allow_methods=cors_config['allow_methods'],
      allow_headers=cors_config['allow_headers'])
@@ -102,7 +102,7 @@ DB_URL = os.getenv("DATABASE_URL")
 REQUIRED_ENV_VARS = {
     'DATABASE_URL': 'Database connection string is required',
     'OPENAI_API_KEY': 'OpenAI API key is required',
-    'BLOB_READ_WRITE_TOKEN': 'Vercel Blob token is required'
+    'BLOB_READ_WRITE_TOKEN': 'Blob token is required'
 }
 
 # Validate required environment variables
@@ -118,7 +118,7 @@ try:
     
     logging.basicConfig(
         level=getattr(logging, os.getenv('LOG_LEVEL', 'INFO')),
-        format='%(asctime)s - %(levelname)s - %(message)s',
+        format='%(asctime)s - %(level)s - %(message)s',
         handlers=[
             logging.StreamHandler(),
             logging.FileHandler(str(log_file))
@@ -143,13 +143,13 @@ PORT = int(os.getenv("PORT", 5000))
 
 # Import optional dependencies with fallbacks
 try:
-    import PyPDF2
+    pass  # PyPDF2 not installed. PDF processing will be unavailable.
 except ImportError:
     logger.warning("PyPDF2 not installed. PDF processing will be unavailable.")
     PyPDF2 = None
 
 try:
-    from docx import Document
+    pass  # python-docx not installed. DOCX processing will be unavailable.
 except ImportError:
     logger.warning("python-docx not installed. DOCX processing will be unavailable.")
     Document = None
@@ -387,7 +387,7 @@ async def health_check():
         return jsonify({
             'status': 'unhealthy',
             'error': str(e),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(datetime.timezone.utc).isoformat()
         }), 500
 
 # Error handlers
@@ -443,7 +443,7 @@ if __name__ == "__main__":
     
     # Log startup information
     logger.info(f"Starting server on port {port}")
-    logger.info(f"CORS origins: {cors_config['allow_origins']}")
+    logger.info(f"CORS origins: {cors_config['allow_origin']}")
     
-    # Note: We don't call app.run() here because we're using hypercorn
-    # The Procfile handles server startup with: hypercorn server:app --bind 0.0.0.0:$PORT
+    # Run the Quart app
+    app.run(host="0.0.0.0", port=port)
