@@ -79,3 +79,6 @@ googleAuth.json
 frontend/src/components/@react-oauth/*
 frontend/src/components/@react-oauth/.env
 frontend/src/react-oauth/google.json
+
+# Deprecated files
+frontend/src/OldApp.js
