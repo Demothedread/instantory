@@ -64,7 +64,7 @@
 .login-decoration.bottom-right {
     bottom: -30px;
     right: -30px;
-    background-image: url('assets/borders/corner_set1/decoTrans_goldCorner.png'); 
+    background-image: url('../assets/borders/corner_set1/decoTrans_goldCorner.png'); 
 }
 
 .login-title {
