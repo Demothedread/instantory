@@ -19,12 +19,12 @@
 
 .login-panel {
     background: var(--black);
-    padding: 3rem;
+    margin: 3rem;
     border: 2px solid var(--gold);
     border-radius: 15px;
     position: relative;
-    width: 90%;
-    max-width: 500px;
+    box-sizing: border-box;
+    max-width: calc(100% - 6rem);
     box-shadow: 
         0 0 30px var(--magenta-glow),
         0 0 30px var(--cyan-glow),
@@ -45,7 +45,7 @@
 .login-decoration.top-left {
     top: -30px;
     left: -30px;
-    background-image: url('../assets/borders/corner_set1/decoTrans_goldCorner_TopLeft.png');
+    background-image: url('../assets/borders/corner_set1/decoTrans_goldCorner-TopLeft.png');
 }
 
 .login-decoration.top-right {
