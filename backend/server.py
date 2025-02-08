@@ -23,16 +23,9 @@ import asyncio
 from quart import Quart, request, jsonify, make_response
 from quart_cors import cors
 
-
-# Ensure backend folder is in Python's path
-# Ensure backend folder is in Python's path
-
 # Import the auth_routes module correctly
-from .auth_routes import auth_bp  # Adjust if needed
+from .auth_routes import auth_bp
 from .db import get_db_pool
-
-# Ensure backend folder is in Python's path
-
 from .routes.inventory import inventory_bp
 from .routes.documents import documents_bp
 from .routes.files import files_bp
@@ -63,29 +56,21 @@ cors_config = {
     'max_age': 3600
 }
 
-# Apply CORS settings to the app
-cors(app, allow_origin=cors_config['allow_origin'],
-     allow_credentials=cors_config['allow_credentials'],
-     allow_methods=cors_config['allow_methods'],
-     allow_headers=cors_config['allow_headers'])
-
 # Register blueprints for API endpoints
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(inventory_bp, url_prefix="/api/inventory")
 app.register_blueprint(documents_bp, url_prefix="/api/documents")
 app.register_blueprint(files_bp, url_prefix="/api/files")
 
-# ✅ **Preflight (OPTIONS) Handling for Inventory & Documents**
+# Global CORS middleware
 @app.before_request
 async def before_request():
-    """Handle preflight requests and apply CORS settings."""
+    """Handle CORS preflight requests."""
     if request.method == "OPTIONS":
         response = await make_response()
         origin = request.headers.get('Origin')
-
-        # Allow CORS for `inventory` and `documents` APIs
-        allowed_endpoints = ["/api/inventory", "/api/documents"]
-        if any(request.path.startswith(ep) for ep in allowed_endpoints) and origin in cors_config['allow_origin']:
+        
+        if origin in cors_config['allow_origin']:
             response.headers.update({
                 'Access-Control-Allow-Origin': origin,
                 'Access-Control-Allow-Methods': ', '.join(cors_config['allow_methods']),
@@ -94,6 +79,30 @@ async def before_request():
                 'Access-Control-Max-Age': '86400'
             })
         return response
+
+@app.after_request
+async def after_request(response):
+    """Add CORS headers to all responses."""
+    origin = request.headers.get('Origin')
+    if origin in cors_config['allow_origin']:
+        response.headers.update({
+            'Access-Control-Allow-Origin': origin,
+            'Access-Control-Allow-Methods': ', '.join(cors_config['allow_methods']),
+            'Access-Control-Allow-Headers': ', '.join(cors_config['allow_headers']),
+            'Access-Control-Allow-Credentials': 'true'
+        })
+
+    # Security headers
+    response.headers.update({
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'X-XSS-Protection': '1; mode=block',
+        'Content-Security-Policy': "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://instantory.onrender.com https://accounts.google.com; frame-src 'self' https://accounts.google.com",
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+        'Vary': 'Origin'
+    })
+    return response
+
 # Load environment variables
 load_dotenv()
 DB_URL = os.getenv("DATABASE_URL")
@@ -110,7 +119,7 @@ for var, message in REQUIRED_ENV_VARS.items():
     if not os.getenv(var):
         raise RuntimeError(f"Environment variable {var} is not set. {message}")
 
-# Configure logging with proper error handling
+# Configure logging
 try:
     log_dir = Path(os.getenv('LOG_DIR', 'logs'))
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -165,7 +174,6 @@ try:
         'DOCUMENT_DIRECTORY': DATA_DIR / 'documents'
     }
 
-    # Create directories with proper permissions
     for directory in PATHS.values():
         try:
             directory.mkdir(parents=True, exist_ok=True, mode=0o755)
@@ -364,22 +372,15 @@ async def cleanup_loop():
 # Health check endpoint
 @app.route('/health')
 async def health_check():
-    """Health check endpoint for Render."""
+    """Health check endpoint."""
     try:
-        # Test database connection
         async with get_db_pool() as pool:
             async with pool.acquire() as conn:
                 await conn.execute('SELECT 1')
         
-        # Check data directories
-        for path in PATHS.values():
-            if not path.exists() or not os.access(path, os.W_OK):
-                raise RuntimeError(f"Data directory {path} is not accessible")
-        
         return jsonify({
             'status': 'healthy',
             'database': 'connected',
-            'storage': 'accessible',
             'timestamp': datetime.now(datetime.timezone.utc).isoformat()
         })
     except Exception as e:
@@ -412,38 +413,8 @@ async def server_error(e):
     logger.error(f"Internal server error: {e}")
     return jsonify({'error': 'Internal server error'}), 500
 
-# ✅ **Ensure CORS Headers Are Applied to All Responses**
-@app.after_request
-async def after_request(response):
-    """Add security and CORS headers to all responses."""
-    origin = request.headers.get('Origin')
-    if origin in cors_config['allow_origin']:
-        response.headers.update({
-            'Access-Control-Allow-Origin': origin,
-            'Access-Control-Allow-Methods': ', '.join(cors_config['allow_methods']),
-            'Access-Control-Allow-Headers': ', '.join(cors_config['allow_headers']),
-            'Access-Control-Allow-Credentials': 'true',
-        })
-
-    # Security headers
-    response.headers.update({
-        'X-Content-Type-Options': 'nosniff',
-        'X-Frame-Options': 'DENY',
-        'X-XSS-Protection': '1; mode=block',
-        'Content-Security-Policy': "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://instantory.onrender.com https://accounts.google.com; frame-src 'self' https://accounts.google.com",
-        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-        'Vary': 'Origin'
-    })
-    return response
-
-# Server startup configuration
 if __name__ == "__main__":
-    # Use PORT from environment with fallback to 5000 (non-privileged port)
     port = int(os.getenv("PORT", 5000))
-    
-    # Log startup information
     logger.info(f"Starting server on port {port}")
     logger.info(f"CORS origins: {cors_config['allow_origin']}")
-    
-    # Run the Quart app
     app.run(host="0.0.0.0", port=port)
