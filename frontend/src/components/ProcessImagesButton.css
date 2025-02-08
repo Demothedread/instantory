@@ -37,17 +37,46 @@
 }
 
 .process-images-container {
-  padding: 0.5rem;
-  background: rgba(26, 26, 26, 0.85);
-  border-radius: 0.5rem;
-  border: 1px solid var(--gold);
+  padding: 1.5rem;
+  background: rgba(26, 26, 26, 0.95);
+  border-radius: 15px;
+  border: 2px solid var(--gold);
   position: relative;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  transition: all 0.3s ease;
+  box-shadow: 
+    0 0 30px var(--magenta-glow),
+    0 0 30px var(--cyan-glow),
+    0 0 50px var(--gold);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 30;
+  margin: 1rem auto;
+  max-width: 400px;
+  transform-style: preserve-3d;
+}
+
+.process-images-container::before,
+.process-images-container::after {
+  content: '';
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background-size: contain;
+  background-repeat: no-repeat;
   z-index: 1;
-  margin: 0.5rem auto;
-  max-width: 200px;
+}
+
+.process-images-container::before {
+  top: -20px;
+  left: -20px;
+  background-image: url('../assets/borders/ArtDeco/EmeraldDeco1.png');
+  transform: rotate(-90deg);
+}
+
+.process-images-container::after {
+  bottom: -20px;
+  right: -20px;
+  background-image: url('../assets/borders/ArtDeco/EmeraldDeco2.png');
+  transform: rotate(90deg);
 }
 
 .process-images-container:hover {
@@ -57,31 +86,63 @@
 
 .file-upload-section {
   position: relative;
-  z-index: 1;
-  margin: 0.25rem 0;
-  padding: 0.25rem;
-  border: 1px dashed rgba(212, 175, 55, 0.3);
-  border-radius: 0.25rem;
+  z-index: 2;
+  margin: 1rem 0;
+  padding: 1.5rem;
+  border: 2px dashed var(--emerald);
+  border-radius: 10px;
   text-align: center;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(26, 148, 133, 0.1);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.file-upload-section:hover {
+  border-color: var(--gold);
+  box-shadow: 
+    inset 0 0 20px rgba(0, 0, 0, 0.3),
+    0 0 15px var(--magenta-glow),
+    0 0 15px var(--cyan-glow);
+  transform: translateY(-2px);
 }
 
 .file-upload-label {
   display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.5rem;
+  padding: 0.8rem 1.5rem;
   background: var(--gold-gradient);
   color: var(--black);
-  border-radius: 0.5rem;
+  border-radius: 2rem;
   cursor: pointer;
-  font-family: 'Rozha One', serif;
-  font-size: 0.8rem;
-  transition: all 0.3s ease;
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
   border: 1px solid var(--gold);
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.file-upload-label::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: shimmer 3s infinite;
 }
 
 .file-upload-label:hover {
@@ -93,22 +154,52 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.25rem 0.5rem;
-  background: var(--gold-gradient);
-  color: var(--black);
-  border-radius: 0.5rem;
-  font-family: 'Rozha One', serif;
-  font-size: 0.8rem;
+  padding: 0.8rem 1.5rem;
+  background: var(--emerald);
+  color: var(--cream);
+  border-radius: 2rem;
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 1rem;
   cursor: pointer;
-  transition: all 0.3s ease;
-  border: 1px solid var(--gold);
-  margin: 0.25rem auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--emerald);
+  margin: 1rem auto;
   width: auto;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  box-shadow: 
+    0 0 15px var(--magenta-glow),
+    0 0 15px var(--cyan-glow);
+}
+
+.process-button::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: shimmer 3s infinite;
 }
 
 .process-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.2);
+  transform: translateY(-2px);
+  background: var(--emerald-light);
+  border-color: var(--emerald-light);
+  color: var(--black);
+  box-shadow: 
+    0 5px 15px rgba(0, 0, 0, 0.3),
+    0 0 20px var(--magenta-glow),
+    0 0 20px var(--cyan-glow);
 }
 
 .process-button:disabled {

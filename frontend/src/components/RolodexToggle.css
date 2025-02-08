@@ -5,42 +5,124 @@
   perspective: 1000px;
   margin: 20px auto;
   width: 80%;
+  position: relative;
+  background: rgba(26, 26, 26, 0.95);
+  border-radius: 15px;
+  padding: 2rem;
+  border: 2px solid var(--gold);
+  box-shadow: 
+    0 0 20px var(--magenta-glow),
+    0 0 20px var(--cyan-glow);
+  transform-style: preserve-3d;
+}
+
+.rolodex-container::before,
+.rolodex-container::after {
+  content: '';
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.rolodex-container::before {
+  top: -20px;
+  left: -20px;
+  background-image: url('../assets/borders/corner_set2/artdeco_corner_0000_topL.png');
+}
+
+.rolodex-container::after {
+  bottom: -20px;
+  right: -20px;
+  background-image: url('../assets/borders/corner_set2/artdeco_corner_0001_btmR.png');
 }
 
 .rolodex-controls {
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 2;
 }
 
 .rolodex-title {
-  font-size: 1.5rem;
+  font-family: 'Cinzel Decorative', serif;
+  font-size: 1.8rem;
   margin: 0 20px;
+  color: var(--gold);
+  text-shadow: 
+    0 0 10px var(--magenta-glow),
+    0 0 20px var(--cyan-glow);
+  position: relative;
+}
+
+.rolodex-title::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--gold-gradient);
+  box-shadow: 
+    0 0 10px var(--magenta-glow),
+    0 0 20px var(--cyan-glow);
 }
 
 .prev-button,
 .next-button {
-  background: var(--cyan-glow);
-  border: none;
+  background: var(--gold-gradient);
+  border: 1px solid var(--gold);
   border-radius: 50%;
-  color: #fff;
+  color: var(--black);
   cursor: pointer;
   font-size: 1.5rem;
   height: 40px;
   width: 40px;
-  box-shadow: 0 0 15px var(--cyan-glow);
-  transition: transform 0.2s;
+  box-shadow: 
+    0 0 15px var(--magenta-glow),
+    0 0 15px var(--cyan-glow);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.prev-button::after,
+.next-button::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: shimmer 3s infinite;
 }
 
 .prev-button:hover,
 .next-button:hover {
-  transform: scale(1.1);
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 
+    0 5px 15px rgba(0, 0, 0, 0.3),
+    0 0 20px var(--magenta-glow),
+    0 0 20px var(--cyan-glow);
 }
 
 .rolodex-view {
   width: 100%;
   height: 500px;
   position: relative;
+  background: rgba(26, 26, 26, 0.7);
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.3);
 }
 
 .rolodex-carousel {
@@ -48,9 +130,10 @@
   top: 0;
   left: 50%;
   transform-style: preserve-3d;
-  transition: transform 0.8s cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
   height: 100%;
+  perspective: 2000px;
 }
 
 .rolodex-item {
@@ -59,11 +142,30 @@
   height: 100%;
   backface-visibility: hidden;
   opacity: 0;
-  transition: opacity 0.8s ease-in-out;
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: rotateY(180deg);
+  background: rgba(26, 26, 26, 0.95);
+  border: 1px solid var(--emerald);
+  border-radius: 10px;
+  padding: 1rem;
+  box-shadow: 
+    0 0 15px var(--magenta-glow),
+    0 0 15px var(--cyan-glow);
 }
 
 .rolodex-item.active {
   opacity: 1;
+  transform: rotateY(0);
+  z-index: 1;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(45deg);
+  }
 }
 
 .rolodex-item:nth-child(1) {
