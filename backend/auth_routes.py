@@ -136,6 +136,46 @@ async def get_or_create_user(email: str, name: Optional[str] = None, picture_url
             
             return dict(user)
 
+@auth_bp.route('/login', methods=['POST'])
+async def login():
+    """Handle email-based login."""
+    try:
+        data = await request.get_json()
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+            
+        # Get or create user with email
+        user = await get_or_create_user(email=email)
+        
+        # Create JWT tokens
+        access_token, refresh_token = create_tokens(user)
+        
+        response = jsonify({'user': user})
+        response.set_cookie(
+            'access_token',
+            access_token,
+            httponly=True,
+            secure=True,
+            samesite='Strict',
+            max_age=JWT_ACCESS_EXPIRES.total_seconds()
+        )
+        response.set_cookie(
+            'refresh_token',
+            refresh_token,
+            httponly=True,
+            secure=True,
+            samesite='Strict',
+            max_age=JWT_REFRESH_EXPIRES.total_seconds()
+        )
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        return jsonify({'error': 'Authentication failed'}), 401
+
 @auth_bp.route('/google', methods=['POST'])
 async def google_auth():
     """Handle Google OAuth authentication."""

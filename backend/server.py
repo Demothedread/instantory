@@ -59,7 +59,7 @@ cors_config = {
     ],
     'allow_credentials': True,
     'allow_methods': ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'PATCH'],
-    'allow_headers': ['Content-Type', 'Authorization'],
+    'allow_headers': ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
     'max_age': 3600
 }
 
@@ -430,7 +430,7 @@ async def after_request(response):
         'X-Content-Type-Options': 'nosniff',
         'X-Frame-Options': 'DENY',
         'X-XSS-Protection': '1; mode=block',
-        'Content-Security-Policy': "default-src 'self'",
+        'Content-Security-Policy': "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://instantory.onrender.com https://accounts.google.com; frame-src 'self' https://accounts.google.com",
         'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
         'Vary': 'Origin'
     })
