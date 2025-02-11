@@ -37,6 +37,7 @@ env/
 venv/
 ENV/
 myvenv/
+.env.test
 
 # Django
 *.log

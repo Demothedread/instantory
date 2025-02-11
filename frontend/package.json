@@ -4,6 +4,8 @@
   "private": true,
   "homepage": "/",
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
     "@neondatabase/serverless": "^0.10.4",
     "@react-oauth/google": "^0.12.1",
     "@testing-library/jest-dom": "^5.17.0",
@@ -20,10 +22,14 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
+    "dev": "react-scripts start",
     "start": "react-scripts start",
-    "build": "CI=false react-scripts build",
+    "build": "GENERATE_SOURCEMAP=false react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "eslint src/**/*.{js,jsx}",
+    "format": "prettier --write src/**/*.{js,jsx,css,json}",
+    "vercel-build": "npm run build"
   },
   "eslintConfig": {
     "extends": [
@@ -43,24 +49,8 @@
       "last 1 safari version"
     ]
   },
-  "google": {
-    "web": {
-      "client_id": "${REACT_APP_GOOGLE_CLIENT_ID}",
-      "project_id": "ancient-snow-448020-n8",
-      "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-      "token_uri": "https://oauth2.googleapis.com/token",
-      "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-      "redirect_uris": [
-        "http://localhost:3000",
-        "https://hocomnia.com",
-        "https://instantory.vercel.app"
-      ],
-      "javascript_origins": [
-        "http://localhost:3000",
-        "https://hocomnia.com",
-        "https://bartleby.vercel.app",
-        "https://instantory.vercel.app"
-      ]
-    }
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
   }
 }

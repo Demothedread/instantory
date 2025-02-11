@@ -34,6 +34,18 @@ JWT_ACCESS_EXPIRES = timedelta(minutes=15)
 JWT_REFRESH_EXPIRES = timedelta(days=7)
 JWT_ALGORITHM = "HS256"
 
+async def create_access_token(user_data: dict) -> str:
+    """Create access token."""
+    return jwt.encode(
+        {
+            **user_data,
+            "exp": datetime.utcnow() + JWT_ACCESS_EXPIRES,
+            "type": "access"
+        },
+        os.getenv('JWT_SECRET'),
+        algorithm=JWT_ALGORITHM
+    )
+
 def create_tokens(user_data: dict) -> Tuple[str, str]:
     """Create access and refresh tokens."""
     access_token = jwt.encode(
@@ -57,6 +69,12 @@ def create_tokens(user_data: dict) -> Tuple[str, str]:
     )
     
     return access_token, refresh_token
+
+async def hash_password(password: str) -> str:
+    """Hash password using bcrypt."""
+    import bcrypt
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode(), salt).decode()
 
 def verify_token(token: str, token_type: str = "access") -> dict:
     """Verify JWT token and return payload."""

@@ -1,3 +1,5 @@
+"""Route handlers for the backend application."""
+
 from .inventory import inventory_bp
 from .documents import documents_bp
 from .files import files_bp

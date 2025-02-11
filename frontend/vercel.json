@@ -1,6 +1,8 @@
 {
   "version": 2,
   "framework": "create-react-app",
+  "buildCommand": "npm run vercel-build",
+  "outputDirectory": "build",
   "public": true,
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
@@ -28,6 +30,18 @@
         {
           "key": "Access-Control-Max-Age",
           "value": "86400"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
         }
       ]
     },
@@ -44,14 +58,6 @@
   "env": {
     "REACT_APP_BACKEND_URL": "https://instantory.onrender.com",
     "REACT_APP_GOOGLE_CLIENT_ID": "700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com",
-    "BLOB_READ_WRITE_TOKEN": "vercel_blob_rw_s5xuxXH6T3fDx9Oz_AdnmR7yE2uQjnt1cWInfUzpXQdtrpS",
-    "NODE_ENV": "production"
-  },
-  "build": {
-    "env": {
-      "REACT_APP_BACKEND_URL": "https://instantory.onrender.com",
-      "REACT_APP_GOOGLE_CLIENT_ID": "700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com",
-      "NODE_ENV": "production"
-    }
+    "BLOB_READ_WRITE_TOKEN": "vercel_blob_rw_s5xuxXH6T3fDx9Oz_AdnmR7yE2uQjnt1cWInfUzpXQdtrpS"
   }
 }
