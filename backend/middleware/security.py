@@ -2,7 +2,7 @@
 import logging
 import time
 from typing import Callable, Awaitable, Dict, Any, Optional
-from quart import Quart, Request, Response, current_app
+from quart import Quart, Request, Response, current_app, request
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -47,7 +47,7 @@ class SecurityMiddleware:
         async def security_checks() -> Optional[Response]:
             """Perform security checks before request processing."""
             # Check request size
-            content_length = Request.content_length
+            content_length = request.content_length
             if content_length and content_length > self.max_body_size:
                 logger.warning(f"Request too large: {content_length} bytes")
                 return current_app.response_class(
@@ -57,7 +57,7 @@ class SecurityMiddleware:
             
             # Rate limiting
             if not await self._check_rate_limit():
-                logger.warning(f"Rate limit exceeded for IP: {Request.remote_addr}")
+                logger.warning(f"Rate limit exceeded for IP: {request.remote_addr}")
                 return current_app.response_class(
                     "Rate limit exceeded",
                     status=429
@@ -70,7 +70,7 @@ class SecurityMiddleware:
             response.headers.update(headers)
             
             # Add rate limit headers
-            limit_info = self.rate_limits.get(Request.remote_addr)
+            limit_info = self.rate_limits.get(request.remote_addr)
             if limit_info:
                 remaining = max(0, self.rate_limit - limit_info.count)
                 reset_time = int(limit_info.reset_time.timestamp())
@@ -84,7 +84,10 @@ class SecurityMiddleware:
     
     async def _check_rate_limit(self) -> bool:
         """Check if request is within rate limits."""
-        ip = Request.remote_addr
+        ip = request.remote_addr
+        if not ip:
+            # Fallback to X-Forwarded-For header if behind proxy
+            ip = request.headers.get('X-Forwarded-For', 'unknown').split(',')[0].strip()
         now = datetime.now()
         
         # Get or create rate limit info
