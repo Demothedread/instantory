@@ -1,7 +1,7 @@
 """CORS middleware for handling cross-origin requests."""
 import logging
 from typing import Callable, Awaitable, Dict, Any
-from quart import Quart, Request, Response, make_response
+from quart import Quart, Request, Response, make_response, request
 
 from ..config.security import get_security_config
 from ..config.logging import log_config
@@ -15,9 +15,9 @@ def setup_cors(app: Quart) -> None:
     @app.before_request
     async def handle_preflight() -> None:
         """Handle CORS preflight requests."""
-        if Request.method == "OPTIONS":
+        if request.method == "OPTIONS":
             response = await make_response()
-            origin = Request.headers.get('Origin')
+            origin = request.headers.get('Origin')
             
             if security.is_origin_allowed(origin):
                 response.headers.update(security.get_cors_headers(origin))
@@ -26,7 +26,7 @@ def setup_cors(app: Quart) -> None:
     @app.after_request
     async def add_cors_headers(response: Response) -> Response:
         """Add CORS headers to all responses."""
-        origin = Request.headers.get('Origin')
+        origin = request.headers.get('Origin')
         if security.is_origin_allowed(origin):
             response.headers.update(security.get_cors_headers(origin))
         return response

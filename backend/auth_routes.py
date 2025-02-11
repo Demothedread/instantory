@@ -46,6 +46,10 @@ async def create_access_token(user_data: dict) -> str:
         algorithm=JWT_ALGORITHM
     )
 
+# Ensure the JWT_SECRET is set
+if not os.getenv('JWT_SECRET'):
+    raise EnvironmentError("JWT_SECRET environment variable not set")
+
 def create_tokens(user_data: dict) -> Tuple[str, str]:
     """Create access and refresh tokens."""
     access_token = jwt.encode(

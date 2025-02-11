@@ -2,10 +2,11 @@
 import logging
 import time
 from typing import Dict, Any, Callable, Awaitable, Optional
-from quart import Quart, Request, Response
+from quart import Quart, Request, Response, request, g
 import json
 from datetime import datetime
 import uuid
+import urllib.parse as urlparse
 
 from ..config.logging import log_config, get_request_logger
 
@@ -63,29 +64,29 @@ class RequestLoggingMiddleware:
             ctx = RequestContext()
             
             # Basic request info
-            ctx.method = Request.method
-            ctx.path = Request.path
-            ctx.query_params = dict(Request.args)
+            ctx.method = request.method
+            ctx.path = request.path
+            ctx.query_params = dict(request.args)
             
             # Client info
-            ctx.client_ip = Request.remote_addr
-            ctx.user_agent = Request.headers.get('User-Agent')
+            ctx.client_ip = request.remote_addr
+            ctx.user_agent = request.headers.get('User-Agent')
             
             # Headers (excluding sensitive ones)
             ctx.headers = {
-                k: v for k, v in Request.headers.items()
+                k: v for k, v in request.headers.items()
                 if k.lower() not in self.sensitive_headers
             }
             
             # Request body (if enabled)
-            if self.log_request_body and Request.is_json:
+            if self.log_request_body and request.is_json:
                 try:
-                    ctx.body = await Request.get_json()
+                    ctx.body = await request.get_json()
                 except Exception as e:
                     logger.warning(f"Failed to parse JSON body: {e}")
             
-            # Store context
-            Request.request_context = ctx
+            # Store context in g
+            g.request_context = ctx
             
             # Log request start
             logger.info(
