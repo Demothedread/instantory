@@ -12,6 +12,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "homepage": "http://localhost:3000/instantory/frontend/",
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
     "@vercel/blob": "^0.27.1",
@@ -24,7 +25,8 @@
     "ws": "^8.16.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.3"
+    "nodemon": "^3.0.3",
+    "@babel/plugin-proposal-private-property-in-object": "^5.21.11"
   },
   "engines": {
     "node": ">=18.0.0"
