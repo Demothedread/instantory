@@ -1,6 +1,6 @@
+import AuthContext, { AuthProvider } from './contexts/auth/index';
 import React, { useContext, useEffect, useState } from 'react';
 
-import AuthContext from './contexts/auth';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import HowToUseOverlay from './components/common/HowToUseOverlay';
 import LoginOverlay from './components/auth/LoginOverlay';
@@ -230,7 +230,9 @@ function AppWrapper() {
   return (
     <GoogleOAuthProvider clientId={googleClientId}>
       <Router>
-        <App />
+        <AuthProvider>
+          <App />
+        </AuthProvider>
       </Router>
     </GoogleOAuthProvider>
   );

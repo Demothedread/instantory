@@ -25,19 +25,23 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
-    // Setup refresh token timer
-    useEffect(() => {
-        if (user) {
-            refreshTimerRef.current = setInterval(refreshToken, authConfig.tokenRefreshInterval);
+    const clearSession = useCallback(() => {
+        setUser(null);
+        localStorage.removeItem(authConfig.sessionKey);
+        if (refreshTimerRef.current) {
+            clearInterval(refreshTimerRef.current);
         }
-        return () => {
-            if (refreshTimerRef.current) {
-                clearInterval(refreshTimerRef.current);
-            }
-        };
-    }, [user, refreshToken]);
+    }, []);
 
-    const refreshToken = async () => {
+    const handleAuthError = useCallback((error) => {
+        console.error('Auth error:', error);
+        setError(error.response?.data?.message || 'Authentication failed');
+        if (error.response?.status === 401) {
+            clearSession();
+        }
+    }, [clearSession]);
+
+    const refreshToken = useCallback(async () => {
         try {
             const response = await axios.post(
                 `${config.apiUrl}${authConfig.endpoints.refresh}`,
@@ -50,9 +54,21 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {                       
             handleAuthError(error);
         }
-    };
+    }, [handleAuthError]);
 
-    const verifySession = async () => {
+    // Setup refresh token timer
+    useEffect(() => {
+        if (user) {
+            refreshTimerRef.current = setInterval(refreshToken, authConfig.tokenRefreshInterval);
+        }
+        return () => {
+            if (refreshTimerRef.current) {
+                clearInterval(refreshTimerRef.current);
+            }
+        };
+    }, [user, refreshToken]);
+
+    const verifySession = useCallback(async () => {
         try {
             setLoading(true);
             const response = await axios.get(
@@ -67,7 +83,7 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [handleAuthError]);
 
     useEffect(() => {
         verifySession();
@@ -77,22 +93,6 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         localStorage.setItem(authConfig.sessionKey, JSON.stringify(userData));
         setError(null);
-    };
-
-    const handleAuthError = (error) => {
-        console.error('Auth error:', error);
-        setError(error.response?.data?.message || 'Authentication failed');
-        if (error.response?.status === 401) {
-            clearSession();
-        }
-    };
-
-    const clearSession = () => {
-        setUser(null);
-        localStorage.removeItem(authConfig.sessionKey);
-        if (refreshTimerRef.current) {
-            clearInterval(refreshTimerRef.current);
-        }
     };
 
     const handleLogin = useCallback(async (userData) => {
@@ -110,7 +110,7 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [handleAuthError]);
 
     const handleGoogleLogin = useCallback(async (credential) => {
         try {
@@ -127,7 +127,7 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [handleAuthError]);
 
     const handleLogout = async () => {
         try {
