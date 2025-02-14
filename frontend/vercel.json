@@ -1,69 +1,37 @@
 {
   "version": 2,
+  "framework": "create-react-app",
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "build",
   "public": true,
-  "rewrites": [],
-  "routes": [
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
     {
-      "source": "/static/.*\\.(js|css|json)$",
+      "source": "/static/(.*)\\.(js|css|json)$",
       "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        },
-        {
-          "key": "Content-Encoding",
-          "value": "gzip"
-        }
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" },
+        { "key": "Content-Encoding", "value": "gzip" }
       ]
     },
     {
-      "source": "/static/.*\\.(png|jpg|jpeg|gif|webp|svg)$",
+      "source": "/static/(.*)\\.(png|jpg|jpeg|gif|webp|svg)$",
       "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     },
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "https://instantory.onrender.com"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET,PUT,POST,DELETE,OPTIONS,PATCH"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type,Authorization,Accept,Origin,X-Requested-With"
-        },
-        {
-          "key": "Access-Control-Allow-Credentials",
-          "value": "true"
-        },
-        {
-          "key": "Access-Control-Max-Age",
-          "value": "86400"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        }
+        { "key": "Access-Control-Allow-Origin", "value": "https://instantory.onrender.com" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,PUT,POST,DELETE,OPTIONS,PATCH" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type,Authorization,Accept,Origin,X-Requested-With" },
+        { "key": "Access-Control-Allow-Credentials", "value": "true" },
+        { "key": "Access-Control-Max-Age", "value": "86400" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" }
       ]
     }
   ],
