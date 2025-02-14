@@ -9,15 +9,6 @@
   ],
   "headers": [
     {
-      "source": "/(favicon.ico|placeholder.png)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400"
-        }
-      ]
-    },
-    {
       "source": "/static/.*\\.(js|css|json)$",
       "headers": [
         {
@@ -73,15 +64,6 @@
         {
           "key": "X-XSS-Protection",
           "value": "1; mode=block"
-        }
-      ]
-    },
-    {
-      "source": "/static/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
         }
       ]
     }
