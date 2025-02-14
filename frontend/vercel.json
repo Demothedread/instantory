@@ -1,11 +1,10 @@
 {
   "version": 2,
-  "framework": "create-react-app",
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "build",
   "public": true,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+  "rewrites": [],
+  "routes": [
   ],
   "headers": [
     {
