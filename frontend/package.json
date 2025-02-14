@@ -4,6 +4,7 @@
   "private": true,
   "homepage": "/",
   "dependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@neondatabase/serverless": "^0.10.4",
@@ -24,8 +25,7 @@
   "devDependencies": {
     "eslint": "^8.54.0",
     "eslint-config-react-app": "^7.0.1",
-    "prettier": "^3.1.0",
-    "@babel/plugin-syntax-private-property-in-object": "^7.21.0"
+    "prettier": "^3.1.0"
   },
   "scripts": {
     "dev": "react-scripts start",
@@ -56,7 +56,6 @@
     ]
   },
   "engines": {
-    "node": "20.17.0",
-    "npm": "11.1.0"
+    "node": "20.x"
   }
 }
