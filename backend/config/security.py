@@ -21,7 +21,8 @@ class SecurityConfig:
                 'Authorization',
                 'Accept',
                 'Origin',
-                'X-Requested-With'
+                'X-Requested-With',
+                'google-oauth-token'
             ],
             'max_age': 3600
         }
@@ -29,7 +30,7 @@ class SecurityConfig:
         # Security headers
         self.security_headers = {
             'X-Content-Type-Options': 'nosniff',
-            'X-Frame-Options': 'DENY',
+            'X-Frame-Options': 'SAMEORIGIN',
             'X-XSS-Protection': '1; mode=block',
             'Content-Security-Policy': self._get_csp_policy(),
             'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
@@ -72,8 +73,12 @@ class SecurityConfig:
         """Generate Content Security Policy."""
         return (
             "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; "
-            "connect-src 'self' https://instantory.onrender.com https://accounts.google.com; "
-            "frame-src 'self' https://accounts.google.com"
+            "connect-src 'self' https://instantory.onrender.com https://*.google.com https://accounts.google.com; "
+            "frame-src 'self' https://*.google.com https://accounts.google.com; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://*.googleusercontent.com; "
+            "img-src 'self' data: https: blob:; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com"
         )
     
     def is_origin_allowed(self, origin: Optional[str]) -> bool:
