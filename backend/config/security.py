@@ -55,9 +55,8 @@ class SecurityConfig:
     def _get_allowed_origins(self) -> List[str]:
         """Get allowed CORS origins from environment or defaults."""
         origins = [
-            "https://instantory.vercel.app",
-            "https://instantory.onrender.com",
-            "https://bartleby.vercel.app"
+            "https://*.vercel.app",
+            "https://*.onrender.com"
         ]
         
         # Add development origins if not in production

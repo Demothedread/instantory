@@ -3,12 +3,9 @@ from .db import get_db_pool, ensure_user_directories, get_user_data_path
 import logging
 import os
 import shutil
-import google.auth
-import json
 import jwt
 from google.auth.transport import requests
 from google.oauth2 import id_token
-from google_auth_oauthlib.flow import Flow
 from typing import Optional, Dict, Any, Tuple
 from datetime import datetime, timedelta
 
@@ -21,7 +18,7 @@ except ImportError:
     logger.warning("Google Auth libraries not installed. Google authentication will be disabled.")
 
 # Configure logging
-logging.basicConfig(
+    logging.warning("Google Auth libraries not installed. Google authentication will be disabled.")
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler()]
@@ -42,7 +39,7 @@ async def create_access_token(user_data: dict) -> str:
             "exp": datetime.utcnow() + JWT_ACCESS_EXPIRES,
             "type": "access"
         },
-        os.getenv('JWT_SECRET'),
+            "exp": datetime.now(datetime.timezone.utc) + JWT_ACCESS_EXPIRES,
         algorithm=JWT_ALGORITHM
     )
 
@@ -68,7 +65,7 @@ def create_tokens(user_data: dict) -> Tuple[str, str]:
             "exp": datetime.utcnow() + JWT_REFRESH_EXPIRES,
             "type": "refresh"
         },
-        os.getenv('JWT_SECRET'),
+            "exp": datetime.now(datetime.timezone.utc) + JWT_REFRESH_EXPIRES,
         algorithm=JWT_ALGORITHM
     )
     
