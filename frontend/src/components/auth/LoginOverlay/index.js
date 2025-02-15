@@ -54,12 +54,29 @@ const LoginOverlay = ({ isVisible }) => {
     };
 
     const handleGoogleSuccess = async (credentialResponse) => {
+        if (!credentialResponse || !credentialResponse.credential) {
+            console.error('Invalid Google credential response');
+            return;
+        }
         try {
             await handleGoogleLogin(credentialResponse.credential);
         } catch (error) {
             console.error('Google login failed:', error);
         }
     };
+
+    // Initialize Google OAuth
+    useEffect(() => {
+        if (isVisible) {
+            // Ensure Google API is loaded
+            if (window.google && window.google.accounts) {
+                window.google.accounts.id.initialize({
+                    auto_select: false,
+                    callback: handleGoogleSuccess
+                });
+            }
+        }
+    }, [isVisible, handleGoogleSuccess]);
 
     return (
         <div css={styles.overlay} className={showAnimation ? 'show' : ''}>
@@ -95,11 +112,11 @@ const LoginOverlay = ({ isVisible }) => {
                             theme="filled_black"
                             shape="pill"
                             text="continue_with"
-                            useOneTap={fedcmEnabled}
+                            useOneTap={false} // Disable OneTap since we're handling it separately
                             width="300px"
-                            context="use"
-                            flow="fedcm"
-                            auto_select={fedcmEnabled}
+                            context="signin"
+                            flow="implicit"
+                            auto_select={false}
                         />
                     </div>
                     

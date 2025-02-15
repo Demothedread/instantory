@@ -12,18 +12,33 @@ export const AuthProvider = ({ children }) => {
     const [error, setError] = useState(null);
     const refreshTimerRef = useRef(null);
 
-    // Load session from localStorage
-    useEffect(() => {
-        const savedSession = localStorage.getItem(authConfig.sessionKey);
-        if (savedSession) {
-            try {
-                const parsedSession = JSON.parse(savedSession);
-                setUser(parsedSession);
-            } catch (e) {
-                localStorage.removeItem(authConfig.sessionKey);
+    // Initialize auth state
+    const initializeAuth = useCallback(async () => {
+        try {
+            setLoading(true);
+            const savedSession = localStorage.getItem(authConfig.sessionKey);
+            if (savedSession) {
+                try {
+                    const parsedSession = JSON.parse(savedSession);
+                    setUser(parsedSession);
+                    // Verify the session immediately
+                    await verifySession();
+                } catch (e) {
+                    localStorage.removeItem(authConfig.sessionKey);
+                }
+            } else {
+                setLoading(false);
             }
+        } catch (error) {
+            console.error('Auth initialization error:', error);
+            setLoading(false);
         }
-    }, []);
+    }, [verifySession]);
+
+    // Load session and initialize auth
+    useEffect(() => {
+        initializeAuth();
+    }, [initializeAuth]);
 
     const clearSession = useCallback(() => {
         setUser(null);
@@ -113,15 +128,29 @@ export const AuthProvider = ({ children }) => {
     }, [handleAuthError]);
 
     const handleGoogleLogin = useCallback(async (credential) => {
+        if (!credential) {
+            setError('Google authentication failed: No credential received');
+            return;
+        }
         try {
             setLoading(true);
             setError(null);
             const response = await axios.post(
                 `${config.apiUrl}${authConfig.endpoints.googleLogin}`,
                 { credential },
-                { withCredentials: true }
+                { 
+                    withCredentials: true,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                }
             );
-            updateUserSession(response.data.user);
+            if (response.data && response.data.user) {
+                updateUserSession(response.data.user);
+            } else {
+                throw new Error('Invalid response format');
+            }
         } catch (error) {
             handleAuthError(error);
         } finally {

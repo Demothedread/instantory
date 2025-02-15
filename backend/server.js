@@ -44,13 +44,14 @@ app.use(cors({
 
 app.use(express.json());
 
+/
 // Set Cross-Origin-Resource-Policy header
 app.use((req, res, next) => {
-  res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   next();
 });
-  res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
-  next();
+
+// Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Internal server error' });
