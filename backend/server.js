@@ -11,7 +11,7 @@ dotenv.config();
 
 
 const app = express();
-const port = process.env.NODE_PORT || 5001;
+const port = process.env.NODE_PORT || 1001;
 
 // Initialize cache with 5 minute TTL
 const cache = new NodeCache({ stdTTL: 300 });
@@ -28,11 +28,11 @@ const renderPool = new Pool({
 });
 
 // Configure Neon connection for read operations
-const neonConfig = {
-  webSocketConstructor: WebSocket,
-  pipelineConnect: 'auto',
-  useSecureWebSocket: true
-};
+// const neonConfig = {
+//   webSocketConstructor: WebSocket,
+//   pipelineConnect: 'auto',
+//   useSecureWebSocket: true
+// };
 
 const neonDb = neon(process.env.NEON_DATABASE_URL);
 
@@ -44,8 +44,22 @@ app.use(cors({
 
 app.use(express.json());
 
-// Error handling middleware
+// Set Cross-Origin-Resource-Policy header
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+  next();
+});
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-site');
+  next();
 app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+// Error handling middleware
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
   console.error(err.stack);
   res.status(500).json({ error: 'Internal server error' });
 });
