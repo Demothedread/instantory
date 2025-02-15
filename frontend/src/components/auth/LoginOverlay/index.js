@@ -1,7 +1,7 @@
+import { GoogleLogin, useGoogleOneTapLogin } from '@react-oauth/google';
 import React, { useContext, useEffect, useState } from 'react';
 
 import AuthContext from '../../../contexts/auth';
-import { GoogleLogin } from '@react-oauth/google';
 import styles from './styles';
 
 const LoginOverlay = ({ isVisible }) => {
@@ -9,6 +9,29 @@ const LoginOverlay = ({ isVisible }) => {
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showAnimation, setShowAnimation] = useState(false);
+    const [fedcmEnabled, setFedcmEnabled] = useState(true);
+
+    // Check if FedCM is supported
+    useEffect(() => {
+        const checkFedcmSupport = async () => {
+            try {
+                // Check if the identity-credentials-get feature is supported
+                const supported = 'IdentityCredential' in window;
+                setFedcmEnabled(supported);
+            } catch (error) {
+                console.warn('FedCM support check failed:', error);
+                setFedcmEnabled(false);
+            }
+        };
+        checkFedcmSupport();
+    }, []);
+
+    // Use Google One Tap as fallback when FedCM is not available
+    useGoogleOneTapLogin({
+        onSuccess: handleGoogleSuccess,
+        onError: (error) => console.error('Google One Tap failed:', error),
+        disabled: fedcmEnabled, // Only enable when FedCM is not available
+    });
 
     useEffect(() => {
         if (isVisible) {
@@ -63,12 +86,20 @@ const LoginOverlay = ({ isVisible }) => {
                     <div css={styles.googleLoginWrapper}>
                         <GoogleLogin
                             onSuccess={handleGoogleSuccess}
-                            onError={() => console.error('Google Login Failed')}
+                            onError={(error) => {
+                                console.error('Google Login Failed:', error);
+                                if (error.message?.includes('identity-credentials-get')) {
+                                    setFedcmEnabled(false); // Disable FedCM and fall back to traditional flow
+                                }
+                            }}
                             theme="filled_black"
                             shape="pill"
                             text="continue_with"
-                            useOneTap
+                            useOneTap={fedcmEnabled}
                             width="300px"
+                            context="use"
+                            flow="fedcm"
+                            auto_select={fedcmEnabled}
                         />
                     </div>
                     

@@ -19,9 +19,20 @@ const config = {
   headers: {
     'Accept': 'application/json',
     'Origin': window.location.origin,
-    'Access-Control-Allow-Credentials': 'true'
+    'Access-Control-Allow-Credentials': 'true',
+    'Sec-Fetch-Site': 'same-origin',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Dest': 'empty'
+  },
+  fedcm: {
+    enabled: true,
+    providers: [{
+      configURL: 'https://accounts.google.com/.well-known/fedcm-configuration',
+      clientId: defaultConfig[environment].googleClientId
+    }]
   },
   credentials: 'include',
+  mode: 'cors',
   blobStore: {
     token: process.env.REACT_APP_BLOB_READ_WRITE_TOKEN
   }

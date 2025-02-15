@@ -22,7 +22,10 @@ class SecurityConfig:
                 'Accept',
                 'Origin',
                 'X-Requested-With',
-                'google-oauth-token'
+                'google-oauth-token',
+                'Sec-Fetch-Site',
+                'Sec-Fetch-Mode',
+                'Sec-Fetch-Dest'
             ],
             'max_age': 3600
         }
@@ -34,7 +37,9 @@ class SecurityConfig:
             'X-XSS-Protection': '1; mode=block',
             'Content-Security-Policy': self._get_csp_policy(),
             'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-            'Vary': 'Origin'
+            'Vary': 'Origin',
+            'Permissions-Policy': 'identity-credentials-get=(self "https://accounts.google.com")',
+            'Cross-Origin-Opener-Policy': 'same-origin-allow-popups'
         }
         
         # JWT configuration
@@ -75,7 +80,8 @@ class SecurityConfig:
             "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; "
             "connect-src 'self' https://instantory.onrender.com https://*.google.com https://accounts.google.com; "
             "frame-src 'self' https://*.google.com https://accounts.google.com; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://*.googleusercontent.com; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://*.googleusercontent.com https://apis.google.com; "
+            "credentials-src 'self' https://accounts.google.com; "
             "img-src 'self' data: https: blob:; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             "font-src 'self' https://fonts.gstatic.com"
