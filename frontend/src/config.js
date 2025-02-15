@@ -1,36 +1,33 @@
-const config = {
-  // Development API URL
+const environment = process.env.NODE_ENV || 'production';
+
+// Default configuration values
+const defaultConfig = {
   development: {
-    apiUrl: process.env.REACT_APP_BACKEND_URL_DEV || 'http://localhost:5000',
-    headers: {
-      'Accept': 'application/json',
-      'Origin': window.location.origin,
-      'Access-Control-Allow-Credentials': 'true'
-    },
-    credentials: 'include',
-    googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-    blobStore: {
-      token: process.env.REACT_APP_BLOB_READ_WRITE_TOKEN
-    }
+    apiUrl: 'http://localhost:5000',
+    googleClientId: '700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com'
   },
-  // Production API URL
   production: {
-    apiUrl: process.env.REACT_APP_BACKEND_URL || 'https://instantory.onrender.com',
-    headers: {
-      'Accept': 'application/json',
-      'Origin': window.location.origin,
-      'Access-Control-Allow-Credentials': 'true'
-    },
-    credentials: 'include',
-    googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-    blobStore: {
-      token: process.env.REACT_APP_BLOB_READ_WRITE_TOKEN
-    }
+    apiUrl: 'https://instantory.onrender.com',
+    googleClientId: '700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com'
   }
 };
 
-// Ensure we're using the correct environment
-const environment = process.env.NODE_ENV || 'production';
-console.log(`Running in ${environment} mode with API URL: ${config[environment].apiUrl}`);
+// Environment-specific configuration
+const config = {
+  apiUrl: process.env.REACT_APP_BACKEND_URL || defaultConfig[environment].apiUrl,
+  googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID || defaultConfig[environment].googleClientId,
+  headers: {
+    'Accept': 'application/json',
+    'Origin': window.location.origin,
+    'Access-Control-Allow-Credentials': 'true'
+  },
+  credentials: 'include',
+  blobStore: {
+    token: process.env.REACT_APP_BLOB_READ_WRITE_TOKEN
+  }
+};
 
-export default config[environment];
+console.log(`Running in ${environment} mode with API URL: ${config.apiUrl}`);
+console.log(`Using Google Client ID: ${config.googleClientId}`);
+
+export default config;

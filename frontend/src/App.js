@@ -1,7 +1,6 @@
 import AuthContext, { AuthProvider } from './contexts/auth/index';
 import React, { useContext, useEffect, useState } from 'react';
 
-import { GoogleOAuthProvider } from '@react-oauth/google';
 import HowToUseOverlay from './components/common/HowToUseOverlay';
 import LoginOverlay from './components/auth/LoginOverlay';
 import Navigation from './components/common/Navigation';
@@ -14,7 +13,6 @@ import { animations } from './styles/theme/animations';
 import { colors } from './styles/theme/colors';
 import config from './config';
 import { css } from '@emotion/react';
-import { googleClientId } from './config/auth';
 import { layout } from './styles/layouts/constraints';
 import { neoDecorocoBase } from './styles/components/neo-decoroco/base';
 import { typography } from './styles/theme/typography';
@@ -228,13 +226,11 @@ function App() {
 // Wrap the app with necessary providers
 function AppWrapper() {
   return (
-    <GoogleOAuthProvider clientId={googleClientId}>
-      <Router>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </Router>
-    </GoogleOAuthProvider>
+    <Router>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </Router>
   );
 }
 
