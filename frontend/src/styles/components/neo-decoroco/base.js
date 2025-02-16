@@ -1,5 +1,5 @@
 import { animations } from '../../theme/animations';
-import colors from '../../theme/colors';
+import { colors } from '../../theme/colors';
 import { css } from '@emotion/react';
 import { layout } from '../../layouts/constraints';
 import { typography } from '../../theme/typography';

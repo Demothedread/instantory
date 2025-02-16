@@ -1,5 +1,5 @@
 import { animations } from '../../../styles/theme/animations';
-import colors from '../../../styles/theme/colors';
+import { colors } from '../../../styles/theme/colors';
 import { css } from '@emotion/react';
 import { layout } from '../../../styles/layouts/constraints';
 import { neoDecorocoBase } from '../../../styles/components/neo-decoroco/base';

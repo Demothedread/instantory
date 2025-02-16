@@ -83,7 +83,7 @@ const styles = {
     min-height: 0;
     opacity: 0;
     transform: translateY(20px);
-    animation: ${animations.fadeIn} 0.5s ${animations.easing.elegant} forwards;
+    animation: ${animations.keyframes.fadeIn} 0.5s ${animations.easing.elegant} forwards;
   `,
 
   errorMessage: css`
@@ -110,7 +110,7 @@ const styles = {
       border: 3px solid ${colors.border};
       border-top-color: ${colors.neonTeal};
       border-radius: 50%;
-      animation: spin 1s linear infinite;
+      animation: ${animations.keyframes.rotateY} 1s linear infinite;
     }
     
     .loading-text {
