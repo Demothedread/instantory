@@ -2,19 +2,18 @@
   "name": "instantory-backend",
   "version": "1.0.0",
   "description": "Instantory Backend API",
-  "main": "server.js",
+  "main": "server.py",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
+    "start": "python server.py",
     "test": "jest",
-    "dev": "nodemon server.js",
+    "dev": "nodemon --exec python server.py",
     "init-db": "node scripts/init-databases.js",
     "sync-db": "node scripts/init-databases.js --sync-only"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "homepage": "http://localhost:3000/instantory/frontend/",
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
     "@vercel/blob": "^0.27.1",
