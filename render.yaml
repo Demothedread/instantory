@@ -28,11 +28,11 @@ services:
       - key: ALLOW_CREDENTIALS
         value: "true"
       - key: CORS_ORIGIN
-        value: https://bartleby.vercel.app
+        value: "https://hocomnia.com,https://bartleby.vercel.app"
       - key: PUBLIC_BACKEND_URL
         value: https://instantory.onrender.com
       - key: FRONTEND_URL
-        value: "https://bartleby.vercel.app"
+        value: "https://hocomnia.com"
       - key: BLOB_READ_WRITE_TOKEN
         sync: false
       - key: OPENAI_API_KEY
@@ -69,11 +69,11 @@ services:
       - key: NEON_DATABASE_URL
         sync: false  # Set in dashboard
       - key: CORS_ORIGIN
-        value: https://bartleby.vercel.app
+        value: "https://hocomnia.com,https://bartleby.vercel.app"
       - key: PUBLIC_BACKEND_URL
         value: https://instantory.onrender.com
       - key: FRONTEND_URL
-        value: https://bartleby.vercel.app
+        value: "https://hocomnia.com"
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

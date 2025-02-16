@@ -1,26 +1,34 @@
 const environment = process.env.NODE_ENV || 'production';
 
-// Default configuration values
-const defaultConfig = {
-  development: {
-    apiUrl: 'http://localhost:5000',
-    googleClientId: '700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com'
-  },
-  production: {
-    apiUrl: 'https://instantory.onrender.com',
-    googleClientId: '700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com'
-  }
+// Initialize configuration with defaults
+const initConfig = () => {
+  // Default configuration values
+  const defaultConfig = {
+    development: {
+      apiUrl: 'http://localhost:5000',
+      googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID
+    },
+    production: {
+      apiUrl: 'https://instantory.onrender.com',
+      googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID
+    }
+  };
+
+  // Ensure environment variables take precedence
+  return {
+    apiUrl: process.env.REACT_APP_BACKEND_URL || defaultConfig[environment].apiUrl,
+    googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID || defaultConfig[environment].googleClientId,
+  };
 };
 
-// Environment-specific configuration
+// Create configuration object
 const config = {
-  apiUrl: process.env.REACT_APP_BACKEND_URL || defaultConfig[environment].apiUrl,
-  googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID || defaultConfig[environment].googleClientId,
+  ...initConfig(),
   headers: {
     'Accept': 'application/json',
     'Origin': window.location.origin,
     'Access-Control-Allow-Credentials': 'true',
-    'Sec-Fetch-Site': 'same-origin',
+    'Sec-Fetch-Site': 'cross-site',
     'Sec-Fetch-Mode': 'cors',
     'Sec-Fetch-Dest': 'empty'
   },
@@ -28,7 +36,7 @@ const config = {
     enabled: true,
     providers: [{
       configURL: 'https://accounts.google.com/.well-known/fedcm-configuration',
-      clientId: defaultConfig[environment].googleClientId
+      clientId: process.env.REACT_APP_GOOGLE_CLIENT_ID
     }]
   },
   credentials: 'include',

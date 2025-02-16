@@ -36,17 +36,43 @@ const assetDb = neon(process.env.NEON_DATABASE_URL, {
 // Initialize Vercel Blob client for asset storage
 const { put: putBlob, list: listBlobs, del: deleteBlob } = require('@vercel/blob');
 
-// Configure CORS
+// Configure CORS with multiple origins
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  credentials: true
+  origin: function(origin, callback) {
+    const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:3000').split(',');
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
 
-// Set Cross-Origin-Resource-Policy header
+// Enhanced security headers
 app.use((req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
   next();
 });
+
+// Initialize MessagePort handlers
+const messageHandlers = new Map();
+const initMessageHandlers = () => {
+  if (typeof MessagePort !== 'undefined') {
+    MessagePort.prototype.k = function(event) {
+      const handler = messageHandlers.get(event.data.type);
+      if (handler) {
+        handler(event.data);
+      }
+    };
+  }
+};
+initMessageHandlers();
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -12,6 +12,23 @@ export const AuthProvider = ({ children }) => {
     const [error, setError] = useState(null);
     const refreshTimerRef = useRef(null);
 
+    const verifySession = useCallback(async () => {
+        try {
+            setLoading(true);
+            const response = await axios.get(
+                `${config.apiUrl}${authConfig.endpoints.session}`,
+                { withCredentials: true }
+            );
+            if (response.data.user) {
+                updateUserSession(response.data.user);
+            }
+        } catch (error) {
+            handleAuthError(error);
+        } finally {
+            setLoading(false);
+        }
+    }, [handleAuthError]);
+
     // Initialize auth state
     const initializeAuth = useCallback(async () => {
         try {
@@ -25,6 +42,7 @@ export const AuthProvider = ({ children }) => {
                     await verifySession();
                 } catch (e) {
                     localStorage.removeItem(authConfig.sessionKey);
+                    setLoading(false);
                 }
             } else {
                 setLoading(false);
@@ -83,26 +101,6 @@ export const AuthProvider = ({ children }) => {
         };
     }, [user, refreshToken]);
 
-    const verifySession = useCallback(async () => {
-        try {
-            setLoading(true);
-            const response = await axios.get(
-                `${config.apiUrl}${authConfig.endpoints.session}`,
-                { withCredentials: true }
-            );
-            if (response.data.user) {
-                updateUserSession(response.data.user);
-            }
-        } catch (error) {
-            handleAuthError(error);
-        } finally {
-            setLoading(false);
-        }
-    }, [handleAuthError]);
-
-    useEffect(() => {
-        verifySession();
-    }, [verifySession]);
 
     const updateUserSession = (userData) => {
         setUser(userData);

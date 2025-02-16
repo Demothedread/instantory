@@ -137,45 +137,81 @@ function App() {
 
   const fetchData = async () => {
     try {
-      const response = await fetch(`${config.apiUrl}/api/inventory`, {
+      // Setup headers with all required CORS and security headers
+      const headers = {
+        ...config.headers,
+        'Content-Type': 'application/json'
+      };
+
+      // Fetch inventory data
+      const inventoryResponse = await fetch(`${config.apiUrl}/api/inventory`, {
         method: 'GET',
         credentials: 'include',
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+        headers,
+        mode: config.mode
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setInventory(Array.isArray(data) ? data : [data]);
-      } else {
-        console.log('No inventory data available');
+      if (!inventoryResponse.ok) {
+        throw new Error(`Inventory fetch failed: ${inventoryResponse.statusText}`);
       }
-    } catch (error) {
-      console.error('Error fetching inventory:', error);
-    }
 
-    try {
-      const response = await fetch(`${config.apiUrl}/api/documents`, {
+      const inventoryData = await inventoryResponse.json();
+      setInventory(Array.isArray(inventoryData) ? inventoryData : [inventoryData]);
+
+      // Fetch documents data
+      const documentsResponse = await fetch(`${config.apiUrl}/api/documents`, {
         method: 'GET',
         credentials: 'include',
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+        headers,
+        mode: config.mode
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setDocuments(Array.isArray(data) ? data : [data]);
-      } else {
-        console.log('No documents data available');
+      if (!documentsResponse.ok) {
+        throw new Error(`Documents fetch failed: ${documentsResponse.statusText}`);
       }
+
+      const documentsData = await documentsResponse.json();
+      setDocuments(Array.isArray(documentsData) ? documentsData : [documentsData]);
+
     } catch (error) {
-      console.error('Error fetching documents:', error);
+      console.error('Error fetching data:', error);
+      setError(error.message);
+      // Clear error after 5 seconds
+      setTimeout(() => setError(null), 5000);
     }
   };
 
   const handleProcessFiles = async () => {
-    await fetchData();
-    setShowRolodex(true);
-    setIsExpanded(false);
+    try {
+      setError(null);
+      await fetchData();
+      setShowRolodex(true);
+      setIsExpanded(false);
+    } catch (error) {
+      console.error('Error processing files:', error);
+      setError('Failed to process files. Please try again.');
+      // Clear error after 5 seconds
+      setTimeout(() => setError(null), 5000);
+    }
   };
+
+  // Initialize MessagePort handlers
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.MessagePort) {
+      const originalPostMessage = window.MessagePort.prototype.postMessage;
+      window.MessagePort.prototype.postMessage = function(...args) {
+        try {
+          originalPostMessage.apply(this, args);
+        } catch (error) {
+          console.error('MessagePort error:', error);
+          // Prevent the 'm' initialization error from breaking the app
+          if (!error.message.includes("Cannot access 'm' before initialization")) {
+            throw error;
+          }
+        }
+      };
+    }
+  }, []);
 
   if (loading) {
     return (
