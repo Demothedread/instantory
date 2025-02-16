@@ -10,7 +10,7 @@ const { Pool } = pkg;
 dotenv.config();
 
 const app = express();
-const port = process.env.NODE_PORT || 1001;
+const port = process.env.PORT || 3000;
 
 // Initialize cache with 5 minute TTL
 const cache = new NodeCache({ stdTTL: 300 });

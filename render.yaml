@@ -48,18 +48,20 @@ services:
       - key: COOKIE_SECRET
         generateValue: true
 
-  # Node.js backend service (worker)
-  - type: worker
+  # Node.js backend service
+  - type: web
     name: instantory-node
     runtime: node
     buildCommand: cd backend && npm install
-    startCommand: cd backend && node server.js
+    startCommand: cd backend && PORT=$PORT node server.js
     autoDeploy: true
     envVars:
       - key: NODE_VERSION
         value: 20.17.0
       - key: NODE_ENV
         value: production
+      - key: PORT
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: instantory_sql
@@ -68,8 +70,20 @@ services:
         sync: false  # Set in dashboard
       - key: CORS_ORIGIN
         value: https://bartleby.vercel.app
-      - key: NODE_ENV
-        value: production
+      - key: PUBLIC_BACKEND_URL
+        value: https://instantory.onrender.com
+      - key: FRONTEND_URL
+        value: https://bartleby.vercel.app
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: COOKIE_SECRET
+        generateValue: true
 
 databases:
   # Main PostgreSQL database on Render
