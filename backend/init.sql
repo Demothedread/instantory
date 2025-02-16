@@ -2,7 +2,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
--- Create users table
+-- Create users table (Main database - Render)
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
@@ -14,13 +14,12 @@ CREATE TABLE IF NOT EXISTS users (
     last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create user_inventory table
+-- Create user_inventory table (Main database - Render)
 CREATE TABLE IF NOT EXISTS user_inventory (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     description TEXT,
-    image_url TEXT,
     category TEXT NOT NULL,
     material TEXT,
     color TEXT,
@@ -28,12 +27,21 @@ CREATE TABLE IF NOT EXISTS user_inventory (
     origin_source TEXT,
     import_cost REAL,
     retail_price REAL,
-    key_tags TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create user_documents table
+-- Create inventory_assets table (Main database - Render)
+CREATE TABLE IF NOT EXISTS inventory_assets (
+    id SERIAL PRIMARY KEY,
+    inventory_id INTEGER REFERENCES user_inventory(id) ON DELETE CASCADE UNIQUE,
+    asset_url TEXT NOT NULL,
+    asset_type TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create user_documents table (Main database - Render)
 CREATE TABLE IF NOT EXISTS user_documents (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -57,7 +65,7 @@ CREATE TABLE IF NOT EXISTS user_documents (
     last_analyzed TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create user_exports table
+-- Create user_exports table (Main database - Render)
 CREATE TABLE IF NOT EXISTS user_exports (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -68,18 +76,24 @@ CREATE TABLE IF NOT EXISTS user_exports (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create inventory_template table for new user initialization
-CREATE TABLE IF NOT EXISTS inventory_template (
+-- Create frontend_assets table (Asset database - Neon)
+CREATE TABLE IF NOT EXISTS frontend_assets (
     id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
+    asset_type TEXT NOT NULL,
+    asset_url TEXT NOT NULL,
     category TEXT NOT NULL,
-    material TEXT,
-    color TEXT,
-    dimensions TEXT,
-    origin_source TEXT,
-    import_cost REAL,
-    retail_price REAL
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create frontend_cache table (Asset database - Neon)
+CREATE TABLE IF NOT EXISTS frontend_cache (
+    id SERIAL PRIMARY KEY,
+    cache_key TEXT UNIQUE NOT NULL,
+    cache_data JSONB NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create updated_at triggers
@@ -98,10 +112,24 @@ CREATE TRIGGER update_user_inventory_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+-- Inventory assets trigger
+DROP TRIGGER IF EXISTS update_inventory_assets_updated_at ON inventory_assets;
+CREATE TRIGGER update_inventory_assets_updated_at
+    BEFORE UPDATE ON inventory_assets
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 -- User documents trigger
 DROP TRIGGER IF EXISTS update_user_documents_updated_at ON user_documents;
 CREATE TRIGGER update_user_documents_updated_at
     BEFORE UPDATE ON user_documents
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Frontend assets trigger
+DROP TRIGGER IF EXISTS update_frontend_assets_updated_at ON frontend_assets;
+CREATE TRIGGER update_frontend_assets_updated_at
+    BEFORE UPDATE ON frontend_assets
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
@@ -114,11 +142,19 @@ CREATE INDEX IF NOT EXISTS idx_user_inventory_color ON user_inventory(color);
 CREATE INDEX IF NOT EXISTS idx_user_inventory_origin ON user_inventory(origin_source);
 CREATE INDEX IF NOT EXISTS idx_user_inventory_created ON user_inventory(created_at DESC);
 
+CREATE INDEX IF NOT EXISTS idx_inventory_assets_inventory_id ON inventory_assets(inventory_id);
+CREATE INDEX IF NOT EXISTS idx_inventory_assets_type ON inventory_assets(asset_type);
+
 CREATE INDEX IF NOT EXISTS idx_user_documents_user_id ON user_documents(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_documents_title ON user_documents(title);
 CREATE INDEX IF NOT EXISTS idx_user_documents_category ON user_documents(category);
 CREATE INDEX IF NOT EXISTS idx_user_documents_field ON user_documents(field);
 CREATE INDEX IF NOT EXISTS idx_user_documents_created ON user_documents(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_frontend_assets_type ON frontend_assets(asset_type);
+CREATE INDEX IF NOT EXISTS idx_frontend_assets_category ON frontend_assets(category);
+CREATE INDEX IF NOT EXISTS idx_frontend_cache_key ON frontend_cache(cache_key);
+CREATE INDEX IF NOT EXISTS idx_frontend_cache_expires ON frontend_cache(expires_at);
 
 -- Create text search indexes
 CREATE INDEX IF NOT EXISTS idx_user_documents_text_search ON user_documents 
@@ -147,9 +183,11 @@ SELECT
     i.import_cost,
     i.retail_price,
     i.created_at,
-    u.email as user_email
+    u.email as user_email,
+    a.asset_url
 FROM user_inventory i
 JOIN users u ON i.user_id = u.id
+LEFT JOIN inventory_assets a ON i.id = a.inventory_id
 ORDER BY i.created_at DESC
 WITH DATA;
 

@@ -6,9 +6,12 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
+    "test": "jest",
     "dev": "nodemon server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "init-db": "node scripts/init-databases.js",
+    "sync-db": "node scripts/init-databases.js --sync-only"
   },
+  "type": "module",
   "keywords": [],
   "author": "",
   "license": "ISC",

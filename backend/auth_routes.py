@@ -3,6 +3,8 @@ from .db import get_db_pool, ensure_user_directories, get_user_data_path
 import logging
 import os
 import shutil
+import google.auth
+import json
 import jwt
 from google.auth.transport import requests
 from google.oauth2 import id_token
@@ -18,6 +20,7 @@ except ImportError:
     logger.warning("Google Auth libraries not installed. Google authentication will be disabled.")
 
 # Configure logging
+logging.basicConfig(
     logging.warning("Google Auth libraries not installed. Google authentication will be disabled.")
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
