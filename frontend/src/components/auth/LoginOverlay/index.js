@@ -1,5 +1,5 @@
 import { GoogleLogin, useGoogleOneTapLogin } from '@react-oauth/google';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
 
 import AuthContext from '../../../contexts/auth';
 import styles from './styles';
@@ -10,6 +10,18 @@ const LoginOverlay = ({ isVisible }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [showAnimation, setShowAnimation] = useState(false);
     const [fedcmEnabled, setFedcmEnabled] = useState(true);
+
+    const handleGoogleSuccess = useCallback(async (credentialResponse) => {
+        if (!credentialResponse || !credentialResponse.credential) {
+            console.error('Invalid Google credential response');
+            return;
+        }
+        try {
+            await handleGoogleLogin(credentialResponse.credential);
+        } catch (error) {
+            console.error('Google login failed:', error);
+        }
+    }, [handleGoogleLogin]);
 
     // Check if FedCM is supported
     useEffect(() => {
@@ -26,18 +38,28 @@ const LoginOverlay = ({ isVisible }) => {
         checkFedcmSupport();
     }, []);
 
-    // Use Google One Tap as fallback when FedCM is not available
-    useGoogleOneTapLogin({
-        onSuccess: handleGoogleSuccess,
-        onError: (error) => console.error('Google One Tap failed:', error),
-        disabled: fedcmEnabled, // Only enable when FedCM is not available
-    });
+    // Initialize Google OAuth
+    useEffect(() => {
+        if (window.google && window.google.accounts) {
+            window.google.accounts.id.initialize({
+                auto_select: false,
+                callback: handleGoogleSuccess
+            });
+        }
+    }, [handleGoogleSuccess]);
 
     useEffect(() => {
         if (isVisible) {
             setShowAnimation(true);
         }
     }, [isVisible]);
+
+    // Use Google One Tap as fallback when FedCM is not available
+    useGoogleOneTapLogin({
+        onSuccess: handleGoogleSuccess,
+        onError: (error) => console.error('Google One Tap failed:', error),
+        disabled: fedcmEnabled, // Only enable when FedCM is not available
+    });
 
     if (!isVisible) return null;
 
@@ -52,31 +74,6 @@ const LoginOverlay = ({ isVisible }) => {
             setIsLoading(false);
         }
     };
-
-    const handleGoogleSuccess = async (credentialResponse) => {
-        if (!credentialResponse || !credentialResponse.credential) {
-            console.error('Invalid Google credential response');
-            return;
-        }
-        try {
-            await handleGoogleLogin(credentialResponse.credential);
-        } catch (error) {
-            console.error('Google login failed:', error);
-        }
-    };
-
-    // Initialize Google OAuth
-    useEffect(() => {
-        if (isVisible) {
-            // Ensure Google API is loaded
-            if (window.google && window.google.accounts) {
-                window.google.accounts.id.initialize({
-                    auto_select: false,
-                    callback: handleGoogleSuccess
-                });
-            }
-        }
-    }, [isVisible, handleGoogleSuccess]);
 
     return (
         <div css={styles.overlay} className={showAnimation ? 'show' : ''}>
