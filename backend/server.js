@@ -10,7 +10,8 @@ const { Pool } = pkg;
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;  // Fallback to 3000 if PORT is undefined
+app.listen(port, () => console.log(`Server running on port ${port}`));
 
 // Initialize cache with 5 minute TTL
 const cache = new NodeCache({ stdTTL: 300 });

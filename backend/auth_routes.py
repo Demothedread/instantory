@@ -6,6 +6,7 @@ import shutil
 import google.auth
 import json
 import jwt
+import bcrypt
 from google.auth.transport import requests
 from google.oauth2 import id_token
 from typing import Optional, Dict, Any, Tuple
@@ -17,15 +18,15 @@ try:
     GOOGLE_AUTH_AVAILABLE = True
 except ImportError:
     GOOGLE_AUTH_AVAILABLE = False
-    logger.warning("Google Auth libraries not installed. Google authentication will be disabled.")
+    logging.warning("Google Auth libraries not installed. Google authentication will be disabled.")
 
 # Configure logging
 logging.basicConfig(
-    logging.warning("Google Auth libraries not installed. Google authentication will be disabled.")
+    logging.warning("Google Auth libraries not installed. Google authentication will be disabled."),
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler()]
-)
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +43,7 @@ async def create_access_token(user_data: dict) -> str:
             "exp": datetime.utcnow() + JWT_ACCESS_EXPIRES,
             "type": "access"
         },
-            "exp": datetime.now(datetime.timezone.utc) + JWT_ACCESS_EXPIRES,
+        os.getenv('JWT_SECRET'),
         algorithm=JWT_ALGORITHM
     )
 
@@ -68,7 +69,7 @@ def create_tokens(user_data: dict) -> Tuple[str, str]:
             "exp": datetime.utcnow() + JWT_REFRESH_EXPIRES,
             "type": "refresh"
         },
-            "exp": datetime.now(datetime.timezone.utc) + JWT_REFRESH_EXPIRES,
+        os.getenv('JWT_SECRET'),
         algorithm=JWT_ALGORITHM
     )
     
@@ -76,7 +77,6 @@ def create_tokens(user_data: dict) -> Tuple[str, str]:
 
 async def hash_password(password: str) -> str:
     """Hash password using bcrypt."""
-    import bcrypt
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(password.encode(), salt).decode()
 
