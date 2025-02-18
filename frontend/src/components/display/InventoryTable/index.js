@@ -1,8 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import config from '../../../config';
+import { inventoryCache } from '../../../utils/cache';
 import placeholderImage from '../../../assets/icons/placeholder.png';
 import styles from './styles';
+import useImagePreload from '../../../hooks/useImagePreload';
+import useInfiniteScroll from '../../../hooks/useInfiniteScroll';
+
+const PAGE_SIZE = 20;
 
 function InventoryTable() {
   const [inventory, setInventory] = useState([]);
@@ -12,15 +17,46 @@ function InventoryTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const searchTimeout = useRef(null);
 
-  const fetchInventory = useCallback(async (searchParams = {}) => {
+  // Get all image URLs for preloading
+  const imageUrls = inventory
+    .map(item => item?.image_url)
+    .filter(Boolean);
+
+  // Setup image preloading
+  const { isImageLoaded } = useImagePreload(imageUrls, {
+    batchSize: 5,
+    preloadThreshold: 3
+  });
+
+  const fetchInventory = useCallback(async (searchParams = {}, isNextPage = false) => {
+    if (isLoading) return;
     setIsLoading(true);
+
     try {
+      const currentPage = isNextPage ? page : 1;
+      const queryParams = new URLSearchParams({
+        ...searchParams,
+        page: currentPage,
+        limit: PAGE_SIZE
+      });
+
       const baseUrl = `${config.apiUrl}/api`;
       const url = searchParams.query || searchParams.category
-        ? `${baseUrl}/inventory/search?${new URLSearchParams(searchParams)}`
-        : `${baseUrl}/inventory`;
+        ? `${baseUrl}/inventory/search?${queryParams}`
+        : `${baseUrl}/inventory?${queryParams}`;
+
+      // Try to get from cache first
+      const cacheKey = url;
+      const cachedData = inventoryCache.get(cacheKey);
+      
+      if (cachedData && !isNextPage) {
+        setInventory(cachedData);
+        return;
+      }
 
       const response = await fetch(url, {
         credentials: 'include'
@@ -31,18 +67,41 @@ function InventoryTable() {
       }
       
       const data = await response.json();
-      setInventory(data);
+      
+      // Update cache
+      inventoryCache.set(cacheKey, data);
+      
+      // Update state
+      if (isNextPage) {
+        setInventory(prev => [...prev, ...data]);
+        setHasMore(data.length === PAGE_SIZE);
+        setPage(currentPage + 1);
+      } else {
+        setInventory(data);
+        setHasMore(data.length === PAGE_SIZE);
+        setPage(2);
+      }
     } catch (error) {
       console.error('Error fetching inventory:', error);
       setInventory([]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isLoading, page]);
 
-  useEffect(() => {
-    fetchInventory();
-  }, [fetchInventory]);
+  // Setup infinite scroll
+  const loadMore = useCallback(() => {
+    if (!hasMore) return;
+    const searchParams = {};
+    if (searchTerm) searchParams.query = searchTerm;
+    if (filterCategory) searchParams.category = filterCategory;
+    fetchInventory(searchParams, true);
+  }, [fetchInventory, hasMore, searchTerm, filterCategory]);
+
+  useInfiniteScroll(loadMore, {
+    enabled: hasMore && !isLoading,
+    dependencies: [hasMore, isLoading]
+  });
 
   useEffect(() => {
     if (searchTimeout.current) {
@@ -74,20 +133,15 @@ function InventoryTable() {
 
   const handleFilter = useCallback((category) => {
     setFilterCategory(category);
+    setPage(1);
+    setHasMore(true);
   }, []);
 
   const handleSearch = useCallback((term) => {
     setSearchTerm(term);
+    setPage(1);
+    setHasMore(true);
   }, []);
-
-  if (isLoading) {
-    return (
-      <div css={styles.loadingContainer}>
-        <div className="loading-spinner"></div>
-        <p className="loading-text">Loading inventory...</p>
-      </div>
-    );
-  }
 
   if (!Array.isArray(inventory) || inventory.length === 0) {
     return (
@@ -223,7 +277,7 @@ function InventoryTable() {
                   <div className="image-wrapper">
                     {item?.image_url && (
                       <img 
-                        src={item.image_url} 
+                        src={isImageLoaded(item.image_url) ? item.image_url : placeholderImage}
                         alt={item?.name || 'Product'} 
                         onError={(e) => {
                           if (!e.target.dataset.retried) {
@@ -231,6 +285,7 @@ function InventoryTable() {
                             e.target.src = placeholderImage;
                           }
                         }}
+                        className={isImageLoaded(item.image_url) ? 'loaded' : 'loading'}
                       />
                     )}
                   </div>
@@ -259,6 +314,13 @@ function InventoryTable() {
           </tbody>
         </table>
       </div>
+
+      {isLoading && (
+        <div css={styles.loadingIndicator}>
+          <div className="loading-spinner"></div>
+          <p>Loading more items...</p>
+        </div>
+      )}
     </div>
   );
 }

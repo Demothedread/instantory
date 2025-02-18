@@ -1,113 +1,86 @@
-import { animations } from '../../../styles/theme/animations';
-import colors from '../../../styles/theme/colors';
+import { colors } from '../../theme/colors';
 import { css } from '@emotion/react';
-import { layout } from '../../../styles/layouts/constraints';
-import { neoDecorocoBase } from '../../../styles/components/neo-decoroco/base';
-import { typography } from '../../../styles/theme/typography';
+import { neoDecorocoBase } from '../../styles/components/neo-decoroco/base';
 
-export const styles = {
+const styles = {
   container: css`
-    height: 100%;
-    overflow-y: auto;
-    padding: ${layout.spacing.md};
-    
-    /* Custom scrollbar */
-    scrollbar-width: thin;
-    scrollbar-color: ${colors.neonTeal} transparent;
-    
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-    
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    
-    &::-webkit-scrollbar-thumb {
-      background-color: ${colors.neonTeal};
-      border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 600px;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+
+    /* Art deco pattern overlay */
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, 
+        #00ff9d 0%,
+        #00b8ff 50%,
+        #00ff9d 100%
+      );
+      box-shadow: 0 0 20px rgba(0, 255, 157, 0.5);
     }
   `,
 
   header: css`
-    ${neoDecorocoBase.heading}
-    margin-bottom: ${layout.spacing.xl};
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-align: center;
+    font-family: 'Metropolis', sans-serif;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
+
+    /* Art deco decorative elements */
+    &::before,
+    &::after {
+      content: '✧';
+      margin: 0 10px;
+      color: #00ff9d;
+    }
   `,
 
   filterSection: css`
     display: flex;
-    gap: ${layout.spacing.lg};
-    margin-bottom: ${layout.spacing.xl};
-    flex-wrap: wrap;
+    gap: 20px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   `,
 
   searchFilter: css`
     flex: 1;
-    min-width: 300px;
-    
-    input {
-      ${neoDecorocoBase.input}
-      padding-right: ${layout.spacing.xl};
-    }
-  `,
 
-  filterMenu: css`
-    position: relative;
-    
-    .filter-menu-trigger {
-      ${neoDecorocoBase.button}
-      display: flex;
-      align-items: center;
-      gap: ${layout.spacing.sm};
-      padding: ${layout.spacing.sm} ${layout.spacing.lg};
-    }
-    
-    .filter-dropdown {
-      position: absolute;
-      top: 100%;
-      right: 0;
-      margin-top: ${layout.spacing.sm};
-      background: ${colors.darkGradient};
-      border: 1px solid ${colors.border};
-      border-radius: 8px;
-      padding: ${layout.spacing.sm};
-      min-width: 200px;
-      z-index: ${layout.zIndex.dropdown};
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-      
-      button {
-        ${neoDecorocoBase.button}
-        width: 100%;
-        text-align: left;
-        padding: ${layout.spacing.sm} ${layout.spacing.md};
-        margin: 2px 0;
-        font-size: ${typography.sizes.sm};
-        background: transparent;
-        
-        &:hover {
-          background: rgba(255, 255, 255, 0.1);
-        }
+    input {
+      width: 100%;
+      padding: 10px 15px;
+      border-radius: 25px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      font-family: 'Metropolis', sans-serif;
+      transition: all 0.3s ease;
+
+      &:focus {
+        outline: none;
+        border-color: #00ff9d;
+        box-shadow: 0 0 15px rgba(0, 255, 157, 0.3);
       }
-    }
-  `,
 
-  semanticSearch: css`
-    ${neoDecorocoBase.panel}
-    margin: ${layout.spacing.lg} 0;
-    padding: ${layout.spacing.lg};
-    display: flex;
-    gap: ${layout.spacing.md};
-    align-items: center;
-    
-    input {
-      ${neoDecorocoBase.input}
-      flex: 1;
-    }
-    
-    button {
-      ${neoDecorocoBase.button}
-      white-space: nowrap;
-      
       &:disabled {
         opacity: 0.5;
         cursor: not-allowed;
@@ -115,105 +88,220 @@ export const styles = {
     }
   `,
 
-  searchResults: css`
-    margin-top: ${layout.spacing.xl};
-    
-    .subtitle {
-      ${neoDecorocoBase.heading}
-      font-size: ${typography.sizes.xl};
-      margin-bottom: ${layout.spacing.lg};
-    }
-    
-    .clear-results {
-      ${neoDecorocoBase.button}
-      margin-bottom: ${layout.spacing.lg};
-    }
-  `,
+  filterMenu: css`
+    position: relative;
 
-  resultItem: css`
-    ${neoDecorocoBase.panel}
-    margin-bottom: ${layout.spacing.lg};
-    padding: ${layout.spacing.lg};
-    
-    .result-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: ${layout.spacing.md};
-      
-      h4 {
-        font-family: ${typography.fonts.modern};
-        font-size: ${typography.sizes.lg};
-        color: ${colors.textLight};
-        margin: 0;
+    .filter-menu-trigger {
+      padding: 10px 20px;
+      border-radius: 25px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      font-family: 'Metropolis', sans-serif;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: #00ff9d;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
     }
-    
-    .result-summary {
-      font-family: ${typography.fonts.elegant};
-      color: ${colors.textLight};
-      opacity: 0.8;
-      margin-bottom: ${layout.spacing.lg};
-      line-height: 1.6;
-    }
-    
-    .relevant-chunks {
-      h5 {
-        font-family: ${typography.fonts.modern};
-        font-size: ${typography.sizes.base};
-        color: ${colors.neonTeal};
-        margin-bottom: ${layout.spacing.sm};
-      }
-      
-      .chunk {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 6px;
-        padding: ${layout.spacing.md};
-        
-        .chunk-content {
-          font-family: ${typography.fonts.primary};
-          font-size: ${typography.sizes.sm};
-          color: ${colors.textLight};
-          line-height: 1.6;
+
+    .filter-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 5px;
+      background: #2a2a2a;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      z-index: 10;
+
+      button {
+        display: block;
+        width: 100%;
+        padding: 10px 20px;
+        text-align: left;
+        border: none;
+        background: none;
+        color: #ffffff;
+        cursor: pointer;
+        transition: background 0.2s ease;
+
+        &:hover {
+          background: rgba(0, 255, 157, 0.1);
         }
       }
     }
   `,
 
-  tableContainer: css`
-    ${neoDecorocoBase.panel}
-    margin-top: ${layout.spacing.lg};
-    overflow-x: auto;
-    
-    table {
-      ${neoDecorocoBase.table}
-      min-width: 100%;
-    }
-    
-    th {
-      cursor: pointer;
-      user-select: none;
-      white-space: nowrap;
-      padding: ${layout.spacing.md} ${layout.spacing.lg};
-      
-      &:hover {
-        background: rgba(255, 255, 255, 0.1);
+  semanticSearch: css`
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(0, 255, 157, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 255, 157, 0.2);
+
+    input {
+      flex: 1;
+      padding: 10px 15px;
+      border-radius: 25px;
+      border: 1px solid rgba(0, 255, 157, 0.3);
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      font-family: 'Metropolis', sans-serif;
+
+      &:focus {
+        outline: none;
+        border-color: #00ff9d;
+        box-shadow: 0 0 15px rgba(0, 255, 157, 0.3);
       }
     }
-    
-    td {
-      padding: ${layout.spacing.md} ${layout.spacing.lg};
-      
-      &.expandable-cell {
-        max-width: ${layout.components.table.cellMaxWidth.md};
-        
+
+    button {
+      padding: 10px 20px;
+      border-radius: 25px;
+      border: none;
+      background: linear-gradient(135deg, #00ff9d 0%, #00b8ff 100%);
+      color: #1a1a1a;
+      font-family: 'Metropolis', sans-serif;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 255, 157, 0.3);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      &.clear-results {
+        background: rgba(255, 77, 77, 0.2);
+        color: #ff4d4d;
+
+        &:hover {
+          background: rgba(255, 77, 77, 0.3);
+        }
+      }
+    }
+  `,
+
+  searchResults: css`
+    .subtitle {
+      color: #ffffff;
+      font-size: 20px;
+      margin-bottom: 15px;
+      font-family: 'Metropolis', sans-serif;
+    }
+  `,
+
+  resultItem: css`
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+
+      h4 {
+        color: #00ff9d;
+        margin: 0;
+        font-family: 'Metropolis', sans-serif;
+      }
+    }
+
+    .result-summary {
+      color: #ffffff;
+      margin-bottom: 15px;
+    }
+
+    .relevant-chunks {
+      background: rgba(0, 255, 157, 0.05);
+      padding: 10px;
+      border-radius: 4px;
+
+      h5 {
+        color: #00ff9d;
+        margin: 0 0 10px 0;
+        font-family: 'Metropolis', sans-serif;
+      }
+
+      .chunk-content {
+        color: #ffffff;
+        font-style: italic;
+      }
+    }
+  `,
+
+  tableContainer: css`
+    overflow-x: auto;
+    margin-bottom: 20px;
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      color: #ffffff;
+
+      th, td {
+        padding: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        text-align: left;
+      }
+
+      th {
+        background: rgba(0, 255, 157, 0.1);
+        font-family: 'Metropolis', sans-serif;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease;
+
+        &:hover {
+          background: rgba(0, 255, 157, 0.2);
+        }
+      }
+
+      tr:hover td {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .expandable-cell {
+        max-width: 200px;
+        position: relative;
+
         .cell-content {
+          max-height: 100px;
           overflow: hidden;
           text-overflow: ellipsis;
-          display: -webkit-box;
-          -webkit-line-clamp: 3;
-          -webkit-box-orient: vertical;
-          line-height: 1.5;
+          transition: max-height 0.3s ease;
+
+          &:hover {
+            max-height: none;
+            position: absolute;
+            background: #2a2a2a;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            padding: 10px;
+            z-index: 10;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+          }
         }
       }
     }
@@ -221,25 +309,59 @@ export const styles = {
 
   downloadButton: css`
     ${neoDecorocoBase.button}
-    padding: ${layout.spacing.sm} ${layout.spacing.md};
-    font-size: ${typography.sizes.sm};
-    
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: none;
+    background: linear-gradient(135deg, #00ff9d 0%, #00b8ff 100%);
+    color: #1a1a1a;
+    font-family: 'Metropolis', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
     &:hover {
       transform: translateY(-2px);
       box-shadow: ${colors.neonGlow} ${colors.neonTeal};
     }
   `,
 
-  footer: css`
-    margin-top: ${layout.spacing.lg};
-    padding: ${layout.spacing.md};
-    border-top: 1px solid ${colors.border};
-    color: ${colors.textLight};
-    font-family: ${typography.fonts.modern};
-    font-size: ${typography.sizes.sm};
-    opacity: 0.7;
-    text-align: right;
+  loadingIndicator: css`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    color: #00ff9d;
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(0, 255, 157, 0.3);
+      border-radius: 50%;
+      border-top-color: #00ff9d;
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 10px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    p {
+      color: #ffffff;
+      font-family: 'Metropolis', sans-serif;
+    }
   `,
+
+  footer: css`
+    text-align: center;
+    color: #ffffff;
+    font-family: 'Metropolis', sans-serif;
+    padding: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  `
 };
 
 export default styles;

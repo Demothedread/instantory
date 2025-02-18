@@ -47,49 +47,34 @@ services:
         generateValue: true
       - key: COOKIE_SECRET
         generateValue: true
-
-  # Node.js backend service
-  - type: web
-    name: instantory-node
-    runtime: node
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && PORT=$PORT node server.js
-    autoDeploy: true
-    envVars:
-      - key: NODE_VERSION
-        value: 20.17.0
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        sync: false
-      - key: DATABASE_URL
-        fromDatabase:
-          name: instantory_sql
-          property: connectionString
-      - key: NEON_DATABASE_URL
-        sync: false  # Set in dashboard
-      - key: CORS_ORIGIN
-        value: "https://hocomnia.com,https://bartleby.vercel.app"
-      - key: PUBLIC_BACKEND_URL
-        value: https://instantory.onrender.com
-      - key: FRONTEND_URL
-        value: "https://hocomnia.com"
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: JWT_SECRET
-        generateValue: true
-      - key: SESSION_SECRET
-        generateValue: true
-      - key: COOKIE_SECRET
-        generateValue: true
-      - key: AWS_ACCESS_KEY_ID
-        sync: false
-      - key: AWS_SECRET_ACCESS_KEY
-        sync: false
-      - key: AWS_S3_EXPRESS_BUCKET
-        value: "instantory-db--usw2-az1--x-s3"
+      - key: STORAGE_BACKEND
+        value: "vercel"
+      - key: DOCUMENT_STORAGE_PROVIDER
+        value: "s3"
+      - key: IMAGE_STORAGE_PROVIDER
+        value: "vercel"
+      - key: VECTOR_SEARCH_ENABLED
+        value: "true"
+      - key: VECTOR_DIMENSION
+        value: "1536"
+      - key: COMPRESSION_ENABLED
+        value: "true"
+      - key: COMPRESSION_LEVEL
+        value: "6"
+      - key: CACHE_STRATEGY
+        value: "stale-while-revalidate"
+      - key: CACHE_DURATION
+        value: "3600"
+      - key: RATE_LIMIT_ENABLED
+        value: "true"
+      - key: RATE_LIMIT_REQUESTS
+        value: "100"
+      - key: RATE_LIMIT_WINDOW
+        value: "60"
+      - key: MAX_UPLOAD_SIZE
+        value: "100000000"
+      - key: TEMP_STORAGE_TTL
+        value: "3600"
 
 databases:
   # Main PostgreSQL database on Render

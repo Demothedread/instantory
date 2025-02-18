@@ -17,9 +17,15 @@ from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from PIL import Image
 from quart import Quart, jsonify, request, send_file, make_response
-from quart_cors import cors
+from .config.security import CORSConfig, get_security_config
+from .config.logging import log_config
 
-# Configure logging
+# Get logger from config
+logger = log_config.get_logger(__name__)
+
+# Get security config
+security_config = get_security_config()
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -126,34 +132,39 @@ async def get_db_pool():
 
 client = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-# Initialize Quart app with CORS
+# Initialize Quart app
 app = Quart(__name__)
-cors(app, allow_origin=CORSConfig.get_origins(), allow_credentials=True)
+
+# Configure CORS
+@app.before_request
+async def handle_preflight():
+    """Handle CORS preflight requests."""
+    if request.method == "OPTIONS":
+        response = await make_response()
+        origin = request.headers.get('Origin')
+        if CORSConfig.is_origin_allowed(origin):
+            response.headers.update(CORSConfig.get_cors_headers(origin))
+        return response
+
+@app.after_request
+async def add_cors_headers(response):
+    """Add CORS and security headers to all responses."""
+    origin = request.headers.get('Origin')
+    if CORSConfig.is_origin_allowed(origin):
+        response.headers.update(CORSConfig.get_cors_headers(origin))
+    response.headers.update(security_config.get_security_headers())
+    return response
 
 @app.before_serving
 async def startup():
     try:
         async with get_db_pool() as pool:
-            await initialize_database(pool)
+            await    (pool)
         logger.info("Application initialized successfully")
     except Exception as e:
         logger.error(f"Startup failed: {e}")
         raise
 
-@app.after_request
-async def after_request(response):
-    """Add security headers and CORS to all responses."""
-    response.headers.update({
-        'X-Content-Type-Options': 'nosniff',
-        'X-Frame-Options': 'DENY',
-        'X-XSS-Protection': '1; mode=block',
-        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-        'Vary': 'Origin'
-    })
-    origin = request.headers.get('Origin')
-    if origin in CORSConfig.get_origins():
-        response.headers['Access-Control-Allow-Origin'] = origin
-    return response
 
 @app.route('/processing-status/<task_id>', methods=['GET'])
 async def processing_status(task_id: str):

@@ -1,117 +1,92 @@
-"""Security configuration including CORS and security headers."""
+"""Security configuration for the application."""
 import os
-from typing import Dict, List, Optional
-import logging
+from typing import List, Dict, Optional
 
-logger = logging.getLogger(__name__)
-
-class SecurityConfig:
-    """Security settings management."""
+class CORSConfig:
+    """CORS configuration settings."""
     
-    def __init__(self):
-        # CORS configuration
-        self.cors_config = {
-            'allow_origin': self._get_allowed_origins(),
-            'allow_credentials': True,
-            'allow_methods': [
-                'GET', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'PATCH'
-            ],
-            'allow_headers': [
-                'Content-Type',
-                'Authorization',
-                'Accept',
-                'Origin',
-                'X-Requested-With',
-                'google-oauth-token',
-                'Sec-Fetch-Site',
-                'Sec-Fetch-Mode',
-                'Sec-Fetch-Dest'
-            ],
-            'max_age': 3600
-        }
-        
-        # Security headers
-        self.security_headers = {
-            'X-Content-Type-Options': 'nosniff',
-            'X-Frame-Options': 'SAMEORIGIN',
-            'X-XSS-Protection': '1; mode=block',
-            'Content-Security-Policy': self._get_csp_policy(),
-            'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-            'Vary': 'Origin',
-            'Permissions-Policy': 'identity-credentials-get=(self "https://accounts.google.com")',
-            'Cross-Origin-Opener-Policy': 'same-origin-allow-popups'
-        }
-        
-        # JWT configuration
-        self.jwt_secret = os.getenv('JWT_SECRET')
-        if not self.jwt_secret:
-            logger.warning("JWT_SECRET not set - using an insecure default")
-            self.jwt_secret = 'development_secret'
-        
-        # Session configuration
-        self.session_secret = os.getenv('SESSION_SECRET')
-        self.cookie_secret = os.getenv('COOKIE_SECRET')
+    @staticmethod
+    def get_origins() -> List[str]:
+        """Get allowed origins from environment or default to development origins."""
+        cors_origin = os.getenv('CORS_ORIGIN', '')
+        if cors_origin:
+            return cors_origin.split(',')
+        return ['http://localhost:3000', 'http://localhost:5000']
     
-    def _get_allowed_origins(self) -> List[str]:
-        """Get allowed CORS origins from environment or defaults."""
-        origins = [
-            "https://*.vercel.app",
-            "https://*.onrender.com"
+    @staticmethod
+    def get_headers() -> List[str]:
+        """Get allowed headers."""
+        return [
+            'Content-Type',
+            'Authorization',
+            'Accept',
+            'Origin',
+            'X-Requested-With',
+            'google-oauth-token'
         ]
-        
-        # Add development origins if not in production
-        if os.getenv('NODE_ENV') != 'production':
-            origins.extend([
-                "http://localhost:3000",
-                "http://127.0.0.1:3000"
-            ])
-        
-        # Add custom origin if specified
-        custom_origin = os.getenv('CORS_ORIGIN')
-        if custom_origin:
-            origins.append(custom_origin)
-        
-        return origins
     
-    def _get_csp_policy(self) -> str:
-        """Generate Content Security Policy."""
-        return (
-            "default-src 'self' https: data: 'unsafe-inline' 'unsafe-eval'; "
-            "connect-src 'self' https://instantory.onrender.com https://*.google.com https://accounts.google.com; "
-            "frame-src 'self' https://*.google.com https://accounts.google.com; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://*.googleusercontent.com https://apis.google.com; "
-            "credentials-src 'self' https://accounts.google.com; "
-            "img-src 'self' data: https: blob:; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "font-src 'self' https://fonts.gstatic.com"
-        )
+    @staticmethod
+    def get_methods() -> List[str]:
+        """Get allowed methods."""
+        return ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH']
     
-    def is_origin_allowed(self, origin: Optional[str]) -> bool:
-        """Check if an origin is allowed by CORS policy."""
+    @staticmethod
+    def get_cors_headers(origin: Optional[str] = None) -> Dict[str, str]:
+        """Get CORS headers for a given origin."""
+        headers = {
+            'Access-Control-Allow-Methods': ','.join(CORSConfig.get_methods()),
+            'Access-Control-Allow-Headers': ','.join(CORSConfig.get_headers()),
+            'Access-Control-Allow-Credentials': 'true',
+            'Access-Control-Max-Age': '3600'
+        }
+        
+        if origin and CORSConfig.is_origin_allowed(origin):
+            headers['Access-Control-Allow-Origin'] = origin
+        
+        return headers
+    
+    @staticmethod
+    def is_origin_allowed(origin: Optional[str]) -> bool:
+        """Check if an origin is allowed."""
         if not origin:
             return False
-        return origin in self.cors_config['allow_origin']
-    
-    def get_cors_headers(self, origin: Optional[str]) -> Dict[str, str]:
-        """Get CORS headers for a given origin."""
-        if not self.is_origin_allowed(origin):
-            return {}
-            
-        return {
-            'Access-Control-Allow-Origin': origin,
-            'Access-Control-Allow-Methods': ', '.join(self.cors_config['allow_methods']),
-            'Access-Control-Allow-Headers': ', '.join(self.cors_config['allow_headers']),
-            'Access-Control-Allow-Credentials': 'true',
-            'Access-Control-Max-Age': str(self.cors_config['max_age'])
-        }
-    
-    def get_security_headers(self) -> Dict[str, str]:
-        """Get security headers."""
-        return self.security_headers.copy()
+        return origin in CORSConfig.get_origins()
 
-# Global instance
-security_config = SecurityConfig()
+class SecurityConfig:
+    """Security configuration settings."""
+    
+    @staticmethod
+    def get_jwt_secret() -> str:
+        """Get JWT secret key from environment."""
+        secret = os.getenv('JWT_SECRET')
+        if not secret:
+            raise ValueError("JWT_SECRET environment variable is required")
+        return secret
+    
+    @staticmethod
+    def get_cookie_secret() -> str:
+        """Get cookie secret key from environment."""
+        secret = os.getenv('COOKIE_SECRET')
+        if not secret:
+            raise ValueError("COOKIE_SECRET environment variable is required")
+        return secret
+    
+    @staticmethod
+    def get_security_headers() -> Dict[str, str]:
+        """Get security headers for responses."""
+        return {
+            'X-Content-Type-Options': 'nosniff',
+            'X-Frame-Options': 'DENY',
+            'X-XSS-Protection': '1; mode=block',
+            'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+            'Referrer-Policy': 'strict-origin-when-cross-origin',
+            'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+        }
 
 def get_security_config() -> SecurityConfig:
-    """Get the security configuration instance."""
-    return security_config
+    """Get security configuration instance."""
+    return SecurityConfig()
+
+def get_cors_config() -> CORSConfig:
+    """Get CORS configuration instance."""
+    return CORSConfig()

@@ -1,9 +1,14 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { documentCache, searchCache } from '../../../utils/cache';
 
 import config from '../../../config';
 import styles from './styles';
+import useInfiniteScroll from '../../../hooks/useInfiniteScroll';
 
-const DocumentsTable = ({ documents }) => {
+const PAGE_SIZE = 20;
+
+const DocumentsTable = () => {
+  const [documents, setDocuments] = useState([]);
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState(null);
   const [filterCategory, setFilterCategory] = useState('');
@@ -12,36 +17,99 @@ const DocumentsTable = ({ documents }) => {
   const [semanticQuery, setSemanticQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSort = (column) => {
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortColumn(column);
-      setSortDirection('asc');
+  const fetchDocuments = useCallback(async (searchParams = {}, isNextPage = false) => {
+    if (isLoading) return;
+    setIsLoading(true);
+
+    try {
+      const currentPage = isNextPage ? page : 1;
+      const queryParams = new URLSearchParams({
+        ...searchParams,
+        page: currentPage,
+        limit: PAGE_SIZE
+      });
+
+      const baseUrl = `${config.apiUrl}/api/documents`;
+      const url = searchParams.query
+        ? `${baseUrl}/search?${queryParams}`
+        : `${baseUrl}?${queryParams}`;
+
+      // Try cache first
+      const cacheKey = url;
+      const cachedData = documentCache.get(cacheKey);
+      
+      if (cachedData && !isNextPage) {
+        setDocuments(cachedData);
+        return;
+      }
+
+      const response = await fetch(url, {
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch documents');
+      }
+
+      const data = await response.json();
+      
+      // Update cache
+      documentCache.set(cacheKey, data);
+      
+      // Update state
+      if (isNextPage) {
+        setDocuments(prev => [...prev, ...data]);
+        setHasMore(data.length === PAGE_SIZE);
+        setPage(currentPage + 1);
+      } else {
+        setDocuments(data);
+        setHasMore(data.length === PAGE_SIZE);
+        setPage(2);
+      }
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [isLoading, page]);
 
-  const handleFilter = (category) => {
-    setFilterCategory(category);
-  };
+  // Setup infinite scroll
+  const loadMore = useCallback(() => {
+    if (!hasMore) return;
+    const searchParams = {};
+    if (searchTerm) searchParams.query = searchTerm;
+    if (filterCategory) searchParams.category = filterCategory;
+    fetchDocuments(searchParams, true);
+  }, [fetchDocuments, hasMore, searchTerm, filterCategory]);
 
-  const handleSearch = (term) => {
-    setSearchTerm(term);
-  };
+  useInfiniteScroll(loadMore, {
+    enabled: hasMore && !isLoading && !semanticResults,
+    dependencies: [hasMore, isLoading, semanticResults]
+  });
 
   const handleSemanticSearch = async () => {
     if (!semanticQuery.trim()) return;
     
     setIsSearching(true);
     try {
+      // Check cache first
+      const cacheKey = `semantic_${semanticQuery}`;
+      const cachedResults = searchCache.get(cacheKey);
+      
+      if (cachedResults) {
+        setSemanticResults(cachedResults);
+        return;
+      }
+
       const response = await fetch(`${config.apiUrl}/api/documents/search`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Origin': window.location.origin,
-          'Access-Control-Allow-Credentials': 'true'
+          'Accept': 'application/json'
         },
         credentials: 'include',
         body: JSON.stringify({ query: semanticQuery })
@@ -52,6 +120,9 @@ const DocumentsTable = ({ documents }) => {
       }
 
       const data = await response.json();
+      
+      // Cache results
+      searchCache.set(cacheKey, data.results);
       setSemanticResults(data.results);
     } catch (error) {
       console.error('Error during semantic search:', error);
@@ -108,7 +179,13 @@ const DocumentsTable = ({ documents }) => {
     return sortableItems;
   }, [filteredDocuments, sortColumn, sortDirection]);
 
-  if (!Array.isArray(documents) || documents.length === 0) {
+  useEffect(() => {
+    if (!semanticResults) {
+      fetchDocuments();
+    }
+  }, [fetchDocuments, semanticResults]);
+
+  if (!Array.isArray(documents) && !semanticResults) {
     return (
       <div css={styles.container}>
         <h2 css={styles.header}>Document Vault</h2>
@@ -127,7 +204,8 @@ const DocumentsTable = ({ documents }) => {
             type="text"
             placeholder="Search documents..."
             value={searchTerm}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            disabled={!!semanticResults}
           />
         </div>
         <div css={styles.filterMenu}>
@@ -135,14 +213,15 @@ const DocumentsTable = ({ documents }) => {
             className="filter-menu-trigger"
             onClick={() => setShowFilterMenu(!showFilterMenu)}
             onBlur={() => setTimeout(() => setShowFilterMenu(false), 200)}
+            disabled={!!semanticResults}
           >
             Filter by Category
           </button>
           {showFilterMenu && (
             <div className="filter-dropdown">
-              <button onClick={() => handleFilter('')}>All Categories</button>
+              <button onClick={() => setFilterCategory('')}>All Categories</button>
               {categories.map(category => (
-                <button key={category} onClick={() => handleFilter(category)}>
+                <button key={category} onClick={() => setFilterCategory(category)}>
                   {category}
                 </button>
               ))}
@@ -164,17 +243,22 @@ const DocumentsTable = ({ documents }) => {
         >
           {isSearching ? 'Searching...' : 'Semantic Search'}
         </button>
-      </div>
-
-      {semanticResults && (
-        <div css={styles.searchResults}>
-          <h3 className="subtitle">Search Results</h3>
+        {semanticResults && (
           <button 
-            onClick={() => setSemanticResults(null)} 
+            onClick={() => {
+              setSemanticResults(null);
+              setSemanticQuery('');
+            }}
             className="clear-results"
           >
             Clear Results
           </button>
+        )}
+      </div>
+
+      {semanticResults ? (
+        <div css={styles.searchResults}>
+          <h3 className="subtitle">Search Results</h3>
           {semanticResults.map((result, index) => (
             <div key={index} css={styles.resultItem}>
               <div className="result-header">
@@ -198,32 +282,30 @@ const DocumentsTable = ({ documents }) => {
             </div>
           ))}
         </div>
-      )}
-
-      {!semanticResults && (
+      ) : (
         <div css={styles.tableContainer}>
           <table>
             <thead>
               <tr>
-                <th onClick={() => handleSort('title')}>
+                <th onClick={() => setSortColumn('title')}>
                   Title {sortColumn === 'title' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
-                <th onClick={() => handleSort('author')}>
+                <th onClick={() => setSortColumn('author')}>
                   Author {sortColumn === 'author' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
-                <th onClick={() => handleSort('category')}>
+                <th onClick={() => setSortColumn('category')}>
                   Category {sortColumn === 'category' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
-                <th onClick={() => handleSort('field')}>
+                <th onClick={() => setSortColumn('field')}>
                   Field {sortColumn === 'field' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
-                <th onClick={() => handleSort('publication_year')}>
+                <th onClick={() => setSortColumn('publication_year')}>
                   Year {sortColumn === 'publication_year' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
                 <th>Summary</th>
                 <th>Thesis</th>
                 <th>Issue</th>
-                <th onClick={() => handleSort('journal_publisher')}>
+                <th onClick={() => setSortColumn('journal_publisher')}>
                   Journal/Publisher {sortColumn === 'journal_publisher' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
                 <th>Influences</th>
@@ -266,8 +348,15 @@ const DocumentsTable = ({ documents }) => {
         </div>
       )}
 
+      {isLoading && !semanticResults && (
+        <div css={styles.loadingIndicator}>
+          <div className="loading-spinner"></div>
+          <p>Loading more documents...</p>
+        </div>
+      )}
+
       <div css={styles.footer}>
-        <p>Total Documents: {filteredDocuments.length}</p>
+        <p>Total Documents: {semanticResults ? semanticResults.length : filteredDocuments.length}</p>
       </div>
     </div>
   );
