@@ -1,23 +1,22 @@
-"""Main application server."""
+# Core imports
 import os
 from pathlib import Path
-# Removed unused imports
 from dotenv import load_dotenv
+
+# Third party imports
 from quart import Quart
 from openai import AsyncOpenAI
 from quart_cors import cors
 
-# Removed unused imports
+# Local imports
 from .config.logging import log_config
-
+from .db import get_db_pool
 from .middleware import setup_middleware
 from .services.processor import create_processor_factory
-from .services.processor import create_processor_factory, create_db_pool
-from .auth_routes import auth_bp
+from .routes.auth_routes import auth_bp
 from .routes.inventory import inventory_bp
 from .routes.documents import documents_bp
 from .routes.files import files_bp
-from .db import get_db_pool, create_db_pool
 
 # Load environment variables
 load_dotenv()
@@ -39,8 +38,13 @@ app = Quart(__name__)
 # Enable CORS
 app = cors(app, allow_origin="*")
 
-# Set port
-port = int(os.getenv("PORT", 10000))
+# Get port from environment (required by Render, defaults to 10000 for local development)
+try:
+    port = int(os.getenv("PORT", "10000"))
+    logger.info(f"Using port {port}")
+except ValueError as e:
+    logger.error(f"Invalid PORT value: {os.getenv('PORT')}")
+    raise RuntimeError(f"Invalid PORT environment variable: {e}")
 
 # Set testing mode if environment variable is set
 if os.getenv('TESTING', '').lower() == 'true':
@@ -83,7 +87,6 @@ async def init_services():
     try:
         # Initialize database pool
         db_pool = await get_db_pool()
-        db_pool = await create_db_pool()
         # Test database connection
         async with db_pool.acquire() as conn:
             await conn.execute('SELECT 1')
@@ -132,11 +135,15 @@ async def shutdown():
         if hasattr(app, 'db_pool'):
             await app.db_pool.close()
         logger.info("Application shutdown complete")
-        logger.info("Application shutdown complete")
     except Exception as e:
         logger.error(f"Shutdown error: {e}")
     
-    # Start the server
-    if __name__ == "__main__":
-        app.run(host="0.0.0.0", port=port, debug=os.getenv('DEBUG', 'false').lower() == 'true', use_reloader=True)
-        logger.info(f"Starting server on port {port}")
+# Start the server
+if __name__ == "__main__":
+    logger.info("Starting server")
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        debug=os.getenv('DEBUG', 'false').lower() == 'true',
+        use_reloader=True
+    )
