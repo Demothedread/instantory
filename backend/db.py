@@ -50,9 +50,14 @@ async def create_pool(database_url: str) -> asyncpg.Pool:
 @asynccontextmanager
 async def get_db_pool():
     """Get the primary database pool (Render)."""
-    if not render_pool:
-        await init_db_pools()
-    yield render_pool
+    global render_pool
+    try:
+        if not render_pool:
+            await init_db_pools()
+        yield render_pool
+    except Exception as e:
+        logger.error(f"Database pool error: {e}")
+        raise
 
 @asynccontextmanager
 async def get_neon_pool():

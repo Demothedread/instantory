@@ -85,19 +85,19 @@ except Exception as e:
 async def init_services():
     """Initialize application services."""
     try:
-        # Initialize database pool
-        db_pool = await get_db_pool()
-        # Test database connection
-        async with db_pool.acquire() as conn:
-            await conn.execute('SELECT 1')
-        logger.info("Database connection successful")
-        
-        # Create processor factory
-        processor_factory = create_processor_factory(db_pool, openai_client)
-        app.processor_factory = processor_factory
-        
-        logger.info("Application services initialized")
-        return db_pool
+        # Initialize database pool using async context manager
+        async with get_db_pool() as db_pool:
+            # Test database connection
+            async with db_pool.acquire() as conn:
+                await conn.execute('SELECT 1')
+            logger.info("Database connection successful")
+            
+            # Create processor factory
+            processor_factory = create_processor_factory(db_pool, openai_client)
+            app.processor_factory = processor_factory
+            
+            logger.info("Application services initialized")
+            return db_pool
     except Exception as e:
         logger.error(f"Service initialization failed: {e}")
         raise
