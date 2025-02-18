@@ -39,8 +39,7 @@ class CORSMiddleware:
         setup_cors(app)
         logger.info("CORS middleware initialized")
     
-    async def __call__(self, scope: Dict[str, Any], receive: Callable[[], Awaitable[Dict]], 
-                      send: Callable[[Dict], Awaitable[None]]) -> None:
+    async def __call__(self, scope: Dict[str, Any], receive: Callable[[], Awaitable[Dict]],  msend: Callable[[Dict], Awaitable[None]]) -> None:
         """Process the request through CORS middleware."""
         if scope["type"] != "http":
             await self.app(scope, receive, send)

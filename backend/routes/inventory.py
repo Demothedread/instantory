@@ -1,5 +1,6 @@
 from quart import Blueprint, jsonify, request
 from ..db import get_db_pool
+from ..config.storage import storage_service   
 
 inventory_bp = Blueprint('inventory', __name__)
 

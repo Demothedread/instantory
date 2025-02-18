@@ -2,15 +2,16 @@ import os
 import logging
 import asyncio
 from io import BytesIO
-from pathlib import Path
 from quart import Blueprint, request, jsonify, send_file
-from .cleanup import get_db_pool
-
+from ..db import get_db_pool
+from ..config.storage import storage_service   # New import
+from ..services.storage.vercel_blob import vercel_blob
+from ..services.storage.s3 import s3_client
+# Configure logging
 logger = logging.getLogger(__name__)
 
-# Create blueprints for document and inventory routes
+# Create blueprint
 documents_bp = Blueprint('documents', __name__)
-inventory_bp = Blueprint('inventory', __name__)
 
 # Unified storage service interface
 class StorageService:
@@ -29,15 +30,10 @@ class StorageService:
             )
             self.bucket_name = os.getenv('S3_BUCKET_NAME')
         elif self.backend == 'vercel':
-            try:
-                from .services.storage.vercel_blob import vercel_blob
-            except ImportError:
-                logger.error("vercel_blob module not found; ensure it is installed.")
-                raise
             self.vercel_blob = vercel_blob
             self.vercel_token = os.getenv('VERCEL_BLOB_READ_WRITE_TOKEN')
         elif self.backend == 'generic':
-            # Placeholder for generic storage (e.g. local filesystem)
+            # Fallback implementation; extend as needed.
             pass
         else:
             raise ValueError("Unsupported STORAGE_BACKEND specified.")
@@ -67,7 +63,7 @@ class StorageService:
             )
             return await asyncio.to_thread(response['Body'].read)
         except (self.BotoCoreError, self.ClientError) as e:
-            logger.error(f"S3 fetch error: {e}")
+            logger.error(f"Error fetching document from S3: {e}")
             return None
 
     async def _delete_document_s3(self, document_url: str) -> bool:
@@ -78,13 +74,12 @@ class StorageService:
             )
             return True
         except (self.BotoCoreError, self.ClientError) as e:
-            logger.error(f"S3 delete error: {e}")
+            logger.error(f"Error deleting document from S3: {e}")
             return False
 
     def _parse_s3_url(self, url: str):
+        # Assumes URL in format: s3://bucket/key
         parts = url.replace("s3://", "").split("/", 1)
-        if len(parts) != 2:
-            raise ValueError("Invalid S3 URL format")
         return parts[0], parts[1]
 
     # --- Vercel Blob Methods ---
@@ -94,7 +89,7 @@ class StorageService:
             response = await asyncio.to_thread(blob.get, document_url)
             return response.content
         except Exception as e:
-            logger.error(f"Vercel Blob fetch error: {e}")
+            logger.error(f"Error fetching document from Vercel: {e}")
             return None
 
     async def _delete_document_vercel(self, document_url: str) -> bool:
@@ -103,11 +98,12 @@ class StorageService:
             await asyncio.to_thread(blob.delete, document_url)
             return True
         except Exception as e:
-            logger.error(f"Vercel Blob delete error: {e}")
+            logger.error(f"Error deleting document from Vercel: {e}")
             return False
 
     # --- Generic Storage Methods ---
     async def _get_document_generic(self, document_url: str) -> bytes:
+        # Implement your generic storage access here.
         logger.info("Generic storage: get_document not implemented")
         return None
 
@@ -115,89 +111,19 @@ class StorageService:
         logger.info("Generic storage: delete_document not implemented")
         return False
 
+# Initialize storage service
 storage_service = StorageService()
 
-# --- Helper Functions for Document Processing ---
-
-async def extract_text_from_pdf(pdf_bytes: bytes) -> str:
-    """
-    Extract text from PDF bytes.
-    Replace this placeholder with a proper PDF extraction library (e.g., pdfminer.six or PyMuPDF).
-    """
-    return pdf_bytes.decode('latin1', errors='ignore')
-
-async def get_summary_and_metadata(text: str) -> dict:
-    """
-    Call an AI service (e.g. OpenAI API) to generate a summary and extract metadata.
-    Placeholder implementation – replace with an actual API call.
-    """
-    await asyncio.sleep(1)
-    return {
-        "summary": f"Summary (first 100 chars): {text[:100]}...",
-        "metadata": {"word_count": len(text.split()), "sample_info": "example"}
-    }
-
-async def compute_embedding(text: str) -> list:
-    """
-    Compute a vector embedding for the text.
-    Returns a dummy 768-dimensional vector; replace with your actual embedding logic.
-    """
-    await asyncio.sleep(0.5)
-    return [0.0] * 768
-
-async def get_query_vector(query: str) -> list:
-    """
-    Generate a vector for the search query.
-    Dummy implementation returning a 300-dimensional vector.
-    """
-    await asyncio.sleep(0.1)
-    return [0.0] * 300
-
-async def process_document(doc_id: int, file_path: str):
-    """
-    Background task to process a document:
-      - Retrieve the file from storage.
-      - Extract text from the PDF.
-      - Generate a summary and extract metadata via an AI service.
-      - Compute a vector embedding.
-      - Update the PostgreSQL record with the processed data.
-    """
-    logger.info(f"Processing document {doc_id} from {file_path}")
-    content = await storage_service.get_document(file_path)
-    if not content:
-        logger.error(f"Failed to retrieve document for doc_id {doc_id}")
-        return
-
-    text = await extract_text_from_pdf(content)
-    results = await get_summary_and_metadata(text)
-    summary = results.get('summary', '')
-    metadata = results.get('metadata', {})
-    embedding = await compute_embedding(text)
-
-    try:
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
-                await conn.execute("""
-                    UPDATE user_documents
-                    SET summary = $1,
-                        metadata = $2,
-                        content_vector = $3
-                    WHERE id = $4
-                """, summary, metadata, embedding, doc_id)
-        logger.info(f"Document {doc_id} processed and updated.")
-    except Exception as e:
-        logger.error(f"Error updating document {doc_id}: {e}")
-
-# --- Document Routes ---
+# --- Routes ---
 
 @documents_bp.route('/api/documents', methods=['GET'])
 async def get_documents():
-    """Retrieve all documents for the current user."""
+    """Get all documents for the current user."""
     try:
         async with get_db_pool() as pool:
             async with pool.acquire() as conn:
-                # Assuming user_id is set via auth middleware or passed as a query parameter
-                user_id = getattr(request, 'user_id', request.args.get('user_id'))
+                # Assume auth middleware sets request.user_id or use header fallback.
+                user_id = getattr(request, 'user_id', request.headers.get('X-User-ID'))
                 if not user_id:
                     return jsonify({"error": "User ID is required"}), 400
                 rows = await conn.fetch("""
@@ -215,17 +141,21 @@ async def get_documents():
 
 @documents_bp.route('/api/documents/content', methods=['GET'])
 async def get_document_content():
-    """Retrieve document content from storage."""
+    """Get document content from storage."""
     try:
         document_url = request.args.get('url')
         if not document_url:
             return jsonify({"error": "No document URL provided"}), 400
 
+        # Retrieve document regardless of backend (URL format is validated in the service)
         content = await storage_service.get_document(document_url)
         if not content:
             return jsonify({"error": "Document not found"}), 404
 
+        # Prepare file in-memory
         file_obj = BytesIO(content)
+
+        # Determine content type based on file extension
         content_type = 'application/octet-stream'
         if document_url.lower().endswith('.pdf'):
             content_type = 'application/pdf'
@@ -238,7 +168,7 @@ async def get_document_content():
             file_obj,
             mimetype=content_type,
             as_attachment=False,
-            attachment_filename=Path(document_url).name
+            attachment_filename=document_url.split('/')[-1]
         )
     except Exception as e:
         logger.error(f"Error retrieving document content: {e}")
@@ -246,7 +176,7 @@ async def get_document_content():
 
 @documents_bp.route('/api/documents', methods=['POST'])
 async def create_document():
-    """Create a new document record and initiate background processing."""
+    """Create a new document."""
     try:
         data = await request.get_json()
         user_id = data.get('user_id')
@@ -261,7 +191,7 @@ async def create_document():
                         publication_year, page_length, thesis, issue,
                         summary, category, field, hashtags,
                         influenced_by, file_path, file_type, extracted_text
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '', $9, $10, $11, $12, $13, $14, '')
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
                     RETURNING *
                 """,
                     user_id,
@@ -272,24 +202,23 @@ async def create_document():
                     data.get('page_length'),
                     data.get('thesis'),
                     data.get('issue'),
+                    data.get('summary'),
                     data.get('category'),
                     data.get('field'),
                     data.get('hashtags'),
                     data.get('influenced_by'),
                     data.get('file_path'),
-                    data.get('file_type')
+                    data.get('file_type'),
+                    data.get('extracted_text')
                 )
-                doc_id = row["id"]
-        # Trigger background processing for the document (e.g. PDF processing)
-        asyncio.create_task(process_document(doc_id, row.get('file_path')))
-        return jsonify(dict(row))
+                return jsonify(dict(row))
     except Exception as e:
         logger.error(f"Error creating document: {e}")
         return jsonify({'error': str(e)}), 500
 
 @documents_bp.route('/api/documents/<int:doc_id>', methods=['PUT'])
 async def update_document(doc_id):
-    """Update an existing document."""
+    """Update a document."""
     try:
         data = await request.get_json()
         user_id = data.get('user_id')
@@ -338,29 +267,75 @@ async def update_document(doc_id):
         logger.error(f"Error updating document {doc_id}: {e}")
         return jsonify({'error': str(e)}), 500
 
-@documents_bp.route('/api/documents/<int:doc_id>', methods=['DELETE'])
-async def delete_document(doc_id):
-    """Delete a document and its associated storage file."""
+@documents_bp.route('/api/documents/search', methods=['GET'])
+async def get_search_documents():
+    """Search documents using vector similarity."""
     try:
-        user_id = request.args.get('user_id')
-        if not user_id:
-            return jsonify({'error': 'User ID required'}), 400
+        query = request.args.get('q')
+        if not query:
+            return jsonify({"error": "No search query provided"}), 400
 
         async with get_db_pool() as pool:
             async with pool.acquire() as conn:
+                user_id = getattr(request, 'user_id', request.headers.get('X-User-ID'))
+                if not user_id:
+                    return jsonify({"error": "User ID is required"}), 400
+
+                # Define get_query_vector function
+                async def get_query_vector(query: str) -> list:
+                    # Dummy implementation, replace with actual logic
+                    return [0.0] * 300  # Example: 300-dimensional vector
+                query_vector = await get_query_vector(query)
+                rows = await conn.fetch("""
+                    SELECT 
+                        id, title, author, summary, category, file_path, created_at,
+                        content_vector <=> $1 as similarity
+                    FROM user_documents 
+                    WHERE user_id = $2
+                    ORDER BY similarity ASC
+                    LIMIT 10
+                """, query_vector, int(user_id))
+                return jsonify([dict(row) for row in rows])
+    except Exception as e:
+        logger.error(f"Error searching documents: {e}")
+        return jsonify({"error": "Failed to search documents"}), 500
+
+@documents_bp.route('/api/documents/<int:doc_id>', methods=['DELETE'])
+async def delete_document(doc_id):
+    """Delete a document and its storage content."""
+    try:
+        async with get_db_pool() as pool:
+            async with pool.acquire() as conn:
+                user_id = getattr(request, 'user_id', request.headers.get('X-User-ID'))
+                if not user_id:
+                    return jsonify({"error": "User ID is required"}), 400
+
+                # Get document URL before deletion
                 row = await conn.fetchrow("""
-                    DELETE FROM user_documents
+                    SELECT file_path FROM user_documents 
                     WHERE id = $1 AND user_id = $2
-                    RETURNING id, file_path
                 """, doc_id, int(user_id))
                 if not row:
-                    return jsonify({'error': 'Document not found'}), 404
+                    return jsonify({"error": "Document not found"}), 404
 
-                # File deletion can be handled asynchronously (e.g., via a cleanup task)
-                return jsonify({'message': 'Document deleted successfully'})
+                document_url = row['file_path']
+
+                # Delete record from database
+                await conn.execute("""
+                    DELETE FROM user_documents 
+                    WHERE id = $1 AND user_id = $2
+                """, doc_id, int(user_id))
+
+                # Delete from storage if supported
+                if document_url:
+                    deleted = await storage_service.delete_document(document_url)
+                    if not deleted:
+                        logger.warning(f"Failed to delete document from storage: {document_url}")
+
+                return jsonify({"message": "Document deleted successfully"})
     except Exception as e:
-        logger.error(f"Error deleting document {doc_id}: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error deleting document: {e}")
+        return jsonify({"error": "Failed to delete document"}), 500
 
 @documents_bp.route('/api/documents/search', methods=['POST'])
 async def search_documents():
@@ -369,7 +344,8 @@ async def search_documents():
         data = await request.get_json()
         user_id = data.get('user_id')
         query = data.get('query', '').strip()
-        field = data.get('field', 'all')  # options: all, content, or metadata
+        field = data.get('field', 'all')  # options: 'all', 'content', 'metadata'
+
         if not user_id:
             return jsonify({'error': 'User ID required'}), 400
         if not query:
@@ -382,22 +358,9 @@ async def search_documents():
                 if field == 'content':
                     where_clause += " AND extracted_text ILIKE $2"
                 elif field == 'metadata':
-                    where_clause += """ AND (
-                        title ILIKE $2 OR
-                        author ILIKE $2 OR
-                        summary ILIKE $2 OR
-                        thesis ILIKE $2 OR
-                        hashtags ILIKE $2
-                    )"""
-                else:
-                    where_clause += """ AND (
-                        title ILIKE $2 OR
-                        author ILIKE $2 OR
-                        summary ILIKE $2 OR
-                        thesis ILIKE $2 OR
-                        hashtags ILIKE $2 OR
-                        extracted_text ILIKE $2
-                    )"""
+                    where_clause += " AND (title ILIKE $2 OR author ILIKE $2 OR summary ILIKE $2 OR thesis ILIKE $2 OR hashtags ILIKE $2)"
+                else:  # 'all'
+                    where_clause += " AND (title ILIKE $2 OR author ILIKE $2 OR summary ILIKE $2 OR thesis ILIKE $2 OR hashtags ILIKE $2 OR extracted_text ILIKE $2)"
                 params.append(f"%{query}%")
                 sql = f"""
                     SELECT id, title, author, summary, extracted_text, created_at
@@ -423,14 +386,16 @@ async def search_documents():
         return jsonify({'error': str(e)}), 500
 
 def extract_matching_excerpt(text: str, query: str, context_chars: int = 150) -> str:
-    """Extract an excerpt from text containing the search query."""
+    """Extract an excerpt around the query match."""
     if not text or not query:
         return ""
-    query_pos = text.lower().find(query.lower())
-    if query_pos == -1:
+    query_lower = query.lower()
+    text_lower = text.lower()
+    pos = text_lower.find(query_lower)
+    if pos == -1:
         return text[:300] + "..."
-    start = max(0, query_pos - context_chars)
-    end = min(len(text), query_pos + len(query) + context_chars)
+    start = max(0, pos - context_chars)
+    end = min(len(text), pos + len(query) + context_chars)
     excerpt = text[start:end]
     if start > 0:
         excerpt = "..." + excerpt

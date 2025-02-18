@@ -84,6 +84,12 @@ services:
         generateValue: true
       - key: COOKIE_SECRET
         generateValue: true
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_EXPRESS_BUCKET
+        value: "instantory-db--usw2-az1--x-s3"
 
 databases:
   # Main PostgreSQL database on Render
