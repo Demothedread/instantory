@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap');
 @import url("https://use.typekit.net/rfh6pul.css");
+@import src/assets/metropolis/*.otf; /* Import Metropolis font */
 
 :root {
   --emerald: #2fa37a;

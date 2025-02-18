@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import Dict, Optional
 import logging
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,11 @@ class StorageConfig:
         
         # Initialize directories
         self._initialize_directories()
+        
+        # Initialize database connection
+        self.db_path = self.data_dir / 'storage.db'
+        self.conn = sqlite3.connect(self.db_path)
+        self._initialize_database()
     
     def _initialize_directories(self) -> None:
         """Create necessary directories with proper permissions."""
@@ -43,9 +49,37 @@ class StorageConfig:
                 logger.error(f"Error creating directory {directory}: {e}")
                 raise
     
+    def _initialize_database(self) -> None:
+        """Initialize the database schema."""
+        try:
+            with self.conn:
+                self.conn.execute('''
+                    CREATE TABLE IF NOT EXISTS storage (
+                        id INTEGER PRIMARY KEY,
+                        path_name TEXT NOT NULL,
+                        path TEXT NOT NULL
+                    )
+                ''')
+                logger.debug("Initialized database schema")
+        except Exception as e:
+            logger.error(f"Error initializing database schema: {e}")
+            raise
+    
     def get_path(self, path_name: str) -> Optional[Path]:
         """Get a configured path by name."""
+        cursor = self.conn.execute('SELECT path FROM storage WHERE path_name = ?', (path_name,))
+        row = cursor.fetchone()
+        if row:
+            return Path(row[0])
         return self.paths.get(path_name)
+    
+    def set_path(self, path_name: str, path: Path) -> None:
+        """Set a configured path by name."""
+        with self.conn:
+            self.conn.execute('''
+                INSERT INTO storage (path_name, path) VALUES (?, ?)
+                ON CONFLICT(path_name) DO UPDATE SET path = excluded.path
+            ''', (path_name, str(path)))
     
     def get_temp_dir(self) -> Path:
         """Get a temporary directory for processing."""
