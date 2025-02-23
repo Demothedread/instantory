@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .s3 import s3_service
 from .vercel_blob import vercel_blob_service
-from ..config.storage import storage_config
+from .config.storage import storage_config
 
 logger = logging.getLogger(__name__)
 
