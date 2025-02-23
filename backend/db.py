@@ -3,7 +3,9 @@ import logging
 import asyncio
 from io import BytesIO
 from pathlib import Path
+
 from quart import Blueprint, request, jsonify, send_file
+
 from .cleanup import get_db_pool
 
 logger = logging.getLogger(__name__)
@@ -12,10 +14,14 @@ logger = logging.getLogger(__name__)
 documents_bp = Blueprint('documents', __name__)
 inventory_bp = Blueprint('inventory', __name__)
 
-# Unified storage service interface
 class StorageService:
+    """
+    Provides a unified interface to different storage backends (S3, Vercel, Generic).
+    Chooses the backend based on the STORAGE_BACKEND environment variable.
+    """
     def __init__(self):
         self.backend = os.getenv('STORAGE_BACKEND', 'generic').lower()
+
         if self.backend == 's3':
             import boto3
             from botocore.exceptions import BotoCoreError, ClientError
@@ -28,21 +34,25 @@ class StorageService:
                 aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
             )
             self.bucket_name = os.getenv('S3_BUCKET_NAME')
+
         elif self.backend == 'vercel':
+            # Import the local vercel_blob module
             try:
-                from .services.storage.vercel_blob import vercel_blob
+                from .services.storage import vercel_blob
             except ImportError:
-                logger.error("vercel_blob module not found; ensure it is installed.")
+                logger.error("vercel_blob module not found; ensure it is installed or the file is present.")
                 raise
             self.vercel_blob = vercel_blob
             self.vercel_token = os.getenv('VERCEL_BLOB_READ_WRITE_TOKEN')
+
         elif self.backend == 'generic':
-            # Placeholder for generic storage (e.g. local filesystem)
+            # Placeholder for generic storage (e.g., local filesystem)
             pass
         else:
             raise ValueError("Unsupported STORAGE_BACKEND specified.")
 
     async def get_document(self, document_url: str) -> bytes:
+        """Retrieve a document's raw bytes from the configured backend."""
         if self.backend == 's3':
             return await self._get_document_s3(document_url)
         elif self.backend == 'vercel':
@@ -51,6 +61,7 @@ class StorageService:
             return await self._get_document_generic(document_url)
 
     async def delete_document(self, document_url: str) -> bool:
+        """Delete a document from the configured backend."""
         if self.backend == 's3':
             return await self._delete_document_s3(document_url)
         elif self.backend == 'vercel':
@@ -60,10 +71,13 @@ class StorageService:
 
     # --- S3 Methods ---
     async def _get_document_s3(self, document_url: str) -> bytes:
+        """Retrieve a document from S3."""
         try:
             bucket, key = self._parse_s3_url(document_url)
             response = await asyncio.to_thread(
-                self.s3_client.get_object, Bucket=bucket, Key=key
+                self.s3_client.get_object,
+                Bucket=bucket,
+                Key=key
             )
             return await asyncio.to_thread(response['Body'].read)
         except (self.BotoCoreError, self.ClientError) as e:
@@ -71,10 +85,13 @@ class StorageService:
             return None
 
     async def _delete_document_s3(self, document_url: str) -> bool:
+        """Delete a document from S3."""
         try:
             bucket, key = self._parse_s3_url(document_url)
             await asyncio.to_thread(
-                self.s3_client.delete_object, Bucket=bucket, Key=key
+                self.s3_client.delete_object,
+                Bucket=bucket,
+                Key=key
             )
             return True
         except (self.BotoCoreError, self.ClientError) as e:
@@ -82,6 +99,7 @@ class StorageService:
             return False
 
     def _parse_s3_url(self, url: str):
+        """Extract bucket and key from an S3 URL."""
         parts = url.replace("s3://", "").split("/", 1)
         if len(parts) != 2:
             raise ValueError("Invalid S3 URL format")
@@ -89,6 +107,7 @@ class StorageService:
 
     # --- Vercel Blob Methods ---
     async def _get_document_vercel(self, document_url: str) -> bytes:
+        """Retrieve a document from Vercel Blob."""
         try:
             blob = self.vercel_blob.Blob(self.vercel_token)
             response = await asyncio.to_thread(blob.get, document_url)
@@ -98,6 +117,7 @@ class StorageService:
             return None
 
     async def _delete_document_vercel(self, document_url: str) -> bool:
+        """Delete a document from Vercel Blob."""
         try:
             blob = self.vercel_blob.Blob(self.vercel_token)
             await asyncio.to_thread(blob.delete, document_url)
@@ -108,13 +128,17 @@ class StorageService:
 
     # --- Generic Storage Methods ---
     async def _get_document_generic(self, document_url: str) -> bytes:
+        """Retrieve a document from a generic/local storage (placeholder)."""
         logger.info("Generic storage: get_document not implemented")
         return None
 
     async def _delete_document_generic(self, document_url: str) -> bool:
+        """Delete a document from a generic/local storage (placeholder)."""
         logger.info("Generic storage: delete_document not implemented")
         return False
 
+
+# Instantiate a single global StorageService for all routes
 storage_service = StorageService()
 
 # --- Helper Functions for Document Processing ---
@@ -128,7 +152,7 @@ async def extract_text_from_pdf(pdf_bytes: bytes) -> str:
 
 async def get_summary_and_metadata(text: str) -> dict:
     """
-    Call an AI service (e.g. OpenAI API) to generate a summary and extract metadata.
+    Call an AI service (e.g., OpenAI API) to generate a summary and extract metadata.
     Placeholder implementation – replace with an actual API call.
     """
     await asyncio.sleep(1)
@@ -156,11 +180,11 @@ async def get_query_vector(query: str) -> list:
 async def process_document(doc_id: int, file_path: str):
     """
     Background task to process a document:
-      - Retrieve the file from storage.
-      - Extract text from the PDF.
-      - Generate a summary and extract metadata via an AI service.
-      - Compute a vector embedding.
-      - Update the PostgreSQL record with the processed data.
+        - Retrieve the file from storage.
+        - Extract text from the PDF.
+        - Generate a summary and metadata via an AI service.
+        - Compute a vector embedding.
+        - Update the PostgreSQL record with the processed data.
     """
     logger.info(f"Processing document {doc_id} from {file_path}")
     content = await storage_service.get_document(file_path)
@@ -177,13 +201,19 @@ async def process_document(doc_id: int, file_path: str):
     try:
         async with get_db_pool() as pool:
             async with pool.acquire() as conn:
-                await conn.execute("""
+                await conn.execute(
+                    """
                     UPDATE user_documents
                     SET summary = $1,
                         metadata = $2,
                         content_vector = $3
                     WHERE id = $4
-                """, summary, metadata, embedding, doc_id)
+                    """,
+                    summary,
+                    metadata,
+                    embedding,
+                    doc_id
+                )
         logger.info(f"Document {doc_id} processed and updated.")
     except Exception as e:
         logger.error(f"Error updating document {doc_id}: {e}")
@@ -196,18 +226,21 @@ async def get_documents():
     try:
         async with get_db_pool() as pool:
             async with pool.acquire() as conn:
-                # Assuming user_id is set via auth middleware or passed as a query parameter
                 user_id = getattr(request, 'user_id', request.args.get('user_id'))
                 if not user_id:
                     return jsonify({"error": "User ID is required"}), 400
-                rows = await conn.fetch("""
+
+                rows = await conn.fetch(
+                    """
                     SELECT id, title, author, journal_publisher, publication_year,
-                           page_length, thesis, issue, summary, category, field,
-                           hashtags, influenced_by, file_path, file_type, created_at
+                    page_length, thesis, issue, summary, category, field,
+                    hashtags, influenced_by, file_path, file_type, created_at
                     FROM user_documents
-                    WHERE user_id = $1 
+                    WHERE user_id = $1
                     ORDER BY created_at DESC
-                """, int(user_id))
+                    """,
+                    int(user_id)
+                )
                 return jsonify([dict(row) for row in rows])
     except Exception as e:
         logger.error(f"Error fetching documents: {e}")
@@ -255,15 +288,20 @@ async def create_document():
 
         async with get_db_pool() as pool:
             async with pool.acquire() as conn:
-                row = await conn.fetchrow("""
+                row = await conn.fetchrow(
+                    """
                     INSERT INTO user_documents (
                         user_id, title, author, journal_publisher,
                         publication_year, page_length, thesis, issue,
                         summary, category, field, hashtags,
                         influenced_by, file_path, file_type, extracted_text
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, '', $9, $10, $11, $12, $13, $14, '')
+                    ) VALUES (
+                        $1, $2, $3, $4, $5, $6, $7, $8,
+                        '', $9, $10, $11,
+                        $12, $13, $14, ''
+                    )
                     RETURNING *
-                """,
+                    """,
                     user_id,
                     data.get('title'),
                     data.get('author'),
@@ -280,7 +318,8 @@ async def create_document():
                     data.get('file_type')
                 )
                 doc_id = row["id"]
-        # Trigger background processing for the document (e.g. PDF processing)
+
+        # Trigger background processing for the document
         asyncio.create_task(process_document(doc_id, row.get('file_path')))
         return jsonify(dict(row))
     except Exception as e:
@@ -298,9 +337,10 @@ async def update_document(doc_id):
 
         async with get_db_pool() as pool:
             async with pool.acquire() as conn:
-                row = await conn.fetchrow("""
-                    UPDATE user_documents SET
-                        title = $1,
+                row = await conn.fetchrow(
+                    """
+                    UPDATE user_documents
+                    SET title = $1,
                         author = $2,
                         journal_publisher = $3,
                         publication_year = $4,
@@ -315,7 +355,7 @@ async def update_document(doc_id):
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = $13 AND user_id = $14
                     RETURNING *
-                """,
+                    """,
                     data.get('title'),
                     data.get('author'),
                     data.get('journal_publisher'),
@@ -348,11 +388,15 @@ async def delete_document(doc_id):
 
         async with get_db_pool() as pool:
             async with pool.acquire() as conn:
-                row = await conn.fetchrow("""
+                row = await conn.fetchrow(
+                    """
                     DELETE FROM user_documents
                     WHERE id = $1 AND user_id = $2
                     RETURNING id, file_path
-                """, doc_id, int(user_id))
+                    """,
+                    doc_id,
+                    int(user_id)
+                )
                 if not row:
                     return jsonify({'error': 'Document not found'}), 404
 
@@ -370,6 +414,7 @@ async def search_documents():
         user_id = data.get('user_id')
         query = data.get('query', '').strip()
         field = data.get('field', 'all')  # options: all, content, or metadata
+
         if not user_id:
             return jsonify({'error': 'User ID required'}), 400
         if not query:
@@ -379,25 +424,31 @@ async def search_documents():
             async with pool.acquire() as conn:
                 where_clause = "user_id = $1"
                 params = [int(user_id)]
+
                 if field == 'content':
                     where_clause += " AND extracted_text ILIKE $2"
                 elif field == 'metadata':
-                    where_clause += """ AND (
-                        title ILIKE $2 OR
-                        author ILIKE $2 OR
-                        summary ILIKE $2 OR
-                        thesis ILIKE $2 OR
-                        hashtags ILIKE $2
-                    )"""
+                    where_clause += """
+                        AND (
+                            title ILIKE $2
+                            OR author ILIKE $2
+                            OR summary ILIKE $2
+                            OR thesis ILIKE $2
+                            OR hashtags ILIKE $2
+                        )
+                    """
                 else:
-                    where_clause += """ AND (
-                        title ILIKE $2 OR
-                        author ILIKE $2 OR
-                        summary ILIKE $2 OR
-                        thesis ILIKE $2 OR
-                        hashtags ILIKE $2 OR
-                        extracted_text ILIKE $2
-                    )"""
+                    where_clause += """
+                        AND (
+                            title ILIKE $2
+                            OR author ILIKE $2
+                            OR summary ILIKE $2
+                            OR thesis ILIKE $2
+                            OR hashtags ILIKE $2
+                            OR extracted_text ILIKE $2
+                        )
+                    """
+
                 params.append(f"%{query}%")
                 sql = f"""
                     SELECT id, title, author, summary, extracted_text, created_at
@@ -407,6 +458,7 @@ async def search_documents():
                     LIMIT 100
                 """
                 rows = await conn.fetch(sql, *params)
+
                 results = []
                 for row in rows:
                     excerpt = extract_matching_excerpt(row['extracted_text'], query)
@@ -417,21 +469,28 @@ async def search_documents():
                         'summary': row['summary'],
                         'excerpt': excerpt
                     })
+
                 return jsonify({'results': results})
     except Exception as e:
         logger.error(f"Error searching documents: {e}")
         return jsonify({'error': str(e)}), 500
 
 def extract_matching_excerpt(text: str, query: str, context_chars: int = 150) -> str:
-    """Extract an excerpt from text containing the search query."""
+    """
+    Extract an excerpt from text containing the search query.
+    Returns a snippet of ~context_chars around the first occurrence of the query.
+    """
     if not text or not query:
         return ""
     query_pos = text.lower().find(query.lower())
     if query_pos == -1:
+        # No match found, return the first 300 chars as a fallback
         return text[:300] + "..."
+
     start = max(0, query_pos - context_chars)
     end = min(len(text), query_pos + len(query) + context_chars)
     excerpt = text[start:end]
+
     if start > 0:
         excerpt = "..." + excerpt
     if end < len(text):
