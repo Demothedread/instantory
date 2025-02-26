@@ -1,104 +1,119 @@
 """Storage configuration and path management."""
 import os
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 import logging
-import sqlite3
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
+class StorageType(Enum):
+    """Types of storage operations."""
+    DOCUMENT = 'document'  # For document files (PDF, DOC, etc.)
+    IMAGE = 'image'       # For image files
+    THUMBNAIL = 'thumbnail'  # For image thumbnails
+    TEMP = 'temp'        # For temporary storage
+
 class StorageConfig:
-    """Storage path and configuration management."""
+    """Storage configuration and path management."""
     
     def __init__(self):
-        # Use /tmp for ephemeral storage if DATA_DIR not set
+        # Base directories
         self.data_dir = Path(os.getenv('DATA_DIR', '/tmp/instantory'))
         
-        # Define storage paths
+        # Storage paths
         self.paths: Dict[str, Path] = {
+            'TEMP_DIR': self.data_dir / 'temp',
             'UPLOADS_DIR': self.data_dir / 'uploads',
             'INVENTORY_IMAGES_DIR': self.data_dir / 'images' / 'inventory',
+            'THUMBNAILS_DIR': self.data_dir / 'images' / 'thumbnails',
             'EXPORTS_DIR': self.data_dir / 'exports',
-            'DOCUMENT_DIRECTORY': self.data_dir / 'documents',
-            'TEMP_DIR': self.data_dir / 'temp'
+            'DOCUMENT_DIRECTORY': self.data_dir / 'documents'
         }
         
-        # Blob storage configuration
-        self.blob_token = os.getenv('BLOB_READ_WRITE_TOKEN')
-        if not self.blob_token:
-            logger.warning("BLOB_READ_WRITE_TOKEN not set - blob storage features will be unavailable")
+        # Storage configuration
+        self.vercel_blob_token = os.getenv('BLOB_READ_WRITE_TOKEN')
+        self.s3_bucket = os.getenv('AWS_S3_EXPRESS_BUCKET')
+        self.s3_region = os.getenv('AWS_REGION', 'us-west-2')
+        self.s3_access_key = os.getenv('AWS_ACCESS_KEY_ID')
+        self.s3_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+        
+        # Validate configuration
+        self._validate_config()
         
         # Initialize directories
         self._initialize_directories()
+    
+    def _validate_config(self) -> None:
+        """Validate storage configuration."""
+        if not self.vercel_blob_token:
+            raise ValueError("BLOB_READ_WRITE_TOKEN environment variable is required")
         
-        # Initialize database connection
-        self.db_path = self.data_dir / 'storage.db'
-        self.conn = sqlite3.connect(self.db_path)
-        self._initialize_database()
+        if not all([self.s3_bucket, self.s3_access_key, self.s3_secret_key]):
+            raise ValueError("AWS S3 configuration is incomplete")
     
     def _initialize_directories(self) -> None:
         """Create necessary directories with proper permissions."""
-        for path_name, directory in self.paths.items():
+        for directory in self.paths.values():
             try:
                 directory.mkdir(parents=True, exist_ok=True, mode=0o755)
                 logger.debug(f"Created directory: {directory}")
-            except PermissionError:
-                logger.error(f"Permission denied creating directory {directory}")
-                raise
             except Exception as e:
                 logger.error(f"Error creating directory {directory}: {e}")
                 raise
     
-    def _initialize_database(self) -> None:
-        """Initialize the database schema."""
-        try:
-            with self.conn:
-                self.conn.execute('''
-                    CREATE TABLE IF NOT EXISTS storage (
-                        id INTEGER PRIMARY KEY,
-                        path_name TEXT NOT NULL,
-                        path TEXT NOT NULL
-                    )
-                ''')
-                logger.debug("Initialized database schema")
-        except Exception as e:
-            logger.error(f"Error initializing database schema: {e}")
-            raise
+    def get_storage_info(self, file_type: str, storage_type: StorageType) -> Tuple[str, Dict[str, str]]:
+        """Get storage backend and configuration for a file type."""
+        if storage_type == StorageType.TEMP:
+            return 'local', {'base_path': str(self.paths['TEMP_DIR'])}
+            
+        if storage_type == StorageType.IMAGE:
+            return 'vercel', {
+                'token': self.vercel_blob_token,
+                'content_type': file_type
+            }
+            
+        if storage_type == StorageType.THUMBNAIL:
+            return 'vercel', {
+                'token': self.vercel_blob_token,
+                'content_type': 'image/jpeg'
+            }
+            
+        # Default to S3 for documents
+        return 's3', {
+            'bucket': self.s3_bucket,
+            'region': self.s3_region,
+            'access_key': self.s3_access_key,
+            'secret_key': self.s3_secret_key
+        }
     
-    def get_path(self, path_name: str) -> Optional[Path]:
-        """Get a configured path by name."""
-        cursor = self.conn.execute('SELECT path FROM storage WHERE path_name = ?', (path_name,))
-        row = cursor.fetchone()
-        if row:
-            return Path(row[0])
-        return self.paths.get(path_name)
-    
-    def set_path(self, path_name: str, path: Path) -> None:
-        """Set a configured path by name."""
-        with self.conn:
-            self.conn.execute('''
-                INSERT INTO storage (path_name, path) VALUES (?, ?)
-                ON CONFLICT(path_name) DO UPDATE SET path = excluded.path
-            ''', (path_name, str(path)))
-    
-    def get_temp_dir(self) -> Path:
-        """Get a temporary directory for processing."""
-        temp_dir = self.paths['TEMP_DIR'] / str(os.getpid())
+    def get_temp_dir(self, user_id: int) -> Path:
+        """Get a temporary directory for user processing."""
+        temp_dir = self.paths['TEMP_DIR'] / str(user_id)
         temp_dir.mkdir(parents=True, exist_ok=True)
         return temp_dir
     
-    def cleanup_temp_dir(self, temp_dir: Path) -> None:
-        """Clean up a temporary directory."""
+    def get_thumbnail_path(self, user_id: int, filename: str) -> Path:
+        """Get the path for an image thumbnail."""
+        return self.paths['THUMBNAILS_DIR'] / str(user_id) / filename
+    
+    def cleanup_temp_files(self, user_id: Optional[int] = None) -> None:
+        """Clean up temporary files for a user or all users."""
         try:
-            if temp_dir.exists():
-                for item in temp_dir.iterdir():
-                    if item.is_file():
-                        item.unlink()
-                    elif item.is_dir():
-                        self.cleanup_temp_dir(item)
-                temp_dir.rmdir()
+            if user_id:
+                temp_dir = self.paths['TEMP_DIR'] / str(user_id)
+                if temp_dir.exists():
+                    for item in temp_dir.iterdir():
+                        if item.is_file():
+                            item.unlink()
+            else:
+                for user_dir in self.paths['TEMP_DIR'].iterdir():
+                    if user_dir.is_dir():
+                        for item in user_dir.iterdir():
+                            if item.is_file():
+                                item.unlink()
         except Exception as e:
-            logger.error(f"Error cleaning up temporary directory {temp_dir}: {e}")
+            logger.error(f"Error cleaning up temporary files: {e}")
 
 # Global instance
 storage_config = StorageConfig()

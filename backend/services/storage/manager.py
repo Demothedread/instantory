@@ -1,12 +1,15 @@
 """Unified storage manager for handling file operations across different providers."""
 import os
+import io
 import logging
-from typing import Optional, Union, BinaryIO
+from typing import Optional, Union, BinaryIO, Tuple
 from pathlib import Path
+from PIL import Image
 
 from .s3 import s3_service
 from .vercel_blob import vercel_blob_service
-from .config.storage import storage_config
+from ...config.storage import storage_config, StorageType
+from ...config.database import get_vector_pool, get_metadata_pool
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +23,7 @@ class StorageManager:
         self.config = storage_config
         self.s3 = s3_service
         self.vercel = vercel_blob_service
+        self.max_thumbnail_size = (300, 300)  # Maximum thumbnail dimensions
         
     async def store_file(
         self,
@@ -56,21 +60,70 @@ class StorageManager:
                 
                 return str(temp_path)
             
-            # Determine storage provider based on content type
+            # Determine storage type and process accordingly
             if content_type.startswith('image/'):
-                # Store images in Vercel Blob
-                return await self.vercel.upload_document(
-                    file_data if isinstance(file_data, bytes) else file_data.read(),
+                # Process and store image with thumbnail
+                original_url, thumbnail_url = await self.process_and_store_image(
+                    user_id,
+                    file_data,
                     filename,
                     content_type
                 )
+                if not original_url:
+                    raise ValueError("Failed to process and store image")
+                return original_url
+                
             elif content_type in ['application/pdf', 'text/plain', 'application/msword']:
-                # Store documents in S3
-                return await self.s3.upload_document(
+                # Store document in S3
+                file_bytes = file_data if isinstance(file_data, bytes) else file_data.read()
+                document_url = await self.s3.upload_document(
                     user_id,
-                    file_data if isinstance(file_data, bytes) else file_data.read(),
+                    file_bytes,
                     filename
                 )
+                
+                # Store document content for vector search
+                if document_url:
+                    try:
+                        # Extract text content
+                        text_content = await self._extract_text_content(file_bytes, content_type)
+                        
+                        if text_content:
+                            # Generate embedding
+                            embedding = await self._generate_embedding(text_content)
+                            
+                            if embedding:
+                                # Store content and embedding in vector database
+                                async with await get_vector_pool() as pool:
+                                    async with pool.acquire() as conn:
+                                        # Store text content
+                                        await conn.execute(
+                                            """
+                                            INSERT INTO document_content (document_id, content)
+                                            VALUES ($1, $2)
+                                            """,
+                                            document_url,
+                                            text_content
+                                        )
+                                        
+                                        # Store vector embedding
+                                        await conn.execute(
+                                            """
+                                            INSERT INTO document_vectors (
+                                                document_id,
+                                                content_vector,
+                                                embedding_model
+                                            ) VALUES ($1, $2, $3)
+                                            """,
+                                            document_url,
+                                            embedding,
+                                            'text-embedding-ada-002'
+                                        )
+                    except Exception as e:
+                        logger.error(f"Error storing document content: {e}")
+                        # Continue even if vector storage fails
+                        
+                return document_url
             else:
                 # Default to S3 for unknown types
                 return await self.s3.upload_document(
@@ -175,6 +228,104 @@ class StorageManager:
             logger.error(f"Error moving file to permanent storage: {e}")
             return None
     
+    async def generate_thumbnail(self, image_data: bytes, filename: str) -> Optional[bytes]:
+        """
+        Generate a thumbnail from image data.
+        
+        Args:
+            image_data: Original image bytes
+            filename: Original filename for determining format
+            
+        Returns:
+            Thumbnail image bytes if successful, None otherwise
+        """
+        try:
+            # Open image from bytes
+            with Image.open(io.BytesIO(image_data)) as img:
+                # Convert RGBA to RGB if needed
+                if img.mode == 'RGBA':
+                    img = img.convert('RGB')
+                
+                # Generate thumbnail
+                img.thumbnail(self.max_thumbnail_size, Image.Resampling.LANCZOS)
+                
+                # Save thumbnail to bytes
+                output = io.BytesIO()
+                img.save(output, format='JPEG', quality=85, optimize=True)
+                return output.getvalue()
+                
+        except Exception as e:
+            logger.error(f"Error generating thumbnail for {filename}: {e}")
+            return None
+
+    async def process_and_store_image(
+        self,
+        user_id: int,
+        file_data: Union[bytes, BinaryIO],
+        filename: str,
+        content_type: str
+    ) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Process and store an image with its thumbnail.
+        
+        Args:
+            user_id: The ID of the user who owns the file
+            file_data: The image content
+            filename: Original filename
+            content_type: Image MIME type
+            
+        Returns:
+            Tuple of (original_url, thumbnail_url) if successful, (None, None) otherwise
+        """
+        try:
+            # Convert to bytes if needed
+            image_bytes = file_data if isinstance(file_data, bytes) else file_data.read()
+            
+            # Generate thumbnail
+            thumbnail_bytes = await self.generate_thumbnail(image_bytes, filename)
+            if not thumbnail_bytes:
+                return None, None
+            
+            # Store original image
+            original_url = await self.vercel.upload_document(
+                image_bytes,
+                filename,
+                content_type
+            )
+            
+            # Generate thumbnail filename
+            thumbnail_name = f"thumb_{filename}"
+            if not thumbnail_name.lower().endswith('.jpg'):
+                thumbnail_name = f"{thumbnail_name}.jpg"
+            
+            # Store thumbnail
+            thumbnail_url = await self.vercel.upload_document(
+                thumbnail_bytes,
+                thumbnail_name,
+                'image/jpeg'
+            )
+            
+            # Update database with URLs
+            async with await get_metadata_pool() as pool:
+                async with pool.acquire() as conn:
+                    await conn.execute(
+                        """
+                        UPDATE user_inventory
+                        SET original_image_url = $1,
+                            thumbnail_url = $2
+                        WHERE user_id = $3 AND original_image_url = $1
+                        """,
+                        original_url,
+                        thumbnail_url,
+                        user_id
+                    )
+            
+            return original_url, thumbnail_url
+            
+        except Exception as e:
+            logger.error(f"Error processing image {filename}: {e}")
+            return None, None
+
     def cleanup_temp_files(self, user_id: Optional[int] = None):
         """
         Clean up temporary files for a user or all users.
@@ -186,6 +337,168 @@ class StorageManager:
             self.config.cleanup_temp_files(user_id)
         except Exception as e:
             logger.error(f"Error cleaning up temporary files: {e}")
+
+    async def _extract_text_content(self, file_bytes: bytes, content_type: str) -> Optional[str]:
+        """
+        Extract text content from different file types.
+        
+        Args:
+            file_bytes: Raw file content
+            content_type: MIME type of the file
+            
+        Returns:
+            Extracted text if successful, None otherwise
+        """
+        try:
+            if content_type == 'text/plain':
+                return file_bytes.decode('utf-8', errors='ignore')
+                
+            elif content_type == 'application/pdf':
+                import PyPDF2
+                pdf_file = io.BytesIO(file_bytes)
+                pdf_reader = PyPDF2.PdfReader(pdf_file)
+                text = []
+                for page in pdf_reader.pages:
+                    text.append(page.extract_text())
+                return '\n'.join(text)
+                
+            elif content_type == 'application/msword' or content_type.endswith('wordprocessingml.document'):
+                from docx import Document
+                doc_file = io.BytesIO(file_bytes)
+                doc = Document(doc_file)
+                text = []
+                for para in doc.paragraphs:
+                    text.append(para.text)
+                return '\n'.join(text)
+                
+            else:
+                logger.warning(f"Unsupported content type for text extraction: {content_type}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error extracting text content: {e}")
+            return None
+
+    async def _generate_embedding(self, text: str) -> Optional[list]:
+        """
+        Generate vector embedding for text using OpenAI API.
+        
+        Args:
+            text: Text to generate embedding for
+            
+        Returns:
+            Vector embedding if successful, None otherwise
+        """
+        try:
+            from openai import AsyncOpenAI
+            
+            client = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            response = await client.embeddings.create(
+                model="text-embedding-ada-002",
+                input=text[:8000]  # Limit text length for API
+            )
+            return response.data[0].embedding
+            
+        except Exception as e:
+            logger.error(f"Error generating embedding: {e}")
+            return None
+
+    async def search_documents(
+        self,
+        user_id: int,
+        query: str,
+        match_threshold: float = 0.7,
+        match_count: int = 10
+    ) -> list:
+        """
+        Search documents using vector similarity.
+        
+        Args:
+            user_id: The ID of the user performing the search
+            query: Search query text
+            match_threshold: Minimum similarity threshold (0-1)
+            match_count: Maximum number of results to return
+            
+        Returns:
+            List of matching documents with similarity scores
+        """
+        try:
+            # Generate query embedding
+            query_embedding = await self._generate_embedding(query)
+            if not query_embedding:
+                return []
+            
+            # Search using vector similarity
+            async with await get_vector_pool() as pool:
+                async with pool.acquire() as conn:
+                    # Get matching documents with similarity scores
+                    rows = await conn.fetch(
+                        """
+                        WITH vector_matches AS (
+                            SELECT document_id, similarity
+                            FROM search_documents($1, $2, $3)
+                        )
+                        SELECT 
+                            d.id,
+                            d.title,
+                            d.author,
+                            d.summary,
+                            dc.content,
+                            vm.similarity
+                        FROM vector_matches vm
+                        JOIN user_documents d ON d.id = vm.document_id
+                        JOIN document_content dc ON dc.document_id = vm.document_id
+                        WHERE d.user_id = $4
+                        ORDER BY vm.similarity DESC
+                        """,
+                        query_embedding,
+                        match_threshold,
+                        match_count,
+                        user_id
+                    )
+                    
+                    return [
+                        {
+                            'id': row['id'],
+                            'title': row['title'],
+                            'author': row['author'],
+                            'summary': row['summary'],
+                            'excerpt': self._extract_relevant_excerpt(row['content'], query),
+                            'similarity': row['similarity']
+                        }
+                        for row in rows
+                    ]
+                    
+        except Exception as e:
+            logger.error(f"Error searching documents: {e}")
+            return []
+    
+    def _extract_relevant_excerpt(self, content: str, query: str, context_chars: int = 150) -> str:
+        """Extract relevant excerpt from content based on query."""
+        try:
+            # Find query in content (case insensitive)
+            query_pos = content.lower().find(query.lower())
+            
+            if query_pos == -1:
+                # If exact query not found, return start of content
+                return content[:300] + "..."
+            
+            # Get surrounding context
+            start = max(0, query_pos - context_chars)
+            end = min(len(content), query_pos + len(query) + context_chars)
+            excerpt = content[start:end]
+            
+            # Add ellipsis if excerpt is truncated
+            if start > 0:
+                excerpt = "..." + excerpt
+            if end < len(content):
+                excerpt = excerpt + "..."
+                
+            return excerpt
+            
+        except Exception as e:
+            logger.error(f"Error extracting excerpt: {e}")
+            return ""
 
 # Global instance
 storage_manager = StorageManager()
