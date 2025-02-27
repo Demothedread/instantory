@@ -90,6 +90,10 @@ class DatabaseConfig:
 # Global instance
 db_config = DatabaseConfig()
 
+async def get_db_pool() -> asyncpg.Pool:
+    """Get the default (metadata) database connection pool."""
+    return await db_config.get_pool(DatabaseType.METADATA)
+
 async def get_vector_pool() -> asyncpg.Pool:
     """Get the vector database connection pool."""
     return await db_config.get_pool(DatabaseType.VECTOR)

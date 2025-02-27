@@ -10,9 +10,15 @@ from quart_cors import cors
 
 # Local imports
 from .config.logging import log_config
-from .db import get_db_pool
+from .config.database import (
+    get_metadata_pool,
+    get_vector_pool,
+    DatabaseConfig,
+    DatabaseType
+)
 from .middleware import setup_middleware
 from .services.processor import create_processor_factory
+from .services.storage import storage_manager
 from .routes.auth_routes import auth_bp
 from .routes.inventory import inventory_bp
 from .routes.documents import documents_bp
@@ -54,9 +60,13 @@ if os.getenv('TESTING', '').lower() == 'true':
 try:
     # Validate required environment variables
     required_vars = {
-        'DATABASE_URL': 'Database connection string is required',
+        'DATABASE_URL': 'Render database connection string is required',
+        'NEON_DATABASE_URL': 'Neon database connection string is required',
         'OPENAI_API_KEY': 'OpenAI API key is required',
-        'BLOB_READ_WRITE_TOKEN': 'Blob token is required'
+        'BLOB_READ_WRITE_TOKEN': 'Vercel Blob token is required',
+        'AWS_S3_EXPRESS_BUCKET': 'S3 bucket name is required',
+        'AWS_ACCESS_KEY_ID': 'AWS access key is required',
+        'AWS_SECRET_ACCESS_KEY': 'AWS secret key is required'
     }
     
     # In test mode, use default values if environment variables are not set
@@ -85,19 +95,32 @@ except Exception as e:
 async def init_services():
     """Initialize application services."""
     try:
-        # Initialize database pool using async context manager
-        async with get_db_pool() as db_pool:
-            # Test database connection
-            async with db_pool.acquire() as conn:
-                await conn.execute('SELECT 1')
-            logger.info("Database connection successful")
-            
-            # Create processor factory
-            processor_factory = create_processor_factory(db_pool, openai_client)
-            app.processor_factory = processor_factory
-            
-            logger.info("Application services initialized")
-            return db_pool
+        # Initialize metadata database
+        metadata_pool = await get_metadata_pool()
+        async with metadata_pool.acquire() as conn:
+            await conn.execute('SELECT 1')
+        logger.info("Metadata database connection successful")
+        
+        # Initialize vector database
+        vector_pool = await get_vector_pool()
+        async with vector_pool.acquire() as conn:
+            await conn.execute('SELECT 1')
+        logger.info("Vector database connection successful")
+        
+        # Store pools in app context
+        app.metadata_pool = metadata_pool
+        app.vector_pool = vector_pool
+        
+        # Create processor factory with metadata pool
+        processor_factory = create_processor_factory(metadata_pool, openai_client)
+        app.processor_factory = processor_factory
+        
+        # Initialize storage manager
+        app.storage_manager = storage_manager
+        logger.info("Storage manager initialized")
+        
+        logger.info("Application services initialized")
+        
     except Exception as e:
         logger.error(f"Service initialization failed: {e}")
         raise
@@ -122,7 +145,7 @@ app.register_blueprint(files_bp, url_prefix="/api/files")
 async def startup():
     """Initialize application on startup."""
     try:
-        app.db_pool = await init_services()
+        await init_services()
         logger.info("Application startup complete")
     except Exception as e:
         logger.error(f"Startup failed: {e}")
@@ -132,8 +155,16 @@ async def startup():
 async def shutdown():
     """Clean up resources on shutdown."""
     try:
-        if hasattr(app, 'db_pool'):
-            await app.db_pool.close()
+        # Close database pools
+        if hasattr(app, 'metadata_pool'):
+            await app.metadata_pool.close()
+        if hasattr(app, 'vector_pool'):
+            await app.vector_pool.close()
+            
+        # Clean up storage manager resources
+        if hasattr(app, 'storage_manager'):
+            await app.storage_manager.cleanup()
+            
         logger.info("Application shutdown complete")
     except Exception as e:
         logger.error(f"Shutdown error: {e}")

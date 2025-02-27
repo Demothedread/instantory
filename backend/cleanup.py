@@ -19,12 +19,21 @@ from PIL import Image
 from quart import Quart, jsonify, request, send_file, make_response
 from .config.security import CORSConfig, get_security_config
 from .config.logging import log_config
+from .config.database import (
+    get_metadata_pool,
+    get_vector_pool,
+    DatabaseConfig,
+    DatabaseType
+)
 
 # Get logger from config
 logger = log_config.get_logger(__name__)
 
 # Get security config
 security_config = get_security_config()
+
+# Get database config
+db_config = DatabaseConfig()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -111,24 +120,11 @@ async def get_db_pool():
     """Create and manage PostgreSQL connection pool."""
     pool = None
     try:
-        database_url = os.getenv('DATABASE_URL')
-        if not database_url:
-            raise ValueError("DATABASE_URL environment variable is required")
-        url = urlparse.urlparse(database_url)
-        pool = await asyncpg.create_pool(
-            user=url.username,
-            password=url.password,
-            database=url.path[1:],
-            host=url.hostname,
-            port=url.port,
-            ssl='require',
-            min_size=1,
-            max_size=10
-        )
+        pool = await get_metadata_pool()
         yield pool
     finally:
-        if pool:
-            await pool.close()
+        # Don't close the pool here as it's managed by DatabaseConfig
+        pass
 
 client = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
@@ -157,12 +153,21 @@ async def add_cors_headers(response):
 
 @app.before_serving
 async def startup():
+    """Initialize application on startup."""
     try:
+        # Initialize metadata database
         async with get_db_pool() as pool:
-            await    (pool)
-        logger.info("Application initialized successfully")
+            async with pool.acquire() as conn:
+                await conn.execute('SELECT 1')
+        
+        # Initialize vector database
+        async with await get_vector_pool() as pool:
+            async with pool.acquire() as conn:
+                await conn.execute('SELECT 1')
+                
+        logger.info("Database connections initialized successfully")
     except Exception as e:
-        logger.error(f"Startup failed: {e}")
+        logger.error(f"Database initialization failed: {e}")
         raise
 
 
