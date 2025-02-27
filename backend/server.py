@@ -10,21 +10,22 @@ from openai import AsyncOpenAI
 from quart_cors import cors
 
 # Task management
-from .cleanup import task_manager, setup_task_cleanup
+from cleanup import task_manager, setup_task_cleanup
 
 # Local imports
-from .config.logging import log_config
-from .config.database import (
+from config.logging import log_config
+from config.database import (
     get_metadata_pool,
     get_vector_pool,
 )
-from .middleware import setup_middleware
-from .services.processor import create_processor_factory
-from .services.storage import storage_manager
-from .routes.auth_routes import auth_bp
-from .routes.inventory import inventory_bp
-from .routes.documents import documents_bp
-from .routes.files import files_bp
+from middleware import setup_middleware
+from services.processor import create_processor_factory
+from services.storage import storage_manager
+from routes.auth_routes import auth_bp
+from routes.inventory import inventory_bp
+from routes.documents import documents_bp
+from routes.files import files_bp
+from hypercorn.config import Config
 
 # Load environment variables
 load_dotenv()
@@ -46,12 +47,17 @@ app = Quart(__name__)
 # Enable CORS
 app = cors(app, allow_origin="*")
 
-# Get port from environment (required by Render, defaults to 10000 for local development)
+# Get port from environment (required by Render)
+port = os.getenv("PORT")
+if not port:
+    logger.error("PORT environment variable is not set.")
+    raise RuntimeError("PORT environment variable is required.")
+
 try:
-    port = int(os.getenv("PORT", "10000"))
+    port = int(port)
     logger.info(f"Using port {port}")
 except ValueError as e:
-    logger.error(f"Invalid PORT value: {os.getenv('PORT')}")
+    logger.error(f"Invalid PORT value: {port}")
     raise RuntimeError(f"Invalid PORT environment variable: {e}")
 
 # Set testing mode if environment variable is set
@@ -200,7 +206,7 @@ if __name__ == "__main__":
     if os.getenv('ENVIRONMENT') == 'production':
         # Use hypercorn in production (render.com)
         import hypercorn.asyncio
-        config = hypercorn.Config()
+        config = Config()
         config.bind = [f"0.0.0.0:{port}"]
         config.use_reloader = False
         config.workers = int(os.getenv('WORKERS', '1'))

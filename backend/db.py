@@ -6,7 +6,7 @@ from pathlib import Path
 
 from quart import Blueprint, request, jsonify, send_file
 
-from .cleanup import get_db_pool
+from cleanup import get_db_pool
 
 logger = logging.getLogger(__name__)
 
