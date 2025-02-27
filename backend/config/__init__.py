@@ -1,13 +1,21 @@
 """Configuration module for the backend application."""
 
-from .database import get_db_pool
+from .database import (
+    get_metadata_pool,
+    get_vector_pool,
+    DatabaseConfig,
+    DatabaseType
+)
 from .security import get_security_config
-from .storage import get_storage_config
+from .storage import storage_manager
 from .logging import log_config
 
 __all__ = [
-    'get_db_pool',
+    'get_metadata_pool',
+    'get_vector_pool',
+    'DatabaseConfig',
+    'DatabaseType',
     'get_security_config',
-    'get_storage_config',
+    'storage_manager',
     'log_config'
 ]

@@ -13,14 +13,15 @@ from quart_cors import cors
 from cleanup import task_manager, setup_task_cleanup
 
 # Local imports
-from config.logging import log_config
-from config.database import (
+from config import (
+    log_config,
     get_metadata_pool,
     get_vector_pool,
+    DatabaseConfig,
+    storage_manager
 )
 from middleware import setup_middleware
 from services.processor import create_processor_factory
-from services.storage import storage_manager
 from routes.auth_routes import auth_bp
 from routes.inventory import inventory_bp
 from routes.documents import documents_bp
