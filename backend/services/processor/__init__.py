@@ -3,10 +3,10 @@ from typing import Dict, Any, Optional
 import asyncpg
 from openai import AsyncOpenAI
 
-from .base_processor import BaseProcessor, ProcessingStatus
-from .document_processor import DocumentProcessor
-from .image_processor import ImageProcessor
-from .batch_processor import BatchProcessor, BatchFiles, BatchStatus
+from base_processor import BaseProcessor, ProcessingStatus
+from document_processor import DocumentProcessor
+from image_processor import ImageProcessor
+from batch_processor import BatchProcessor, BatchFiles, BatchStatus
 
 class ProcessorFactory:
     """Factory for creating processor instances."""

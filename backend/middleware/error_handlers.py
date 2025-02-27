@@ -7,7 +7,7 @@ from werkzeug.exceptions import HTTPException
 import asyncpg.exceptions
 import json
 
-from ..config.logging import log_config
+from .config.logging import log_config
 
 logger = log_config.get_logger(__name__)
 

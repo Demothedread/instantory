@@ -1,6 +1,6 @@
 """Service components for the backend application."""
 
-from .processor import (
+from processor import (
     BaseProcessor,
     ProcessingStatus,
     DocumentProcessor,

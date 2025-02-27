@@ -3,8 +3,8 @@ import logging
 from typing import Callable, Awaitable, Dict, Any
 from quart import Quart, Request, Response, make_response, request
 
-from ..config.security import CORSConfig, get_security_config
-from ..config.logging import log_config
+from .config.security import CORSConfig, get_security_config
+from .config.logging import log_config
 
 logger = log_config.get_logger(__name__)
 security = get_security_config()
