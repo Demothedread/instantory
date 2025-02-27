@@ -1,20 +1,22 @@
 # Core imports
 import os
+import asyncio
 from pathlib import Path
 from dotenv import load_dotenv
 
 # Third party imports
-from quart import Quart
+from quart import Quart, jsonify
 from openai import AsyncOpenAI
 from quart_cors import cors
+
+# Task management
+from .cleanup import task_manager, setup_task_cleanup
 
 # Local imports
 from .config.logging import log_config
 from .config.database import (
     get_metadata_pool,
     get_vector_pool,
-    DatabaseConfig,
-    DatabaseType
 )
 from .middleware import setup_middleware
 from .services.processor import create_processor_factory
@@ -140,12 +142,27 @@ app.register_blueprint(inventory_bp, url_prefix="/api/inventory")
 app.register_blueprint(documents_bp, url_prefix="/api/documents")
 app.register_blueprint(files_bp, url_prefix="/api/files")
 
+# Task status route
+@app.route('/api/tasks/<task_id>', methods=['GET'])
+async def get_task_status(task_id: str):
+    """Get the status of a background task."""
+    task = task_manager.get_task(task_id)
+    if not task:
+        return jsonify({'error': 'Task not found'}), 404
+    return jsonify(task)
+
 # Initialize application
 @app.before_serving
 async def startup():
     """Initialize application on startup."""
     try:
+        # Initialize services
         await init_services()
+        
+        # Start task cleanup loop
+        asyncio.create_task(setup_task_cleanup())
+        logger.info("Task cleanup loop started")
+        
         logger.info("Application startup complete")
     except Exception as e:
         logger.error(f"Startup failed: {e}")
@@ -169,12 +186,30 @@ async def shutdown():
     except Exception as e:
         logger.error(f"Shutdown error: {e}")
     
+# Configure hypercorn for production
+if os.getenv('ENVIRONMENT') == 'production':
+    # Production settings
+    app.config.update({
+        'PROPAGATE_EXCEPTIONS': True,
+        'PREFERRED_URL_SCHEME': 'https'
+    })
+
 # Start the server
 if __name__ == "__main__":
     logger.info("Starting server")
-    app.run(
-        host="0.0.0.0",
-        port=port,
-        debug=os.getenv('DEBUG', 'false').lower() == 'true',
-        use_reloader=True
-    )
+    if os.getenv('ENVIRONMENT') == 'production':
+        # Use hypercorn in production (render.com)
+        import hypercorn.asyncio
+        config = hypercorn.Config()
+        config.bind = [f"0.0.0.0:{port}"]
+        config.use_reloader = False
+        config.workers = int(os.getenv('WORKERS', '1'))
+        asyncio.run(hypercorn.asyncio.serve(app, config))
+    else:
+        # Development server
+        app.run(
+            host="0.0.0.0",
+            port=port,
+            debug=os.getenv('DEBUG', 'false').lower() == 'true',
+            use_reloader=False  # Disable reloader to prevent conflicts
+        )

@@ -113,77 +113,19 @@ class TaskManager:
         for task_id in expired_tasks:
             del self.tasks[task_id]
 
+# Export instances
 task_manager = TaskManager()
-
-@asynccontextmanager
-async def get_db_pool():
-    """Create and manage PostgreSQL connection pool."""
-    pool = None
-    try:
-        pool = await get_metadata_pool()
-        yield pool
-    finally:
-        # Don't close the pool here as it's managed by DatabaseConfig
-        pass
-
 client = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-# Initialize Quart app
-app = Quart(__name__)
+async def setup_task_cleanup():
+    """Periodic cleanup of expired tasks."""
+    while True:
+        await asyncio.sleep(3600)
+        task_manager.cleanup()
 
-# Configure CORS
-@app.before_request
-async def handle_preflight():
-    """Handle CORS preflight requests."""
-    if request.method == "OPTIONS":
-        response = await make_response()
-        origin = request.headers.get('Origin')
-        if CORSConfig.is_origin_allowed(origin):
-            response.headers.update(CORSConfig.get_cors_headers(origin))
-        return response
-
-@app.after_request
-async def add_cors_headers(response):
-    """Add CORS and security headers to all responses."""
-    origin = request.headers.get('Origin')
-    if CORSConfig.is_origin_allowed(origin):
-        response.headers.update(CORSConfig.get_cors_headers(origin))
-    response.headers.update(security_config.get_security_headers())
-    return response
-
-@app.before_serving
-async def startup():
-    """Initialize application on startup."""
-    try:
-        # Initialize metadata database
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
-                await conn.execute('SELECT 1')
-        
-        # Initialize vector database
-        async with await get_vector_pool() as pool:
-            async with pool.acquire() as conn:
-                await conn.execute('SELECT 1')
-                
-        logger.info("Database connections initialized successfully")
-    except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
-        raise
-
-
-@app.route('/processing-status/<task_id>', methods=['GET'])
-async def processing_status(task_id: str):
+async def check_task_status(task_id: str) -> Optional[Dict[str, Any]]:
     """Check the status of a background task."""
     task = task_manager.get_task(task_id)
     if not task:
-        return jsonify({'error': 'Invalid task ID'}), 404
-    return jsonify(task)
-
-@app.before_serving
-async def setup_task_cleanup():
-    """Periodic cleanup of expired tasks."""
-    async def cleanup_loop():
-        while True:
-            await asyncio.sleep(3600)
-            task_manager.cleanup()
-    asyncio.create_task(cleanup_loop())
+        return None
+    return task
