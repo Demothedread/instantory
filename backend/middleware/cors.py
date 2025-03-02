@@ -1,78 +1,41 @@
-"""CORS middleware for handling cross-origin requests."""
-import logging
-from typing import Callable, Awaitable, Dict, Any
-from quart import Quart, Request, Response, make_response, request
+"""CORS middleware configuration."""
+from quart import Quart
+from typing import List, Dict, Any
 
-from ..config.security import CORSConfig, get_security_config
-from ..config.logging import log_config
+def setup_cors(app: Quart, enabled: bool = True, allow_credentials: bool = True) -> None:
+    """Configure CORS for the application."""
+    if not enabled:
+        return
 
-logger = log_config.get_logger(__name__)
-security = get_security_config()
-cors_config = CORSConfig()
-
-def setup_cors(app: Quart) -> None:
-    """Set up CORS handling for the application."""
-    
-    @app.before_request
-    async def handle_preflight() -> None:
-        """Handle CORS preflight requests."""
-        if request.method == "OPTIONS":
-            response = await make_response()
-            origin = request.headers.get('Origin')
-            
-            if cors_config.is_origin_allowed(origin):
-                response.headers.update(cors_config.get_cors_headers(origin))
-            return response
-    
     @app.after_request
-    async def add_cors_headers(response: Response) -> Response:
-        """Add CORS headers to all responses."""
+    async def add_cors_headers(response):
+        """Add CORS headers to responses."""
+        request = app.current_request
         origin = request.headers.get('Origin')
-        if cors_config.is_origin_allowed(origin):
-            response.headers.update(cors_config.get_cors_headers(origin))
-        response.headers.update(security.get_security_headers())
-        return response
-
-class CORSMiddleware:
-    """Middleware class for handling CORS."""
-    
-    def __init__(self, app: Quart):
-        self.app = app
-        setup_cors(app)
-        logger.info("CORS middleware initialized")
-    
-    async def __call__(self, scope: Dict[str, Any], receive: Callable[[], Awaitable[Dict]], send: Callable[[Dict], Awaitable[None]]) -> None:
-        """Process the request through CORS middleware."""
-        if scope["type"] != "http":
-            await self.app(scope, receive, send)
-            return
         
-        async def send_with_cors(message: Dict) -> None:
-            """Add CORS headers to response messages."""
-            if message["type"] == "http.response.start":
-                origin = None
-                for key, value in scope.get("headers", []):
-                    if key.decode("latin1").lower() == "origin":
-                        origin = value.decode("latin1")
-                        break
-                
-                if cors_config.is_origin_allowed(origin):
-                    headers = message.get("headers", [])
-                    cors_headers = cors_config.get_cors_headers(origin)
-                    security_headers = security.get_security_headers()
-                    
-                    # Add both CORS and security headers
-                    all_headers = {**cors_headers, **security_headers}
-                    
-                    # Convert dictionary headers to list of tuples
-                    for name, value in all_headers.items():
-                        headers.append(
-                            (name.lower().encode("latin1"),
-                             str(value).encode("latin1"))
-                        )
-                    
-                    message["headers"] = headers
+        # Get CORS settings from app config
+        cors_config = app.config.get('CORS_CONFIG', {})
+        allowed_origins = cors_config.get('allow_origin', ['http://localhost:3000'])
+        allowed_methods = cors_config.get('allow_methods', ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'])
+        allowed_headers = cors_config.get('allow_headers', [
+            'Content-Type',
+            'Authorization',
+            'Accept',
+            'Origin',
+            'X-Requested-With'
+        ])
+        
+        # Set CORS headers if origin is allowed
+        if origin and (origin in allowed_origins or '*' in allowed_origins):
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Methods'] = ','.join(allowed_methods)
+            response.headers['Access-Control-Allow-Headers'] = ','.join(allowed_headers)
             
-            await send(message)
+            if allow_credentials:
+                response.headers['Access-Control-Allow-Credentials'] = 'true'
+            
+            # Cache preflight response for browsers
+            if request.method == 'OPTIONS':
+                response.headers['Access-Control-Max-Age'] = '3600'
         
-        await self.app(scope, receive, send_with_cors)
+        return response

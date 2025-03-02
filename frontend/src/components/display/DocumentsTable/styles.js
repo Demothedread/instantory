@@ -1,6 +1,6 @@
 import { colors } from '../../theme/colors';
 import { css } from '@emotion/react';
-import { neoDecorocoBase } from '../../styles/components/neo-decoroco/base';
+import { neoDecorocoBase } from '../../styles/components/neo-decoroco/base'; // Verify this path
 
 const styles = {
   container: css`
