@@ -1,4 +1,4 @@
-import { colors } from '../../theme/colors';
+import { colors } from '../../styles/theme/colors'; //frontend/src/styles/theme/colors.js
 import { css } from '@emotion/react';
 import { neoDecorocoBase } from '../../styles/components/neo-decoroco/base'; // Verify this path
 
