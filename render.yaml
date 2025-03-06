@@ -20,7 +20,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: PORT
-        sync: false
+        sync: true
       - key: ENVIRONMENT
         value: "production"
       - key: HYPERCORN_WORKERS

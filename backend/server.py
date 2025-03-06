@@ -12,7 +12,7 @@ from hypercorn.asyncio import serve
 import asyncio
 
 # Task management
-from .cleanup import task_manager, setup_task_cleanup
+from backend.cleanup import task_manager, setup_task_cleanup
 
 # Local imports
 from .config import config as app_config
