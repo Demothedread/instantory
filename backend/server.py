@@ -1,13 +1,13 @@
 # Core imports
 import os
 from dotenv import load_dotenv
-# from server import app
+# This comment ensures app is properly exported for hypercorn
 
 # Third party imports
 from quart import Quart, jsonify
 from openai import AsyncOpenAI
 from quart_cors import cors
-from hypercorn.config import Config
+from hypercorn.config import Config as HypercornConfig
 from hypercorn.asyncio import serve
 import asyncio
 
@@ -15,43 +15,43 @@ import asyncio
 from .cleanup import task_manager, setup_task_cleanup
 
 # Local imports
-from config import config
-from middleware import setup_middleware
-from services.processor import create_processor_factory
-from routes.auth_routes import auth_bp
-from routes.inventory import inventory_bp
-from routes.documents import documents_bp
-from routes.files import files_bp
+from .config import config as app_config
+from .middleware import setup_middleware
+from .services.processor import create_processor_factory
+from .routes.auth_routes import auth_bp
+from .routes.inventory import inventory_bp
+from .routes.documents import documents_bp
+from .routes.files import files_bp
 
 # Load environment variables
 load_dotenv()
 
 # Initialize logging
-logger = config.logging.get_logger(__name__)
+logger = app_config.logging.get_logger(__name__)
 
 # Initialize OpenAI client
 try:
-    openai_client = AsyncOpenAI(api_key=config.settings.get_api_key('openai'))
+    openai_client = AsyncOpenAI(api_key=app_config.settings.get_api_key('openai'))
     logger.info("OpenAI client initialized")
 except Exception as e:
     logger.error(f"Failed to initialize OpenAI client: {e}")
-    raise RuntimeError("OpenAI client initialization failed")
+    raise RuntimeError("OpenAI client initialization failed") from e
 
 # Initialize Quart app
 app = Quart(__name__)
 
 # Configure app
 app.config.update({
-    'TESTING': config.settings.testing,
-    'MAX_CONTENT_LENGTH': config.settings.get_max_content_length(),
-    'PROJECT_ROOT': config.settings.paths.BASE_DIR,
-    'CORS_CONFIG': config.settings.get_cors_config()
+    'TESTING': app_config.settings.testing,
+    'MAX_CONTENT_LENGTH': app_config.settings.get_max_content_length(),
+    'PROJECT_ROOT': app_config.settings.paths.BASE_DIR,
+    'CORS_CONFIG': app_config.settings.get_cors_config()
 })
 
 # Enable CORS with configuration
-app = cors(app, **config.settings.get_cors_config())
+app = cors(app, **app_config.settings.get_cors_config())
 
-if config.settings.is_production():
+if app_config.settings.is_production():
     app.config.update({
         'PROPAGATE_EXCEPTIONS': True,
         'PREFERRED_URL_SCHEME': 'https'
@@ -62,22 +62,22 @@ async def init_services():
     """Initialize application services."""
     try:
         # Initialize configuration components
-        await config.initialize()
+        await app_config.initialize()
         
         # Store components in app context
-        app.db = config.db
-        app.storage = config.storage
+        app.db = app_config.db
+        app.storage = app_config.storage
         
         # Create processor factory
-        app.processor_factory = create_processor_factory(config.db, openai_client)
+        app.processor_factory = create_processor_factory(app_config.db, openai_client)
         
         logger.info("Application services initialized")
     except Exception as e:
         logger.error(f"Service initialization failed: {e}")
-        raise
+        raise RuntimeError(f"Service initialization failed: {str(e)}") from e
 
 # Set up middleware
-setup_middleware(app, config.settings)
+setup_middleware(app, app_config.settings)
 
 # Register blueprints
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -104,22 +104,22 @@ async def startup():
         logger.info("Application startup complete")
     except Exception as e:
         logger.error(f"Startup failed: {e}")
-        raise
+        raise RuntimeError(f"Startup failed: {str(e)}") from e
 
 @app.after_serving
 async def shutdown():
     """Clean up resources on shutdown."""
     try:
-        await config.cleanup()
+        await app_config.cleanup()
         logger.info("Application shutdown complete")
     except Exception as e:
         logger.error(f"Shutdown error: {e}")
+        # Not re-raising here as we're shutting down anyway
      
 # Start the server
-config = Config()
-config.bind = [f"0.0.0.0:{os.getenv('PORT', 8000)}"]
+hypercorn_config = HypercornConfig()
+hypercorn_config.bind = [f"0.0.0.0:{str(os.getenv('PORT', '8000'))}"]
 
 if __name__ == "__main__":
     logger.info("Starting server")
-    import asyncio
-    asyncio.run(serve(app,config))  
+    asyncio.run(serve(app, hypercorn_config))

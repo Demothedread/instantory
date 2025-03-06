@@ -11,7 +11,8 @@ services:
       chmod -R 755 /data
     startCommand: |
       . /opt/render/project/venv/bin/activate
-      ENVIRONMENT=production WORKERS=${HYPERCORN_WORKERS} python -m backend.server
+      export ENVIRONMENT=production PORT=$PORT
+      hypercorn backend:app --bind 0.0.0.0:$PORT --workers=${HYPERCORN_WORKERS} --worker-class=${HYPERCORN_WORKER_CLASS} --keep-alive=${HYPERCORN_KEEP_ALIVE} --graceful-timeout=${HYPERCORN_GRACEFUL_TIMEOUT}
     autoDeploy: true
     envVars:
       - key: PYTHONPATH
