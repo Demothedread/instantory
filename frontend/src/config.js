@@ -10,7 +10,8 @@ const initConfig = () => {
     },
     production: {
       apiUrl: 'https://instantory.onrender.com',
-      googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID
+      // Hardcoded fallback for production in case env variable isn't available
+      googleClientId: '700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com'
     }
   };
 
@@ -36,7 +37,7 @@ const config = {
     enabled: true,
     providers: [{
       configURL: 'https://accounts.google.com/.well-known/fedcm-configuration',
-      clientId: process.env.REACT_APP_GOOGLE_CLIENT_ID
+      clientId: process.env.REACT_APP_GOOGLE_CLIENT_ID || '700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com'
     }]
   },
   credentials: 'include',
