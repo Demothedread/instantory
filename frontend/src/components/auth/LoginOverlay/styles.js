@@ -1,6 +1,7 @@
 import { css } from '@emotion/react';
 
-export const styles = {
+// Convert to default export to match import in component files
+const styles = {
     overlay: css`
         position: fixed;
         top: 0;
@@ -94,3 +95,6 @@ export const styles = {
         font-weight: 500;
     `,
 };
+
+// Add default export to match import in component files
+export default styles;

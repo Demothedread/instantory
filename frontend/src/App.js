@@ -17,7 +17,8 @@ import { layout } from './styles/layouts/constraints';
 import { neoDecorocoBase } from './styles/components/neo-decoroco/base';
 import { typography } from './styles/theme/typography';
 
-const styles = {
+// Define styles object directly rather than importing from './styles'
+const appStyles = {
   appContainer: css`
     min-height: 100vh;
     max-height: ${layout.viewport.maxHeight};
@@ -215,7 +216,7 @@ function App() {
 
   if (loading) {
     return (
-      <div css={styles.loadingContainer}>
+      <div css={appStyles.loadingContainer}>
         <div className="loading-spinner"></div>
         <div className="loading-text">Loading...</div>
       </div>
@@ -223,20 +224,20 @@ function App() {
   }
 
   return (
-    <div css={styles.appContainer}>
+    <div css={appStyles.appContainer}>
       <Navigation />
-      <header css={styles.header}>
+      <header css={appStyles.header}>
         {user && <UserMenu user={user} />}
       </header>
 
-      <main css={styles.mainSection}>
-        {error && <div css={styles.errorMessage}>{error}</div>}
+      <main css={appStyles.mainSection}>
+        {error && <div css={appStyles.errorMessage}>{error}</div>}
 
         <LoginOverlay isVisible={!user} />
 
         {user && (
           <>
-            <div css={styles.uploadSection} className={!showRolodex ? 'expanded' : 'minimized'}>
+            <div css={appStyles.uploadSection} className={!showRolodex ? 'expanded' : 'minimized'}>
               <ProcessImagesButton 
                 onProcess={handleProcessFiles} 
                 isAuthenticated={true}
@@ -245,7 +246,7 @@ function App() {
             </div>
 
             {showRolodex && (
-              <div css={styles.contentDisplayWrapper}>
+              <div css={appStyles.contentDisplayWrapper}>
                 <RolodexToggle inventory={inventory} documents={documents} />
               </div>
             )}
