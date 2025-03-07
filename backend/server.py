@@ -13,13 +13,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Add the parent directory to sys.path to enable imports
+# Add the project root and backend directory to sys.path to enable imports
 current_dir = Path(__file__).resolve().parent
 parent_dir = current_dir.parent
+# Make project root first in path (higher priority)
 if str(parent_dir) not in sys.path:
     sys.path.insert(0, str(parent_dir))
+# Make backend dir second in path
 if str(current_dir) not in sys.path:
     sys.path.insert(0, str(current_dir))
+# Also add the absolute paths to make sure imports work in all execution contexts
+sys.path.insert(0, str(current_dir.absolute()))
+sys.path.insert(0, str(parent_dir.absolute()))
 
 # Load environment variables (.env file is optional)
 load_dotenv(verbose=True)

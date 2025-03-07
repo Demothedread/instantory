@@ -86,7 +86,7 @@ class DatabaseConfig:
         
         # If no configuration is available, log a warning and return None
         if not config:
-            logger.warning(f"No configuration available for {db_type.value} database")
+            logger.warning("No configuration available for %s database", db_type.value)
             return None
             
         try:

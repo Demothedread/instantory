@@ -1,59 +1,27 @@
 services:
-  # Python backend service
+  # Define the main web service
   - type: web
-    name: instantory
+    name: instantory-api
     runtime: python
-    buildCommand: |
-      python -m venv /opt/render/project/venv
-      . /opt/render/project/venv/bin/activate
-      pip install -r requirements.txt
-      mkdir -p /data/uploads /data/images/inventory /data/exports /data/documents /data/logs
-      chmod -R 755 /data
-    startCommand: |
-      . /opt/render/project/venv/bin/activate
-      export ENVIRONMENT=production PORT=$PORT
-      hypercorn backend:app --bind 0.0.0.0:$PORT --workers=${HYPERCORN_WORKERS} --worker-class=${HYPERCORN_WORKER_CLASS} --keep-alive=${HYPERCORN_KEEP_ALIVE} --graceful-timeout=${HYPERCORN_GRACEFUL_TIMEOUT}
-    autoDeploy: true
+    buildCommand: pip install -r requirements.txt
+    startCommand: PYTHONPATH=$PYTHONPATH:. python -m backend.server
     envVars:
-      - key: PYTHONPATH
-        value: "/opt/render/project/src"
       - key: PYTHON_VERSION
-        value: 3.11.0
-      - key: PORT
-        sync: true
-      - key: ENVIRONMENT
-        value: "production"
-      - key: HYPERCORN_WORKERS
-        value: "4"
-      - key: HYPERCORN_KEEP_ALIVE
-        value: "120"
-      - key: HYPERCORN_GRACEFUL_TIMEOUT
-        value: "120"
-      - key: HYPERCORN_WORKER_CLASS
-        value: "asyncio"
+        value: 3.9.0
       - key: DATABASE_URL
         fromDatabase:
-          name: instantory_sql
+          name: instantory-db
           property: connectionString
-      - key: NEON_DATABASE_URL
-        sync: false  # Set in dashboard
-      - key: CORS_ENABLED
-        value: "true"
-      - key: ALLOW_CREDENTIALS
-        value: "true"
-      - key: CORS_ORIGIN
-        value: "https://hocomnia.com,https://bartleby.vercel.app"
-      - key: PUBLIC_BACKEND_URL
-        value: https://instantory.onrender.com
-      - key: FRONTEND_URL
-        value: "https://hocomnia.com"
-      - key: BLOB_READ_WRITE_TOKEN
-        sync: false
       - key: OPENAI_API_KEY
         sync: false
-      - key: GOOGLE_CLIENT_ID
-        sync: false
-      - key: GOOGLE_CLIENT_SECRET
+      - key: STORAGE_TYPE
+        value: vercel_blob
+      - key: CORS_ORIGINS
+        value: https://instantory.vercel.app
+      - key: SECRET_KEY
+        generateValue: true
+      # Added required variables from .env.example
+      - key: BLOB_READ_WRITE_TOKEN
         sync: false
       - key: JWT_SECRET
         generateValue: true
@@ -61,77 +29,40 @@ services:
         generateValue: true
       - key: COOKIE_SECRET
         generateValue: true
-      - key: STORAGE_BACKEND
-        value: "vercel"
-      - key: DOCUMENT_STORAGE_PROVIDER
-        value: "s3"
-      - key: IMAGE_STORAGE_PROVIDER
-        value: "vercel"
-      - key: VECTOR_SEARCH_ENABLED
-        value: "true"
-      - key: VECTOR_DIMENSION
-        value: "1536"
-      - key: COMPRESSION_ENABLED
-        value: "true"
-      - key: COMPRESSION_LEVEL
-        value: "6"
-      - key: CACHE_STRATEGY
-        value: "stale-while-revalidate"
-      - key: CACHE_DURATION
-        value: "3600"
-      - key: RATE_LIMIT_ENABLED
-        value: "true"
-      - key: RATE_LIMIT_REQUESTS
-        value: "100"
-      - key: RATE_LIMIT_WINDOW
-        value: "60"
-      - key: MAX_UPLOAD_SIZE
-        value: "100000000"
-      - key: TEMP_STORAGE_TTL
-        value: "3600"
-      # AWS S3 Configuration
-      - key: AWS_ACCESS_KEY_ID
-        sync: false
-      - key: AWS_SECRET_ACCESS_KEY
-        sync: false
-      - key: AWS_S3_EXPRESS_BUCKET
-        sync: false
-      - key: AWS_REGION
-        value: "us-west-2"
-      - key: AWS_S3_ENDPOINT
-        value: "https://s3.us-west-2.amazonaws.com"
-    disk:
-      name: data
-      mountPath: /data
-      sizeGB: 10
-
-databases:
-  # Main PostgreSQL database on Render
-  - name: instantory_sql
-    databaseName: instantory_db
-    user: instantory_db_user
-    plan: free
-    ipAllowList: []  # Allow all IPs for development
-
-# Shared environment variables for all services
-envVarGroups:
-  - name: instantory-shared
-    envVars:
+      - key: PUBLIC_BACKEND_URL
+        value: https://instantory-api.onrender.com
+      - key: VERCEL_URL
+        value: https://instantory.vercel.app
+      # Data directories
       - key: DATA_DIR
-        value: /data
+        value: ./data
       - key: UPLOADS_DIR
-        value: /data/uploads
+        value: ./data/uploads
       - key: INVENTORY_IMAGES_DIR
-        value: /data/images/inventory
+        value: ./data/images/inventory
       - key: EXPORTS_DIR
-        value: /data/exports
+        value: ./data/exports
       - key: DOCUMENT_DIRECTORY
-        value: /data/documents
+        value: ./data/documents
+      # Logging
       - key: LOG_LEVEL
         value: info
-      - key: LOG_FILE
-        value: /data/logs/instantory.log
-      - key: CACHE_TTL
-        value: "300"
-      - key: MAX_CACHE_SIZE
-        value: "100"
+      
+  # Optional worker configuration - disabled by default
+  # Uncomment and customize if needed for background tasks
+  # - type: worker
+  #   name: instantory-worker
+  #   runtime: python
+  #   buildCommand: pip install -r requirements.txt
+  #   startCommand: cd backend && python worker.py
+  #   envVars:
+  #     - key: DATABASE_URL
+  #       fromDatabase:
+  #         name: instantory-db
+  #         property: connectionString
+
+# Define the database
+databases:
+  - name: instantory-db
+    plan: starter
+    ipAllowList: []
