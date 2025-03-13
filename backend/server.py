@@ -136,14 +136,46 @@ inventory_bp = blueprints['inventory']
 documents_bp = blueprints['documents']
 files_bp = blueprints['files']
 
+# Initialize storage-related variables
+try:
+    STORAGE_BACKEND = os.getenv('STORAGE_BACKEND', 'vercel').lower()
+    logger.info(f"Using storage backend: {STORAGE_BACKEND}")
+    
+    # Validate storage configuration
+    if STORAGE_BACKEND == 'vercel' and not os.getenv('BLOB_READ_WRITE_TOKEN'):
+        logger.warning("BLOB_READ_WRITE_TOKEN not found but Vercel storage backend is selected")
+    
+    if STORAGE_BACKEND == 's3' and not all([
+        os.getenv('AWS_ACCESS_KEY_ID'),
+        os.getenv('AWS_SECRET_ACCESS_KEY'),
+        os.getenv('AWS_S3_EXPRESS_BUCKET')
+    ]):
+        logger.warning("AWS S3 configuration incomplete but S3 storage backend is selected")
+except Exception as e:
+    logger.error(f"Error initializing storage settings: {e}")
+
+# Verify database connections (database.py will handle the actual connections)
+try:
+    if not os.getenv('DATABASE_URL'):
+        logger.warning("DATABASE_URL not set - main database connection may fail")
+    else:
+        logger.info("Main database configuration found (DATABASE_URL)")
+    
+    if os.getenv('NEON_DATABASE_URL'):
+        logger.info("Vector database configuration found (NEON_DATABASE_URL)")
+    else:
+        logger.info("Vector database not configured - vector search will be unavailable")
+except Exception as e:
+    logger.error(f"Error checking database settings: {e}")
+
 # Initialize OpenAI client with error handling
 try:
     openai_api_key = os.getenv('OPENAI_API_KEY')
     if not openai_api_key:
-        logger.warning("OPENAI_API_KEY not found in environment variables")
+        logger.warning("OPENAI_API_KEY not found in environment variables - vector operations will be limited")
     
     openai_client = AsyncOpenAI(api_key=openai_api_key)
-    logger.info("OpenAI client initialized")
+    logger.info("OpenAI client initialized successfully")
 except Exception as e:
     logger.error(f"Failed to initialize OpenAI client: {e}")
     # Allow the app to start without OpenAI initially

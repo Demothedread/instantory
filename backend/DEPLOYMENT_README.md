@@ -90,8 +90,8 @@ OPENAI_API_KEY=your_openai_key
 2. **Deploy on Render**:
    - Connect your GitHub repository to Render
    - Configure the environment variables
-   - Set the build command to `cd backend && npm install`
-   - Set the start command to `node backend/server.js`
+   - Set the build command to `pip install -r requirements.txt && cd backend && node scripts/init-databases.js --sync-only`
+   - Set the start command to `PYTHONPATH=$PYTHONPATH:. python -m backend.server`
 
 3. **Configure Frontend**:
    - In `.env.production` in your frontend directory, set:
