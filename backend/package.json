@@ -1,19 +1,24 @@
 {
-  "name": "backend",
+  "name": "init-database",
   "version": "1.0.0",
-  "description": "This guide covers the testing infrastructure for the Bartleby backend, including unit tests, integration tests, and deployment testing strategies.",
-  "main": "index.js",
-  "directories": {
-    "test": "tests"
-  },
+  "description": "Database initialization and connection setup script for Instantory",
+  "main": "init-databases.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node init-databases.js",
+    "sync": "node init-databases.js --sync-only"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.758.0"
-  }
+    "@aws-sdk/client-s3": "^3.450.0",
+    "@neondatabase/serverless": "^0.6.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "pg": "^8.11.3",
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "pseudø",
+  "license": "MIT"
 }
