@@ -12,6 +12,22 @@ export const AuthProvider = ({ children }) => {
     const [error, setError] = useState(null);
     const refreshTimerRef = useRef(null);
 
+    const clearSession = useCallback(() => {
+        setUser(null);
+        localStorage.removeItem(authConfig.sessionKey);
+        if (refreshTimerRef.current) {
+            clearInterval(refreshTimerRef.current);
+        }
+    }, []);
+    
+    const handleAuthError = useCallback((error) => {
+        console.error('Auth error:', error);
+        setError(error.response?.data?.message || 'Authentication failed');
+        if (error.response?.status === 401) {
+            clearSession();
+        }
+    }, [clearSession]);
+
     const verifySession = useCallback(async () => {
         try {
             setLoading(true);
@@ -57,22 +73,6 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         initializeAuth();
     }, [initializeAuth]);
-
-    const clearSession = useCallback(() => {
-        setUser(null);
-        localStorage.removeItem(authConfig.sessionKey);
-        if (refreshTimerRef.current) {
-            clearInterval(refreshTimerRef.current);
-        }
-    }, []);
-
-    const handleAuthError = useCallback((error) => {
-        console.error('Auth error:', error);
-        setError(error.response?.data?.message || 'Authentication failed');
-        if (error.response?.status === 401) {
-            clearSession();
-        }
-    }, [clearSession]);
 
     const refreshToken = useCallback(async () => {
         try {

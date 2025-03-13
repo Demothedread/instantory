@@ -11,7 +11,13 @@ class CORSConfig:
         cors_origin = os.getenv('CORS_ORIGIN', '')
         if cors_origin:
             return cors_origin.split(',')
-        return ['http://localhost:3000', 'http://localhost:5000']
+        return [
+            'http://localhost:3000',
+            'http://localhost:5000',
+            'https://vercel.live',
+            'https://hocomnia.com',
+            'https://instantory.vercel.app'
+        ]
     
     @staticmethod
     def get_headers() -> List[str]:

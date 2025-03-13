@@ -10,14 +10,14 @@ services:
         value: 3.9.0
       - key: DATABASE_URL
         fromDatabase:
-          name: instantory-db
+          name: instantory_db_mrp1
           property: connectionString
       - key: OPENAI_API_KEY
         sync: false
       - key: STORAGE_TYPE
         value: vercel_blob
       - key: CORS_ORIGINS
-        value: https://instantory.vercel.app
+        value: https://bartelby.vercel.app
       - key: SECRET_KEY
         generateValue: true
       # Added required variables from .env.example

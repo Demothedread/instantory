@@ -1,7 +1,8 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useState } from 'react';
 
 import AuthContext from '../../../contexts/auth';
 import { GoogleLogin } from '@react-oauth/google';
+import { css } from '@emotion/react';
 import styles from './styles';
 
 const LoginOverlay = ({ isVisible }) => {
@@ -43,18 +44,18 @@ const LoginOverlay = ({ isVisible }) => {
     if (!isVisible) return null;
 
     return (
-        <div css={styles.overlay}>
-            <div css={styles.panel}>
-                <h2 css={styles.title}>Welcome to Bartleby</h2>
+        <div css={css(styles.overlay)}>
+            <div css={css(styles.panel)}>
+                <h2 css={css(styles.title)}>Welcome to Instantory</h2>
 
                 {error && (
-                    <div css={styles.errorMessage} onClick={clearError}>
+                    <div css={css(styles.errorMessage)} onClick={clearError}>
                         <span>⚠️ {error}</span>
                     </div>
                 )}
 
-                <div css={styles.loginOptions}>
-                    <div css={styles.googleLoginWrapper}>
+                <div css={css(styles.loginOptions)}>
+                    <div css={css(styles.googleLoginWrapper)}>
                         <GoogleLogin
                             onSuccess={handleGoogleSuccess}
                             onError={(error) => console.error('Google Login Failed:', error)}
@@ -65,16 +66,16 @@ const LoginOverlay = ({ isVisible }) => {
                         />
                     </div>
 
-                    <div css={styles.divider}>
-                        <div css={styles.dividerLine} />
-                        <span css={styles.dividerText}>or</span>
-                        <div css={styles.dividerLine} />
+                    <div css={css(styles.divider)}>
+                        <div css={css(styles.dividerLine)} />
+                        <span css={css(styles.dividerText)}>or</span>
+                        <div css={css(styles.dividerLine)} />
                     </div>
 
-                    <form onSubmit={handleEmailLogin} css={styles.emailForm}>
+                    <form onSubmit={handleEmailLogin} css={css(styles.emailForm)}>
                         <input
                             type="email"
-                            css={styles.emailInput}
+                            css={css(styles.emailInput)}
                             placeholder="Enter your email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -83,7 +84,7 @@ const LoginOverlay = ({ isVisible }) => {
                         />
                         <button
                             type="submit"
-                            css={[styles.emailLoginButton, isLoading && styles.loading]}
+                            css={css(isLoading ? [styles.emailLoginButton, styles.loading] : styles.emailLoginButton)}
                             disabled={isLoading}
                         >
                             {isLoading ? 'Logging in...' : 'Continue with Email'}
@@ -91,8 +92,8 @@ const LoginOverlay = ({ isVisible }) => {
                     </form>
                 </div>
 
-                <div css={styles.footer}>
-                    <span css={styles.footerText}>Secure Authentication</span>
+                <div css={css(styles.footer)}>
+                    <span css={css(styles.footerText)}>Secure Authentication</span>
                 </div>
             </div>
         </div>

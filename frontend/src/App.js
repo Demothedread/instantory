@@ -205,8 +205,10 @@ function App() {
           originalPostMessage.apply(this, args);
         } catch (error) {
           console.error('MessagePort error:', error);
-          // Prevent the 'm' initialization error from breaking the app
-          if (!error.message.includes("Cannot access 'm' before initialization")) {
+          // Prevent initialization errors from breaking the app
+          // Handle both 'h' and 'm' variable initialization errors
+          if (!error.message.includes("Cannot access") || 
+              !error.message.includes("before initialization")) {
             throw error;
           }
         }
