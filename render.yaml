@@ -11,7 +11,7 @@ services:
       # Database configuration
       - key: DATABASE_URL
         fromDatabase:
-          name: instantory-db-mrp1
+          name: instantory_sql
           property: connectionString
       - key: NEON_DATABASE_URL
         sync: false  # Set this in the Render dashboard
@@ -71,10 +71,10 @@ services:
     startCommand: "PYTHONPATH=$PYTHONPATH:. python -m backend.scripts.setup_user_storage"
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.0
+        value: 3.11.0
       - key: DATABASE_URL
         fromDatabase:
-          name: instantory-sql
+          name: instantory_sql
           property: connectionString
       - key: NEON_DATABASE_URL
         sync: false
