@@ -94,8 +94,3 @@ services:
         value: "./data"
 
 # Define the database
-databases:
-  - name: instantory-sql
-    plan: free
-    ipAllowList: []  # Allow all IPs to access
-    connectionString: "DATABASE_URL"
