@@ -89,22 +89,46 @@ except ImportError:
     def create_processor_factory(db, client):
         return None
 
-# Import blueprints with fallbacks
-blueprints = {
-    'auth': None,
-    'inventory': None,
-    'documents': None,
-    'files': None
+# Blueprint module mapping (module_name: bp_variable)
+blueprint_modules = {
+    'auth': {'file': 'auth_routes', 'bp': 'auth_bp'},
+    'inventory': {'file': 'inventory', 'bp': 'inventory_bp'},
+    'documents': {'file': 'documents', 'bp': 'documents_bp'},
+    'files': {'file': 'files', 'bp': 'files_bp'}
 }
 
-for bp_name in blueprints.keys():
-    try:
-        module = __import__(f'routes.{bp_name}', fromlist=[f'{bp_name}_bp'])
-        blueprints[bp_name] = getattr(module, f'{bp_name}_bp')
-        logger.info(f"Loaded blueprint: {bp_name}")
-    except (ImportError, AttributeError) as e:
-        logger.warning(f"{bp_name} routes not available: {e}")
-        blueprints[bp_name] = Blueprint(bp_name, __name__)
+# Import blueprints with multiple fallback paths to handle different execution contexts
+blueprints = {}
+for key, config in blueprint_modules.items():
+    module_name = config['file']
+    bp_name = config['bp']
+    blueprints[key] = None
+    
+    # Try different import paths to handle both deployment and local development
+    import_paths = [
+        f'backend.routes.{module_name}',  # For when running as module (Render deployment)
+        f'routes.{module_name}',          # For local development
+    ]
+    
+    imported = False
+    for import_path in import_paths:
+        try:
+            module = __import__(import_path, fromlist=[bp_name])
+            blueprints[key] = getattr(module, bp_name)
+            logger.info(f"Loaded blueprint '{key}' from {import_path}")
+            imported = True
+            break
+        except (ImportError, AttributeError) as e:
+            # Use info level for first failure, debug for subsequent ones
+            if import_path == import_paths[0]:
+                logger.info(f"Primary import path failed for {key}: {e}")
+            else:
+                logger.debug(f"Alternative import attempt for {import_path}: {e}")
+    
+    # Create fallback blueprint if all import attempts failed
+    if not imported:
+        logger.warning(f"{key} routes not available after all import attempts")
+        blueprints[key] = Blueprint(key, __name__)
 
 # Get route blueprints
 auth_bp = blueprints['auth']

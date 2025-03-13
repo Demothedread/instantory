@@ -1,68 +1,101 @@
 services:
   # Define the main web service
   - type: web
-    name: instantory-api
+    name: instantory
     runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: PYTHONPATH=$PYTHONPATH:. python -m backend.server
+    buildCommand: pip install -r requirements.txt && cd backend && node scripts/init-databases.js --sync-only
+    startCommand: "PYTHONPATH=$PYTHONPATH:. python -m backend.server"
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.0
+        value: 3.11.0
+      # Database configuration
       - key: DATABASE_URL
         fromDatabase:
-          name: instantory_db_mrp1
+          name: instantory-db-mrp1
           property: connectionString
+      - key: NEON_DATABASE_URL
+        sync: false  # Set this in the Render dashboard
+      # OpenAI configuration for vector embeddings
       - key: OPENAI_API_KEY
         sync: false
-      - key: STORAGE_TYPE
-        value: vercel_blob
-      - key: CORS_ORIGINS
-        value: https://bartelby.vercel.app
-      - key: SECRET_KEY
-        generateValue: true
-      # Added required variables from .env.example
+      # Storage configuration
+      - key: STORAGE_BACKEND
+        value: "vercel"
       - key: BLOB_READ_WRITE_TOKEN
         sync: false
+      # AWS S3 configuration (optional)
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_EXPRESS_BUCKET
+        sync: false
+      - key: AWS_REGION
+        value: "us-west-2"
+      # CORS and security
+      - key: CORS_ORIGINS
+        value: "https://instantory.vercel.app, https://bartelby.vercel.app, https://hocomnia.com"
       - key: JWT_SECRET
         generateValue: true
       - key: SESSION_SECRET
         generateValue: true
       - key: COOKIE_SECRET
         generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      # Paths and URLs
       - key: PUBLIC_BACKEND_URL
-        value: https://instantory-api.onrender.com
+        value: "https://instantory-api.onrender.com"
       - key: VERCEL_URL
-        value: https://instantory.vercel.app
+        value: "https://instantory.vercel.app"
       # Data directories
       - key: DATA_DIR
-        value: ./data
+        value: "./data"
       - key: UPLOADS_DIR
-        value: ./data/uploads
+        value: "./data/uploads"
       - key: INVENTORY_IMAGES_DIR
-        value: ./data/images/inventory
+        value: "./data/images/inventory"
       - key: EXPORTS_DIR
-        value: ./data/exports
+        value: "./data/exports"
       - key: DOCUMENT_DIRECTORY
-        value: ./data/documents
+        value: "./data/documents"
       # Logging
       - key: LOG_LEVEL
-        value: info
+        value: "info"
       
-  # Optional worker configuration - disabled by default
-  # Uncomment and customize if needed for background tasks
-  # - type: worker
-  #   name: instantory-worker
-  #   runtime: python
-  #   buildCommand: pip install -r requirements.txt
-  #   startCommand: cd backend && python worker.py
-  #   envVars:
-  #     - key: DATABASE_URL
-  #       fromDatabase:
-  #         name: instantory-db
-  #         property: connectionString
+  # Background worker for processing tasks
+  - type: worker
+    name: instantory-worker
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: "PYTHONPATH=$PYTHONPATH:. python -m backend.scripts.setup_user_storage"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: instantory-db
+          property: connectionString
+      - key: NEON_DATABASE_URL
+        sync: false
+      - key: STORAGE_BACKEND
+        value: "vercel"
+      - key: BLOB_READ_WRITE_TOKEN
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_EXPRESS_BUCKET
+        sync: false
+      - key: AWS_REGION
+        value: "us-west-2"
+      - key: DATA_DIR
+        value: "./data"
 
 # Define the database
 databases:
-  - name: instantory-db
-    plan: starter
-    ipAllowList: []
+  - name: instantory-sql
+    plan: free
+    ipAllowList: []  # Allow all IPs to access
+    connectionString: "DATABASE_URL"
