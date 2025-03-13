@@ -262,7 +262,8 @@ function App() {
   );
 }
 
-// Wrap the app with necessary providers
+// Wrap the app with necessary providers //
+
 function AppWrapper() {
   return (
     <Router>

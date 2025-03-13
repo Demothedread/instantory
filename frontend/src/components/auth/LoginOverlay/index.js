@@ -6,7 +6,7 @@ import { css } from '@emotion/react';
 import styles from './styles';
 
 const LoginOverlay = ({ isVisible }) => {
-    const { handleLogin, handleGoogleLogin, error, clearError } = useContext(AuthContext);
+    const { handleLogin, handleGoogleLogin, error, clearError, setUser } = useContext(AuthContext);
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -19,6 +19,7 @@ const LoginOverlay = ({ isVisible }) => {
         }
         setIsLoading(true);
         try {
+            // Use the context's handleGoogleLogin instead of direct fetch
             await handleGoogleLogin(credential);
         } catch (error) {
             console.error('Google login failed:', error);

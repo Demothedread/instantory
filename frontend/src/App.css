@@ -275,7 +275,6 @@ body::before {
 .top {
   font-family: "hotel-open", monospace;
   font-size: 4rem;
-  overlay: screen;
   letter-spacing: 0.3em;
   color: radial-gradient(circle, rgb(82, 203, 195) 0%, rgba(178, 142, 255, 0.78) 50%, rgba(0, 255, 251, 0.754) 100%);
   -webkit-text-stroke: .8px rgb(255, 255, 255);

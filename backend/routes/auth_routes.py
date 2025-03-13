@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from google.oauth2 import id_token
 from google.auth.transport import requests
 import logging
-from backend.db import get_db_pool
+from backend.config.database import get_db_pool
 
 logger = logging.getLogger(__name__)
 
@@ -62,34 +62,91 @@ async def get_user_by_email(email: str):
     async with get_db_pool() as pool:
         async with pool.acquire() as conn:
             return await conn.fetchrow(
-                "SELECT id, email, password_hash, auth_provider FROM users WHERE email = $1", email
+                "SELECT id, email, password_hash, auth_provider, is_verified FROM users WHERE email = $1", email
             )
 
 
-async def create_user(email: str, name: str, password_hash: str = None, auth_provider: str = "email", google_id: str = None):
+async def create_user(email: str, name: str, password_hash: str = None, auth_provider: str = "email", google_id: str = None, is_verified: bool = False):
     """Create a new user in the database."""
     async with get_db_pool() as pool:
         async with pool.acquire() as conn:
             return await conn.fetchrow(
                 """
-                INSERT INTO users (email, name, password_hash, auth_provider, google_id)
-                VALUES ($1, $2, $3, $4, $5)
-                RETURNING id, email, name, auth_provider
+                INSERT INTO users (email, name, password_hash, auth_provider, google_id, is_verified)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING id, email, name, auth_provider, is_verified
                 """,
-                email, name, password_hash, auth_provider, google_id
+                email, name, password_hash, auth_provider, google_id, is_verified
             )
 
 
+async def create_user_storage(user_id: int):
+    """Create storage entries for a new user."""
+    # Determine storage backend from environment
+    storage_backend = os.getenv('STORAGE_BACKEND', 'generic').lower()
+    
+    # Generate unique path for user storage
+    storage_path_base = f"user_{user_id}_{os.urandom(4).hex()}"
+    
+    if storage_backend == 'vercel':
+        storage_path = f"vercel/{storage_path_base}"
+    elif storage_backend == 's3':
+        storage_path = f"s3/{storage_path_base}"
+    else:
+        storage_path = f"local/{storage_path_base}"
+    
+    async with get_db_pool() as pool:
+        async with pool.acquire() as conn:
+            # Insert storage configuration
+            await conn.execute("""
+                INSERT INTO user_storage (user_id, storage_type, storage_path)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (user_id, storage_type) DO NOTHING
+            """, user_id, storage_backend, storage_path)
+            
+    return storage_path
+
+async def get_user_storage(user_id: int):
+    """Get storage information for a user."""
+    storage_backend = os.getenv('STORAGE_BACKEND', 'generic').lower()
+    
+    async with get_db_pool() as pool:
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow("""
+                SELECT storage_path 
+                FROM user_storage 
+                WHERE user_id = $1 AND storage_type = $2
+            """, user_id, storage_backend)
+            
+            if row:
+                return {
+                    "storage_type": storage_backend,
+                    "storage_path": row['storage_path']
+                }
+            return None
+
 async def get_user_data(user_id: int):
-    """Retrieve a user's inventory and documents."""
+    """Retrieve a user's inventory, documents, and storage information."""
     async with get_db_pool() as pool:
         async with pool.acquire() as conn:
             inventory = await conn.fetch("SELECT * FROM user_inventory WHERE user_id = $1", user_id)
             documents = await conn.fetch("SELECT * FROM user_documents WHERE user_id = $1", user_id)
-
+            
+            # Get storage info
+            storage_info = await get_user_storage(user_id)
+            if not storage_info:
+                # Create storage if it doesn't exist
+                storage_path = await create_user_storage(user_id)
+                storage_backend = os.getenv('STORAGE_BACKEND', 'generic').lower()
+                storage_info = {
+                    "storage_type": storage_backend,
+                    "storage_path": storage_path
+                }
+            
             return {
                 "inventory": [dict(item) for item in inventory],
                 "documents": [dict(doc) for doc in documents],
+                "storage": storage_info
             }
 
 
@@ -161,7 +218,7 @@ async def login():
         return jsonify({"error": "Login failed", "details": str(e)}), 500
 
 
-@auth_bp.route('/google-login', methods=['POST'])
+@auth_bp.route('/google', methods=['POST'])
 async def google_login():
     """Authenticate a user via Google OAuth."""
     try:
@@ -183,7 +240,7 @@ async def google_login():
         # Retrieve or create user
         user = await get_user_by_email(email)
         if not user:
-            user = await create_user(email, name, auth_provider="google", google_id=google_id)
+            user = await create_user(email, name, auth_provider="google", google_id=google_id, is_verified=True)
 
         access_token = await create_token({"id": user['id'], "email": user['email']}, "access")
         refresh_token = await create_token({"user_id": user['id']}, "refresh")
@@ -191,6 +248,7 @@ async def google_login():
         response = jsonify({
             "message": "Google login successful",
             "user": dict(user),
+            "is_verified": user.get("is_verified", False),
             "data": await get_user_data(user['id'])
         })
         response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Strict')
@@ -255,12 +313,13 @@ async def check_session():
 
         async with get_db_pool() as pool:
             async with pool.acquire() as conn:
-                user = await conn.fetchrow("SELECT id, email FROM users WHERE id = $1", user_id)
+                user = await conn.fetchrow("SELECT id, email, is_verified FROM users WHERE id = $1", user_id)
 
         if user:
             return jsonify({
                 "authenticated": True,
                 "user": dict(user),
+                "is_verified": user.get("is_verified", False),
                 "data": await get_user_data(user_id)
             })
 

@@ -91,7 +91,8 @@ class DatabaseConfig:
             
         try:
             # Configure SSL based on environment
-            ssl = 'require' if not os.getenv('TESTING') else None
+            env = os.getenv('ENVIRONMENT', 'production').lower()
+            ssl = 'require' if env in ['production', 'staging'] else None
             
             # Create the connection pool
             self._pools[db_type] = await asyncpg.create_pool(
@@ -109,8 +110,6 @@ class DatabaseConfig:
             return self._pools[db_type]
         except Exception as e:
             logger.error(f"Failed to create {db_type.value} database pool: {e}")
-            # Return None instead of raising to allow the application to continue
-            # if one database is unavailable but another is available
             return None
 
     async def close_pools(self) -> None:
@@ -129,7 +128,11 @@ async def get_db_pool() -> Optional[asyncpg.Pool]:
     
     Returns None if not available. Check the return value before use.
     """
-    return await db_config.get_pool(DatabaseType.METADATA)
+    pool = await db_config.get_pool(DatabaseType.METADATA)
+    if pool is None:
+        logger.error("Failed to retrieve metadata database pool. Ensure the configuration is correct.")
+        raise RuntimeError("Metadata database pool is not available.")
+    return pool
 
 async def get_vector_pool() -> Optional[asyncpg.Pool]:
     """Get the vector database connection pool.
