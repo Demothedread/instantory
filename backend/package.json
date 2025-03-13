@@ -2,10 +2,10 @@
   "name": "init-database",
   "version": "1.0.0",
   "description": "Database initialization and connection setup script for Instantory",
-  "main": "init-databases.js",
+  "main": "scripts/init-databases.js",
   "scripts": {
-    "start": "node init-databases.js",
-    "sync": "node init-databases.js --sync-only"
+    "start": "node scripts/init-databases.js",
+    "sync": "node scripts/init-databases.js --sync-only"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.450.0",
