@@ -1,13 +1,15 @@
 services:
-  # Define the main web service
+  # Define the main web service (Python application)
   - type: web
     name: instantory
     runtime: python
-    buildCommand: pip install -r requirements.txt && cd backend && npm install 
-    startCommand: "PYTHONPATH=$PYTHONPATH:. python -m backend.server && npm run start"
+    buildCommand: pip install -r requirements.txt && cd backend && npm install --production
+    startCommand: "PYTHONPATH=$PYTHONPATH:. python -m backend.server"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: NODE_VERSION
+        value: 18.x
       # Database configuration
       - key: DATABASE_URL
         fromDatabase:
@@ -62,6 +64,34 @@ services:
       # Logging
       - key: LOG_LEVEL
         value: "info"
+  
+  # Database initialization service
+  - type: web
+    name: instantory-db-init
+    runtime: node
+    buildCommand: cd backend && npm install --production
+    startCommand: cd backend && npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x
+      - key: DATABASE_URL
+        fromDatabase:
+          name: instantory_sql
+          property: connectionString
+      - key: NEON_DATABASE_URL
+        sync: false
+      - key: STORAGE_BACKEND
+        value: "vercel"
+      - key: BLOB_READ_WRITE_TOKEN
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_S3_EXPRESS_BUCKET
+        sync: false
+      - key: AWS_REGION
+        value: "us-west-2"
       
   # Background worker for processing tasks
   - type: worker
@@ -94,3 +124,6 @@ services:
         value: "./data"
 
 # Define the database
+databases:
+  - name: instantory_sql
+    plan: starter
