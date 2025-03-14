@@ -38,7 +38,7 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "https://hocomnia.com,https://bartleby.vercel.app" },
+        { "key": "Access-Control-Allow-Origin", "value": "https://hocomnia.com, https://bartleby.vercel.app" },
         { "key": "Access-Control-Allow-Methods", "value": "GET,PUT,POST,DELETE,OPTIONS,PATCH" },
         { "key": "Access-Control-Allow-Headers", "value": "Content-Type,Authorization,Accept,Origin,X-Requested-With,google-oauth-token" },
         { "key": "Access-Control-Allow-Credentials", "value": "true" },
@@ -58,7 +58,7 @@
     "REACT_APP_STORAGE_PROVIDER": "vercel",
     "REACT_APP_MAX_UPLOAD_SIZE": "100000000",
     "REACT_APP_SUPPORTED_IMAGE_TYPES": "image/jpeg,image/png,image/gif,image/webp",
-    "REACT_APP_SUPPORTED_DOC_TYPES": "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain",
+    "REACT_APP_SUPPORTED_DOC_TYPES": "application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document, text/plain",
     "BLOB_READ_WRITE_TOKEN": "vercel_blob_rw_s5xuxXH6T3fDx9Oz_AdnmR7yE2uQjnt1cWInfUzpXQdtrpS"
   }
 }
