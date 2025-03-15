@@ -1,17 +1,16 @@
 const environment = process.env.NODE_ENV || 'production';
+const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com';
 
 // Initialize configuration with defaults
 const initConfig = () => {
   // Default configuration values
   const defaultConfig = {
     development: {
-      apiUrl: 'http://localhost:5000',
-      googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID
+      googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID || googleClientId
     },
     production: {
       apiUrl: 'https://instantory.onrender.com',
-      // Hardcoded fallback for production in case env variable isn't available
-      googleClientId: '700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com'
+      googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID || googleClientId
     }
   };
 
@@ -36,8 +35,7 @@ const config = {
   fedcm: {
     enabled: true,
     providers: [{
-      configURL: 'https://accounts.google.com/.well-known/fedcm-configuration',
-      clientId: process.env.REACT_APP_GOOGLE_CLIENT_ID || '700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com'
+      clientId: process.env.REACT_APP_GOOGLE_CLIENT_ID || googleClientId
     }]
   },
   credentials: 'include',
