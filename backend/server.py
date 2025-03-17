@@ -185,9 +185,12 @@ except Exception as e:
 app = Quart(__name__)
 
 # Function to recreate the CORS app
-def apply_cors(app_instance, origins):
+ddef apply_cors(app_instance, origins):
     """Apply CORS configuration to the app."""
-    return cors(app_instance, allow_origin=origins)
+    if len(origins) == 1 and origins[0] == '*':
+        return cors(app_instance, allow_origin='*')
+    else:
+        return cors(app_instance, allow_origin=origins)
 
 # Set default configuration
 default_config = {
