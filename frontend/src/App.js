@@ -69,9 +69,11 @@ function App() {
   useEffect(() => {
     if (user && !hasInitializedRef.current) {
       fetchData();
+      setShowRolodex(true);
       hasInitializedRef.current = true;
     } else if (!user) {
       hasInitializedRef.current = false;
+      setShowRolodex(false);
     }
   }, [user, fetchData]);
 
