@@ -96,7 +96,6 @@ blueprint_modules = {
     'documents': {'file': 'documents', 'bp': 'documents_bp'},
     'files': {'file': 'files', 'bp': 'files_bp'}
 }
-
 # Import blueprints with multiple fallback paths to handle different execution contexts
 blueprints = {}
 for key, config in blueprint_modules.items():
@@ -185,7 +184,7 @@ except Exception as e:
 app = Quart(__name__)
 
 # Function to recreate the CORS app
-ddef apply_cors(app_instance, origins):
+def apply_cors(app_instance, origins):
     """Apply CORS configuration to the app."""
     if len(origins) == 1 and origins[0] == '*':
         return cors(app_instance, allow_origin='*')

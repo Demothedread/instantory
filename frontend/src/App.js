@@ -4,7 +4,7 @@ import React, { useCallback, useContext, useEffect, useRef, useState } from 'rea
 import HowToUseOverlay from './components/common/HowToUseOverlay';
 import LoginOverlay from './components/auth/LoginOverlay';
 import Navigation from './components/common/Navigation';
-import RolodexToggle from './components/common/RolodexToggle';
+import RolodexToggle from './components/display/RolodexToggle';
 import { BrowserRouter as Router } from 'react-router-dom';
 import SpeedInsights from './components/common/SpeedInsights';
 import UserMenu from './components/common/UserMenu';
