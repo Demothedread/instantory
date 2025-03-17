@@ -1,6 +1,5 @@
 const environment = process.env.NODE_ENV || 'production';
 const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com';
-
 // Initialize configuration with defaults
 const initConfig = () => {
   // Default configuration values

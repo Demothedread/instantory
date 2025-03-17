@@ -46,7 +46,7 @@ const useImagePreload = (imageUrls, options = {}) => {
     };
 
     preloadBatch();
-  }, [imageUrls, batchSize, enabled, preloadThreshold]);
+  }, [imageUrls, batchSize, enabled, preloadThreshold, loadedImages]);
 
   const isImageLoaded = (url) => {
     return loadedImages.has(url);

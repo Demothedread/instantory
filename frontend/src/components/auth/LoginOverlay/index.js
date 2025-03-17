@@ -4,10 +4,8 @@ import AuthContext from '../../../contexts/auth';
 import { GoogleLogin } from '@react-oauth/google';
 import { css } from '@emotion/react';
 import styles from './styles';
-import { useNavigate } from 'react-router-dom';
 
 const LoginOverlay = ({ isVisible }) => {
-    const navigate = useNavigate();
     const { handleLogin, handleGoogleLogin, error, clearError, setUser } = useContext(AuthContext);
     const [email, setEmail] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -48,7 +46,6 @@ const LoginOverlay = ({ isVisible }) => {
     if (!isVisible) return null;
 
     return (
-        navigate('frontend/src/pages/Landing.js'),
         <div css={css(styles.overlay)}>
             <div css={css(styles.panel)}>
                 <h2 css={css(styles.title)}>Welcome to Instantory</h2>

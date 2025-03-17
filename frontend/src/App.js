@@ -1,5 +1,5 @@
 import AuthContext, { AuthProvider } from './contexts/auth/index';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import HowToUseOverlay from './components/common/HowToUseOverlay';
 import LoginOverlay from './components/auth/LoginOverlay';
@@ -129,14 +129,10 @@ function App() {
   const [documents, setDocuments] = useState([]);
   const [showHowTo, setShowHowTo] = useState(false);
   const [error, setError] = useState(null);
+  const hasInitializedRef = useRef(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
-
-  const fetchData = async () => {
+  // Define fetchData with useCallback to prevent unnecessary re-renders
+  const fetchData = useCallback(async () => {
     try {
       // Setup headers with all required CORS and security headers
       const headers = {
@@ -180,7 +176,20 @@ function App() {
       // Clear error after 5 seconds
       setTimeout(() => setError(null), 5000);
     }
-  };
+  }, [setInventory, setDocuments, setError]); // Adding dependencies to prevent useEffect warnings
+
+  // Only run fetchData once when user becomes available, not on every user change
+  useEffect(() => {
+    if (user && !hasInitializedRef.current) {
+      fetchData();
+      hasInitializedRef.current = true;
+    }
+    
+    // Reset the initialization flag when user is null
+    if (!user) {
+      hasInitializedRef.current = false;
+    }
+  }, [user, fetchData]);
 
   const handleProcessFiles = async () => {
     try {

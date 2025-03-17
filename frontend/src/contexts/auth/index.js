@@ -173,6 +173,7 @@ export const AuthProvider = ({ children }) => {
         <AuthContext.Provider 
             value={{ 
                 user, 
+                setUser, // Expose setUser function
                 loading, 
                 error,
                 handleLogin,

@@ -34,7 +34,7 @@ function ProcessImagesButton({ isAuthenticated, onProcess, isMinimized = false }
   const [isInstructionFocused, setIsInstructionFocused] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [taskId, setTaskId] = useState(null);
+  // Removed unused state variable: taskId
 
   const [progressState, dispatch] = useReducer(progressReducer, {
     uploadProgress: 0,
@@ -100,7 +100,6 @@ function ProcessImagesButton({ isAuthenticated, onProcess, isMinimized = false }
       );
 
       if (response.data.task_id) {
-        setTaskId(response.data.task_id);
         pollProcessingStatus(response.data.task_id);
       } else {
         throw new Error('No task ID received.');

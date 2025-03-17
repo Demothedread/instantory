@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const useInfiniteScroll = (callback, options = {}) => {
   const {
@@ -8,7 +8,7 @@ const useInfiniteScroll = (callback, options = {}) => {
   } = options;
 
   const [isFetching, setIsFetching] = useState(false);
-  const observerRef = useRef(null);
+  // Removed unused observerRef
 
   useEffect(() => {
     const handleScroll = async () => {
@@ -27,6 +27,7 @@ const useInfiniteScroll = (callback, options = {}) => {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [callback, enabled, isFetching, threshold, ...dependencies]);
 
   return { isFetching };

@@ -287,25 +287,67 @@ const DocumentsTable = () => {
           <table>
             <thead>
               <tr>
-                <th onClick={() => setSortColumn('title')}>
+                <th onClick={() => {
+                  if (sortColumn === 'title') {
+                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setSortColumn('title');
+                    setSortDirection('asc');
+                  }
+                }}>
                   Title {sortColumn === 'title' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
-                <th onClick={() => setSortColumn('author')}>
+                <th onClick={() => {
+                  if (sortColumn === 'author') {
+                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setSortColumn('author');
+                    setSortDirection('asc');
+                  }
+                }}>
                   Author {sortColumn === 'author' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
-                <th onClick={() => setSortColumn('category')}>
+                <th onClick={() => {
+                  if (sortColumn === 'category') {
+                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setSortColumn('category');
+                    setSortDirection('asc');
+                  }
+                }}>
                   Category {sortColumn === 'category' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
-                <th onClick={() => setSortColumn('field')}>
+                <th onClick={() => {
+                  if (sortColumn === 'field') {
+                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setSortColumn('field');
+                    setSortDirection('asc');
+                  }
+                }}>
                   Field {sortColumn === 'field' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
-                <th onClick={() => setSortColumn('publication_year')}>
+                <th onClick={() => {
+                  if (sortColumn === 'publication_year') {
+                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setSortColumn('publication_year');
+                    setSortDirection('asc');
+                  }
+                }}>
                   Year {sortColumn === 'publication_year' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
                 <th>Summary</th>
                 <th>Thesis</th>
                 <th>Issue</th>
-                <th onClick={() => setSortColumn('journal_publisher')}>
+                <th onClick={() => {
+                  if (sortColumn === 'journal_publisher') {
+                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setSortColumn('journal_publisher');
+                    setSortDirection('asc');
+                  }
+                }}>
                   Journal/Publisher {sortColumn === 'journal_publisher' && (sortDirection === 'asc' ? '▲' : '▼')}
                 </th>
                 <th>Influences</th>
