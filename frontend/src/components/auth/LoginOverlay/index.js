@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react';
 
-import AuthContext from '../../../contexts/auth';
+import { AuthContext }  from '../../../contexts/auth';
 import { GoogleLogin } from '@react-oauth/google';
 import { css } from '@emotion/react';
 import styles from './styles';
