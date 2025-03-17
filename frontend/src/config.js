@@ -1,28 +1,29 @@
+import { authConfig, googleClientId } from './config/auth';
+
 const environment = process.env.NODE_ENV || 'production';
-const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com';
 // Initialize configuration with defaults
 const initConfig = () => {
   // Default configuration values
   const defaultConfig = {
     development: {
-      googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID || googleClientId
+      apiUrl: 'http://localhost:5000'
     },
     production: {
-      apiUrl: 'https://instantory.onrender.com',
-      googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID || googleClientId
+      apiUrl: 'https://instantory.onrender.com'
     }
   };
 
   // Ensure environment variables take precedence
   return {
     apiUrl: process.env.REACT_APP_BACKEND_URL || defaultConfig[environment].apiUrl,
-    googleClientId: process.env.REACT_APP_GOOGLE_CLIENT_ID || defaultConfig[environment].googleClientId,
+    googleClientId: googleClientId
   };
 };
 
 // Create configuration object
 const config = {
   ...initConfig(),
+  auth: authConfig,
   headers: {
     'Accept': 'application/json',
     'Origin': window.location.origin,

@@ -1,4 +1,4 @@
-import { AuthContext, AuthProvider } from './contexts/auth/index';
+import { AuthContext, AuthProvider } from './contexts/auth';
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import HowToUseOverlay from './components/common/HowToUseOverlay';
@@ -16,7 +16,7 @@ import { neoDecorocoBase } from './styles/components/neo-decoroco/base';
 import { typography } from './styles/theme/typography';
 
 function App() {
-  const { user, loginWithGoogle } = useContext(AuthContext);
+  const { user, loginWithGoogle, logout } = useContext(AuthContext);
   const [inventory, setInventory] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [showHowTo, setShowHowTo] = useState(false);
@@ -142,7 +142,7 @@ function App() {
           {!user && (
             <LoginOverlay
               isVisible={!user}
-              onGoogleLogin={() => loginWithGoogle()}
+              onGoogleLogin={loginWithGoogle}
             />
           )}
 
@@ -174,7 +174,7 @@ function App() {
 
 export default function AppWrapper() {
   return (
-    <AuthProvider backendUrl="https://instantory.onrender.com">
+    <AuthProvider backendUrl={config.apiUrl}>
       <App />
     </AuthProvider>
   );
