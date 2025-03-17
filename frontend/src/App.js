@@ -11,6 +11,7 @@ import UserMenu from './components/common/UserMenu';
 import { colors } from './styles/theme/colors';
 import config from './config';
 import { css } from '@emotion/react';
+import { dataApi } from './services/api';
 import { layout } from './styles/layouts/constraints';
 import { neoDecorocoBase } from './styles/components/neo-decoroco/base';
 import { typography } from './styles/theme/typography';
@@ -28,33 +29,21 @@ function App() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const headers = { 'Content-Type': 'application/json' };
-
     try {
       const [inventoryResponse, documentsResponse] = await Promise.all([
-        fetch(`${config.apiUrl}/api/inventory`, {
-          method: 'GET',
-          credentials: 'include',
-          headers,
-          mode: config.mode,
-        }),
-        fetch(`${config.apiUrl}/api/documents`, {
-          method: 'GET',
-          credentials: 'include',
-          headers,
-          mode: config.mode,
-        }),
+        dataApi.getInventory(),
+        dataApi.getDocuments()
       ]);
 
-      if (!inventoryResponse.ok || !documentsResponse.ok) {
-        throw new Error('Failed fetching inventory or documents.');
+      // Add error checking for API responses
+      if (!inventoryResponse || !documentsResponse) {
+        throw new Error('Invalid API response');
       }
 
-      const [inventoryData, documentsData] = await Promise.all([
-        inventoryResponse.json(),
-        documentsResponse.json(),
-      ]);
-
+      // Properly handle API responses with safe fallbacks
+      const inventoryData = inventoryResponse.data;
+      const documentsData = documentsResponse.data;
+      
       setInventory(Array.isArray(inventoryData) ? inventoryData : []);
       setDocuments(Array.isArray(documentsData) ? documentsData : []);
     } catch (err) {
@@ -80,6 +69,7 @@ function App() {
   const handleProcessFiles = useCallback(async () => {
     setLoading(true);
     try {
+      await dataApi.processFiles();
       await fetchData();
     } catch (err) {
       setError('Error processing files.');
@@ -174,7 +164,7 @@ function App() {
 
 export default function AppWrapper() {
   return (
-    <AuthProvider backendUrl={config.apiUrl}>
+    <AuthProvider>
       <App />
     </AuthProvider>
   );

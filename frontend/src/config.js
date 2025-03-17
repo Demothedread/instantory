@@ -1,51 +1,19 @@
-import { authConfig, googleClientId } from './config/auth';
+// This file is now a redirect to the structured config system
+// Import the new config from the config directory
+import config from './config/index';
 
-const environment = process.env.NODE_ENV || 'production';
-// Initialize configuration with defaults
-const initConfig = () => {
-  // Default configuration values
-  const defaultConfig = {
-    development: {
-      apiUrl: 'http://localhost:5000'
-    },
-    production: {
-      apiUrl: 'https://instantory.onrender.com'
-    }
-  };
-
-  // Ensure environment variables take precedence
-  return {
-    apiUrl: process.env.REACT_APP_BACKEND_URL || defaultConfig[environment].apiUrl,
-    googleClientId: googleClientId
-  };
-};
-
-// Create configuration object
-const config = {
-  ...initConfig(),
-  auth: authConfig,
-  headers: {
-    'Accept': 'application/json',
-    'Origin': window.location.origin,
-    'Access-Control-Allow-Credentials': 'true',
-    'Sec-Fetch-Site': 'cross-site',
-    'Sec-Fetch-Mode': 'cors',
-    'Sec-Fetch-Dest': 'empty'
-  },
-  fedcm: {
-    enabled: true,
-    providers: [{
-      clientId: process.env.REACT_APP_GOOGLE_CLIENT_ID || googleClientId
-    }]
-  },
-  credentials: 'include',
-  mode: 'cors',
-  blobStore: {
-    token: process.env.REACT_APP_BLOB_READ_WRITE_TOKEN
-  }
-};
-
-console.log(`Running in ${environment} mode with API URL: ${config.apiUrl}`);
-console.log(`Using Google Client ID: ${config.googleClientId}`);
+// Re-export the config to maintain backward compatibility
 
 export default config;
+
+// This comment explains the change for developers:
+/*
+ * NOTICE: The config.js file has been deprecated in favor of a structured 
+ * configuration system in the 'config/' directory.
+ * 
+ * To access configuration:
+ * - Import from './config' instead of './config.js'
+ * - Use config.auth for auth settings
+ * - Use config.apiUrl for API URL
+ * - See config/index.js for the full configuration schema
+ */

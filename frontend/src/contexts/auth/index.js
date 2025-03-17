@@ -1,15 +1,9 @@
 import React, { createContext, useCallback, useEffect, useRef, useState } from 'react';
 
-import { authConfig } from '../../config/auth';
-import axios from 'axios';
+import { authApi } from '../../services/api';
+import config from '../../config';
 
 const AuthContext = createContext();
-
-const api = axios.create({
-  baseURL: process.env.REACT_APP_BACKEND_URL || 'https://instantory.onrender.com',
-  headers: { 'Content-Type': 'application/json' },
-  withCredentials: true,
-});
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -19,13 +13,13 @@ export const AuthProvider = ({ children }) => {
 
   const clearSession = useCallback(() => {
     setUser(null);
-    localStorage.removeItem(authConfig.sessionKey);
+    localStorage.removeItem(config.auth.sessionKey);
     if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
   }, []);
 
   const updateUserSession = useCallback((userData) => {
     setUser(userData);
-    localStorage.setItem(authConfig.sessionKey, JSON.stringify(userData));
+    localStorage.setItem(config.auth.sessionKey, JSON.stringify(userData));
     setError(null);
   }, []);
 
@@ -41,7 +35,7 @@ export const AuthProvider = ({ children }) => {
   const verifySession = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get(authConfig.endpoints.session);
+      const { data } = await authApi.checkSession();
       if (data.user) updateUserSession(data.user);
     } catch (error) {
       handleAuthError(error);
@@ -52,7 +46,7 @@ export const AuthProvider = ({ children }) => {
 
   const refreshToken = useCallback(async () => {
     try {
-      const { data } = await api.post(authConfig.endpoints.refresh);
+      const { data } = await authApi.refreshToken();
       if (data.user) updateUserSession(data.user);
     } catch (error) {
       handleAuthError(error);
@@ -63,7 +57,21 @@ export const AuthProvider = ({ children }) => {
     async (userData) => {
       setLoading(true);
       try {
-        const { data } = await api.post(authConfig.endpoints.login, userData);
+        // Ensure userData is properly formatted with email and password
+        if (!userData || typeof userData !== 'object') {
+          throw new Error('Invalid login data format');
+        }
+        
+        const { email, password } = userData;
+        if (!email) {
+          throw new Error('Email is required');
+        }
+        
+        const { data } = await authApi.login(userData);
+        if (!data?.user) {
+          throw new Error('Invalid server response - missing user data');
+        }
+        
         updateUserSession(data.user);
       } catch (error) {
         handleAuthError(error);
@@ -82,7 +90,7 @@ export const AuthProvider = ({ children }) => {
       }
       setLoading(true);
       try {
-        const { data } = await api.post(authConfig.endpoints.googleLogin, { credential });
+        const { data } = await authApi.loginWithGoogle(credential);
         if (data?.user) updateUserSession(data.user);
         else throw new Error('Invalid response format');
       } catch (error) {
@@ -96,7 +104,7 @@ export const AuthProvider = ({ children }) => {
 
   const handleLogout = useCallback(async () => {
     try {
-      await api.post(authConfig.endpoints.logout);
+      await authApi.logout();
       clearSession();
     } catch (error) {
       handleAuthError(error);
@@ -106,14 +114,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       setLoading(true);
-      const savedSession = localStorage.getItem(authConfig.sessionKey);
+      const savedSession = localStorage.getItem(config.auth.sessionKey);
       if (savedSession) {
         try {
           const parsedSession = JSON.parse(savedSession);
           setUser(parsedSession);
           await verifySession();
-        } catch {
-          localStorage.removeItem(authConfig.sessionKey);
+        } catch (error) {
+          console.error('Error parsing session data:', error);
+          localStorage.removeItem(config.auth.sessionKey);
         }
       }
       setLoading(false);
@@ -123,7 +132,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (user) {
-      refreshTimerRef.current = setInterval(refreshToken, authConfig.tokenRefreshInterval);
+      refreshTimerRef.current = setInterval(refreshToken, config.auth.tokenRefreshInterval);
     }
     return () => {
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
@@ -149,4 +158,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export { AuthContext }; 
+export { AuthContext };

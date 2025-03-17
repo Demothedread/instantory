@@ -5,9 +5,10 @@ import { GoogleLogin } from '@react-oauth/google';
 import { css } from '@emotion/react';
 import styles from './styles';
 
-const LoginOverlay = ({ isVisible }) => {
-    const { handleLogin, handleGoogleLogin, error, clearError, setUser } = useContext(AuthContext);
+const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
+    const { login, loginWithGoogle, error, clearError, setUser } = useContext(AuthContext);
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
     // Handle Google OAuth login
@@ -19,10 +20,11 @@ const LoginOverlay = ({ isVisible }) => {
         }
         setIsLoading(true);
         try {
-            // Use the context's handleGoogleLogin instead of direct fetch
-            await handleGoogleLogin(credential);
+            // Use the passed prop if available, otherwise use context
+            const loginFn = onGoogleLogin || loginWithGoogle;
+            await loginFn(credential);
         } catch (error) {
-            setUser(credentialResponse.profileObj);
+            // Google Sign-In API changed - profileObj is no longer available in newer versions
             console.error('Google login failed:', error);
         } finally {
             setIsLoading(false);
@@ -35,7 +37,8 @@ const LoginOverlay = ({ isVisible }) => {
         if (!email) return;
         setIsLoading(true);
         try {
-            await handleLogin(email);
+            // Send both email and password to the login function
+            await login({ email, password });
         } catch (error) {
             console.error('Email login failed:', error);
         } finally {
@@ -84,12 +87,21 @@ const LoginOverlay = ({ isVisible }) => {
                             required
                             disabled={isLoading}
                         />
+                        <input
+                            type="password"
+                            css={css(styles.emailInput)}
+                            placeholder="Enter your password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            disabled={isLoading}
+                        />
                         <button
                             type="submit"
                             css={css(isLoading ? [styles.emailLoginButton, styles.loading] : styles.emailLoginButton)}
                             disabled={isLoading}
                         >
-                            {isLoading ? 'Logging in...' : 'Continue with Email'}
+                            {isLoading ? 'Logging in...' : 'Sign In'}
                         </button>
                     </form>
                 </div>
