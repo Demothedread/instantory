@@ -12,7 +12,7 @@ import { colors } from './styles/theme/colors';
 import config from './config';
 import { css } from '@emotion/react';
 import { layout } from './styles/layouts/constraints';
-import { neoBase } from './styles/components/neo/base';
+import { neoDecorocoBase } from './styles/components/neo-decoroco/base';
 import { typography } from './styles/theme/typography';
 
 function App() {
@@ -92,7 +92,7 @@ function App() {
 
   const appStyles = {
     header: css`
-      ${neoBase.panel};
+      ${neoDecorocoBase.panel};
       height: ${layout.heights.header};
       display: flex;
       align-items: center;
@@ -109,7 +109,7 @@ function App() {
       opacity: 0.7;
     `,
     error: css`
-      ${neoBase.panel};
+      ${neoDecorocoBase.panel};
       background-color: rgba(255, 0, 0, 0.1);
       color: red;
       padding: ${layout.spacing.md};
