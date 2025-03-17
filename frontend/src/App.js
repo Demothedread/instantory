@@ -6,7 +6,7 @@ import LoginOverlay from './components/auth/LoginOverlay';
 import Navigation from './components/common/Navigation';
 import RolodexToggle from './components/display/RolodexToggle';
 import { BrowserRouter as Router } from 'react-router-dom';
-import SpeedInsights from './components/common/SpeedInsights';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import UserMenu from './components/common/UserMenu';
 import { colors } from './styles/theme/colors';
 import config from './config';
