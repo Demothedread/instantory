@@ -36,7 +36,7 @@ services:
         value: "us-west-2"
       # CORS and security
       - key: CORS_ORIGINS
-        value: "https://instantory.vercel.app, https://bartelby.vercel.app, https://hocomnia.com"
+        value: "*, https://instantory.vercel.app, https://bartelby.vercel.app, https://hocomnia.com"
       - key: JWT_SECRET
         generateValue: true
       - key: SESSION_SECRET

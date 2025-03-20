@@ -22,7 +22,8 @@ def setup_cors(app: Quart, enabled: bool = True, allow_credentials: bool = True)
             'Authorization',
             'Accept',
             'Origin',
-            'X-Requested-With'
+            'X-Requested-With',
+            'google-oauth-token'
         ])
         
         # Set CORS headers if origin is allowed
