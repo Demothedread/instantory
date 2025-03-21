@@ -126,4 +126,4 @@ services:
 # Define the database
 databases:
   - name: instantory_sql
-    plan: starter
+    plan: free
