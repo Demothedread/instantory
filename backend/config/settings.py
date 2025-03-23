@@ -163,6 +163,3 @@ class Settings:
                 'google-oauth-token'
             ]
         }
-
-# Global instance
-settings = Settings()

@@ -168,6 +168,14 @@ except Exception as e:
     logger.error(f"Error checking database settings: {e}")
 
 # Initialize OpenAI client with error handling
+# Import OAuth service with fallback
+try:
+    from services.oauth import create_oauth_service
+    oauth_service = create_oauth_service()
+    logger.info("OAuth service initialized successfully")
+except ImportError as e:
+    logger.warning(f"OAuth service not available: {e}")
+    oauth_service = None
 try:
     openai_api_key = os.getenv('OPENAI_API_KEY')
     if not openai_api_key:
@@ -243,6 +251,11 @@ async def init_services():
         # Store components in app context
         app.db = app_config.db
         app.storage = app_config.storage
+        app.oauth_service = oauth_service
+        if oauth_service:
+            logger.info("OAuth service attached to app context")
+        else:
+            logger.warning("OAuth service not attached - fallback mode")
         
         # Create processor factory only if OpenAI client is available
         if openai_client:
@@ -285,6 +298,45 @@ async def get_task_status(task_id: str):
     if not task:
         return jsonify({'error': 'Task not found'}), 404
     return jsonify(task)
+
+# Auth0 Integration Endpoints
+from urllib.parse import quote_plus, urlencode
+import json
+from os import environ as env
+from quart import session, render_template, redirect, url_for
+
+@auth_bp.route("/home", methods=["GET"])
+async def home():
+    return await render_template(
+        "home.html",
+        session=session.get("user"),
+        pretty=json.dumps(session.get("user"), indent=4),
+    )
+
+@auth_bp.route("/login", methods=["GET"])
+async def login():
+    redirect_uri = url_for("auth.callback", _external=True)
+    # Initiate Auth0 login via the OAuth service
+    return await app.oauth_service.auth0.authorize_redirect(redirect_uri)
+
+@auth_bp.route("/callback", methods=["GET", "POST"])
+async def callback():
+    # Handle Auth0 callback and retrieve token
+    token = await app.oauth_service.auth0.authorize_access_token()
+    session["user"] = token
+    return redirect(url_for("auth.home"))
+
+@auth_bp.route("/logout", methods=["GET"])
+async def logout():
+    # Clear user session and redirect to Auth0 logout URL
+    session.clear()
+    logout_url = (
+        "https://" + env.get("AUTH0_DOMAIN") + "/v2/logout?" + urlencode({
+            "returnTo": url_for("auth.home", _external=True),
+            "client_id": env.get("AUTH0_CLIENT_ID"),
+        }, quote_via=quote_plus)
+    )
+    return redirect(logout_url)
 
 # Initialize application
 @app.before_serving

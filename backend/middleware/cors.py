@@ -15,7 +15,7 @@ def setup_cors(app: Quart, enabled: bool = True, allow_credentials: bool = True)
         
         # Get CORS settings from app config
         cors_config = app.config.get('CORS_CONFIG', {})
-        allowed_origins = cors_config.get('allow_origin', ['http://localhost:3000'])
+        allowed_origins = cors_config.get('allow_origin', ['https://hocomnia.com'])
         allowed_methods = cors_config.get('allow_methods', ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'])
         allowed_headers = cors_config.get('allow_headers', [
             'Content-Type',

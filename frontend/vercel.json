@@ -1,23 +1,29 @@
 {
   "version": 2,
   "framework": "create-react-app",
-  "buildCommand": "npm run vercel-build",
+  "buildCommand": "npm run build",
   "outputDirectory": "build",
   "public": true,
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
-    {
+    {                                                                
       "source": "/(.*)",
       "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self' https://accounts.google.com https://hocomnia.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://*.googleapis.com https://hocomnia.com https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://use.typekit.net https://p.typekit.net; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com https://use.typekit.net https://*.typekit.net; connect-src 'self' https://hocomnia.com https://instantory.onrender.com https://instantory-api.onrender.com https://api.vercel.com https://api.openai.com https://*.blob.vercel-storage.com https://*.s3.amazonaws.com https://neon.tech wss://*.neon.tech https://accounts.google.com https://www.googleapis.com https://oauth2.googleapis.com; frame-src https://accounts.google.com https://apis.google.com https://content.googleapis.com;"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        },
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "require-corp"
+        },
         {
           "key": "Access-Control-Allow-Origin",
           "value": "*"
@@ -35,20 +41,36 @@
           "value": "true"
         },
         {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self' https://accounts.google.com https://hocomnia.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://*.googleapis.com https://hocomnia.com https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://use.typekit.net https://p.typekit.net; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com https://use.typekit.net https://*.typekit.net; connect-src 'self' https://hocomnia.com https://instantory.onrender.com https://instantory-api.onrender.com https://api.vercel.com https://api.openai.com https://*.blob.vercel-storage.com https://*.s3.amazonaws.com https://neon.tech wss://*.neon.tech https://accounts.google.com https://www.googleapis.com https://oauth2.googleapis.com; frame-src https://accounts.google.com https://apis.google.com https://content.googleapis.com;"
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=none, microphone=none, geolocation=none, fullscreen=(self), payment=none"
         }
-      ]
-    }
-  ],
-  "env": {
-    "REACT_APP_BACKEND_URL": "https://instantory.onrender.com",
-    "REACT_APP_GOOGLE_CLIENT_ID": "700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com",
-    "REACT_APP_API_VERSION": "v1",
-    "REACT_APP_STORAGE_PROVIDER": "vercel",
-    "REACT_APP_MAX_UPLOAD_SIZE": "100000000",
-    "REACT_APP_SUPPORTED_IMAGE_TYPES": "image/jpeg,image/png,image/gif,image/webp",
-    "REACT_APP_SUPPORTED_DOC_TYPES": "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain",
-    "BLOB_READ_WRITE_TOKEN": "vercel_blob_rw_s5xuxXH6T3fDx9Oz_AdnmR7yE2uQjnt1cWInfUzpXQdtrpS"
-  }
+      ],
+      "env": {
+        "REACT_APP_BACKEND_URL": "https://instantory.onrender.com",
+        "REACT_APP_GOOGLE_CLIENT_ID": "700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com",
+        "REACT_APP_API_VERSION": "v1",
+        "REACT_APP_STORAGE_PROVIDER": "vercel",
+        "REACT_APP_MAX_UPLOAD_SIZE": "100000000",
+        "REACT_APP_SUPPORTED_IMAGE_TYPES": "image/jpeg,image/png,image/gif,image/webp",
+        "REACT_APP_SUPPORTED_DOC_TYPES": "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain",
+        "BLOB_READ_WRITE_TOKEN": "vercel_blob_rw_s5xuxXH6T3fDx9Oz_AdnmR7yE2uQjnt1cWInfUzpXQdtrpS"
+       }
+      }
+    ]
 }

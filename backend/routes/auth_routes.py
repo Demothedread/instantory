@@ -4,7 +4,7 @@ import jwt
 import bcrypt
 from datetime import datetime, timedelta
 from google.oauth2 import id_token
-from google.auth.transport import requests
+from google.auth.transport import requests as google_requests
 import logging
 from backend.config.database import get_db_pool
 
@@ -152,6 +152,49 @@ async def get_user_data(user_id: int):
 
 # --- Authentication Routes --- #
 
+@auth_bp.route('/google', methods=['POST'])
+async def google_login():
+    """Authenticate a user via Google OAuth."""
+    try:
+        data = await request.get_json()
+        credential = data.get('credential')
+
+        if not credential:
+            return jsonify({"error": "Missing Google OAuth credential"}), 400
+
+        # Verify Google token
+        id_info = id_token.verify_oauth2_token(credential, google_requests.Request(), GOOGLE_CLIENT_ID)
+        if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+            return jsonify({"error": "Invalid token issuer"}), 403
+
+        email = id_info.get('email')
+        name = id_info.get('name', email)
+        google_id = id_info.get('sub')
+
+        # Retrieve or create user
+        user = await get_user_by_email(email)
+        if not user:
+            user = await create_user(email, name, auth_provider="google", google_id=google_id, is_verified=True)
+
+        access_token = await create_token({"id": user['id'], "email": user['email']}, "access")
+        refresh_token = await create_token({"user_id": user['id']}, "refresh")
+
+        response = jsonify({
+            "message": "Google login successful",
+            "user": dict(user),
+            "is_verified": user.get("is_verified", False),
+            "data": await get_user_data(user['id'])
+        })
+        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Strict')
+        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Strict')
+
+        return response
+
+    except Exception as e:
+        logger.exception("Google login failed")
+        return jsonify({"error": "Google login failed", "details": str(e)}), 500
+
+
 @auth_bp.route('/register', methods=['POST'])
 async def register():
     """Register a new user via email and password."""
@@ -216,49 +259,6 @@ async def login():
     except Exception as e:
         logger.exception("Login failed")
         return jsonify({"error": "Login failed", "details": str(e)}), 500
-
-
-@auth_bp.route('/google', methods=['POST'])
-async def google_login():
-    """Authenticate a user via Google OAuth."""
-    try:
-        data = await request.get_json()
-        credential = data.get('credential')
-
-        if not credential:
-            return jsonify({"error": "Missing Google OAuth credential"}), 400
-
-        # Verify Google token
-        id_info = id_token.verify_oauth2_token(credential, requests.Request(), GOOGLE_CLIENT_ID)
-        if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-            return jsonify({"error": "Invalid token issuer"}), 403
-
-        email = id_info.get('email')
-        name = id_info.get('name', email)
-        google_id = id_info.get('sub')
-
-        # Retrieve or create user
-        user = await get_user_by_email(email)
-        if not user:
-            user = await create_user(email, name, auth_provider="google", google_id=google_id, is_verified=True)
-
-        access_token = await create_token({"id": user['id'], "email": user['email']}, "access")
-        refresh_token = await create_token({"user_id": user['id']}, "refresh")
-
-        response = jsonify({
-            "message": "Google login successful",
-            "user": dict(user),
-            "is_verified": user.get("is_verified", False),
-            "data": await get_user_data(user['id'])
-        })
-        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Strict')
-        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Strict')
-
-        return response
-
-    except Exception as e:
-        logger.exception("Google login failed")
-        return jsonify({"error": "Google login failed", "details": str(e)}), 500
 
 
 @auth_bp.route('/refresh', methods=['POST'])

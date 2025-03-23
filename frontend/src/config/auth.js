@@ -1,4 +1,6 @@
-const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com';
+const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID 
+const googleClientSecret = process.env.REACT_APP_GOOGLE_CLIENT_SECRET 
+const googleCredentialAPIKey = process.env.REACT_APP_GOOGLE_CREDENTIAL_API_KEY 
 
 const authConfig = {
   tokenRefreshInterval: 14 * 60 * 1000, // 14 minutes
@@ -8,8 +10,10 @@ const authConfig = {
     googleLogin: '/api/auth/google',
     logout: '/api/auth/logout',
     refresh: '/api/auth/refresh',
-    session: '/api/auth/session'
+    session: '/api/auth/session',
+    home: '/api/auth/home',
+    callback: '/api/auth/callback'
   }
 };
 
-export { googleClientId, authConfig };
+export { googleClientId, googleClientSecret, googleCredentialAPIKey, authConfig };
