@@ -32,33 +32,11 @@
           "key": "Access-Control-Allow-Methods",
           "value": "GET, POST, PUT, DELETE, OPTIONS, PATCH"
         },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, Accept, Origin, X-Requested-With, google-oauth-token"
-        },
-        {
-          "key": "Access-Control-Allow-Credentials",
-          "value": "true"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "no-referrer"
-        },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=none, microphone=none, geolocation=none, fullscreen=(self), payment=none"
+            {
+              "key": "Access-Control-Allow-Headers",
+              "value": "Content-Type, Authorization, Accept, Origin, X-Requested-With, google-oauth-token"
+            }
+          ]
         }
       ],
       "env": {
@@ -70,7 +48,5 @@
         "REACT_APP_SUPPORTED_IMAGE_TYPES": "image/jpeg,image/png,image/gif,image/webp",
         "REACT_APP_SUPPORTED_DOC_TYPES": "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain",
         "BLOB_READ_WRITE_TOKEN": "vercel_blob_rw_s5xuxXH6T3fDx9Oz_AdnmR7yE2uQjnt1cWInfUzpXQdtrpS"
-       }
       }
-    ]
 }
