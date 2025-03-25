@@ -1,11 +1,11 @@
 {
   "version": 2,
   "framework": "create-react-app",
-  "buildCommand": "npm run build",{ "source": "/api/(.*)", "destination": "https://instantory.onrender.com/api/$1" }
+  "buildCommand": "npm run build",
   "outputDirectory": "build",
   "public": true,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://instantory.onrender.com/api/$1" }
+    { "source": "/api/(.*)", "destination": "https://instantory.onrender.com/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
