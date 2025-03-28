@@ -43,15 +43,14 @@ class StorageConfig:
         
         # Initialize directories
         self._initialize_directories()
-    
+        
     def _validate_config(self) -> None:
         """Validate storage configuration."""
         if not self.vercel_blob_token:
-            raise ValueError("BLOB_READ_WRITE_TOKEN environment variable is required")
-        
+            raise ValueError("BLOB_READ_WRITE_TOKEN environment variable is required")   
         if not all([self.s3_bucket, self.s3_access_key, self.s3_secret_key]):
             raise ValueError("AWS S3 configuration is incomplete")
-    
+        
     def _initialize_directories(self) -> None:
         """Create necessary directories with proper permissions."""
         for directory in self.paths.values():
@@ -61,24 +60,22 @@ class StorageConfig:
             except Exception as e:
                 logger.error(f"Error creating directory {directory}: {e}")
                 raise
-    
+
     def get_storage_info(self, file_type: str, storage_type: StorageType) -> Tuple[str, Dict[str, str]]:
         """Get storage backend and configuration for a file type."""
         if storage_type == StorageType.TEMP:
             return 'local', {'base_path': str(self.paths['TEMP_DIR'])}
-            
         if storage_type == StorageType.IMAGE:
             return 'vercel', {
                 'token': self.vercel_blob_token,
                 'content_type': file_type
             }
-            
         if storage_type == StorageType.THUMBNAIL:
             return 'vercel', {
                 'token': self.vercel_blob_token,
                 'content_type': 'image/jpeg'
             }
-            
+                 
         # Default to S3 for documents
         return 's3', {
             'bucket': self.s3_bucket,

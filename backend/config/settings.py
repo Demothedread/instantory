@@ -117,7 +117,7 @@ class Settings:
 
     def get_max_content_length(self) -> int:
         """Get maximum content length in bytes."""
-        return int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))
+        return int((os.getenv('MAX_CONTENT_LENGTH'), 16 * 1024 * 1024))
 
     def validate_required_vars(self) -> None:
         """Validate required environment variables."""

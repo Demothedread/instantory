@@ -6,8 +6,6 @@ from datetime import datetime, timedelta
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 import logging
-from backend.config.database import get_db_pool
-
 logger = logging.getLogger(__name__)
 
 # Environment variables

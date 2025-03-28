@@ -6,10 +6,8 @@ This document outlines the changes made to fix the authentication system and how
 
 1. **Fixed Circular Import Issue**
    - Modified `auth_routes.py` to import `get_db_pool` directly from `config.database` instead of `backend.db`
-   
 2. **Aligned API Endpoints**
-   - Changed backend Google auth route from `/google-login` to `/google` to match frontend configuration
-   
+   - Changed backend Google auth route from `/google-login` to `/google` to match frontend configuration 
 3. **Fixed Parameter Mismatch**
    - Updated frontend to use consistent parameter naming for Google authentication
 

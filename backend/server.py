@@ -14,21 +14,22 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Add the project root and backend directory to sys.path to enable imports
-current_dir = Path(__file__).resolve().parent
-parent_dir = current_dir.parent
+# .''''''
+#current_dir = Path(__file__).resolve().parent
+#parent_dir = current_dir.parent
 # Make project root first in path (higher priority)
-if str(parent_dir) not in sys.path:
-    sys.path.insert(0, str(parent_dir))
+#if str(parent_dir) not in sys.path:
+#   sys.path.insert(0, str(parent_dir))
 # Make backend dir second in path
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
+# str(current_dir) not in sys.path:
+#   sys.path.insert(0, str#(current_dir))
 # Also add the absolute paths to make sure imports work in all execution contexts
-sys.path.insert(0, str(current_dir.absolute()))
-sys.path.insert(0, str(parent_dir.absolute()))
+#sys.path.insert(0, str(current_dir.absolute()))
+#sys.path.insert(0, str(parent_dir.absolute()))
 
-# Load environment variables (.env file is optional)
+#Load environment variables (.env file is optional)
 load_dotenv(verbose=True)
-
+# ''''''
 # Import local modules with fallbacks for each module
 try:
     from cleanup import task_manager, setup_task_cleanup
@@ -54,24 +55,12 @@ from types import SimpleNamespace
 
 # Import config with fallback
 try:
-    from config import config as app_config
+    from config.settings import settings
+    app_config = SimpleNamespace(settings=settings)
 except ImportError:
-    logger.error("Unable to import config module")
-    # Create a minimal config placeholder
+    logger.error("Unable to import settings module")
     app_config = SimpleNamespace()
-    
-    # Define async stub functions
-    async def initialize_stub():
-        pass
-        
-    async def cleanup_stub():
-        pass
-        
-    app_config.initialize = initialize_stub
-    app_config.cleanup = cleanup_stub
     app_config.settings = SimpleNamespace(testing=False)
-    app_config.db = None
-    app_config.storage = None
 
 # Import middleware with fallback
 try:
@@ -136,14 +125,14 @@ documents_bp = blueprints['documents']
 files_bp = blueprints['files']
 
 # Initialize storage-related variables
+STORAGE_BACKEND = os.getenv('STORAGE_BACKEND', 'vercel').lower()
+logger.info(f"Using storage backend: {STORAGE_BACKEND}")
+
 try:
-    STORAGE_BACKEND = os.getenv('STORAGE_BACKEND', 'vercel').lower()
-    logger.info(f"Using storage backend: {STORAGE_BACKEND}")
-    
     # Validate storage configuration
     if STORAGE_BACKEND == 'vercel' and not os.getenv('BLOB_READ_WRITE_TOKEN'):
         logger.warning("BLOB_READ_WRITE_TOKEN not found but Vercel storage backend is selected")
-    
+
     if STORAGE_BACKEND == 's3' and not all([
         os.getenv('AWS_ACCESS_KEY_ID'),
         os.getenv('AWS_SECRET_ACCESS_KEY'),
@@ -159,7 +148,7 @@ try:
         logger.warning("DATABASE_URL not set - main database connection may fail")
     else:
         logger.info("Main database configuration found (DATABASE_URL)")
-    
+
     if os.getenv('NEON_DATABASE_URL'):
         logger.info("Vector database configuration found (NEON_DATABASE_URL)")
     else:
@@ -167,7 +156,7 @@ try:
 except Exception as e:
     logger.error(f"Error checking database settings: {e}")
 
-# Initialize OpenAI client with error handling
+    # Initialize OpenAI client with error handling
 # Import OAuth service with fallback
 try:
     from services.oauth import create_oauth_service
