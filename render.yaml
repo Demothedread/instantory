@@ -13,7 +13,7 @@ services:
       # Database configuration
       - key: DATABASE_URL
         fromDatabase:
-          name: instantory_sql
+          name: bartlebySQL
           property: connectionString
       - key: NEON_DATABASE_URL
         sync: false  # Set this in the Render dashboard
@@ -47,7 +47,7 @@ services:
         sync: false
       # Paths and URLs
       - key: PUBLIC_BACKEND_URL
-        value: "https://instantory-api.onrender.com"
+        value: "https://instantory.onrender.com"
       - key: VERCEL_URL
         value: "https://instantory.vercel.app"
       # Data directories
@@ -76,7 +76,7 @@ services:
         value: 18.x
       - key: DATABASE_URL
         fromDatabase:
-          name: instantory_sql
+          name: bartlebySQL
           property: connectionString
       - key: NEON_DATABASE_URL
         sync: false
@@ -104,7 +104,7 @@ services:
         value: 3.11.0
       - key: DATABASE_URL
         fromDatabase:
-          name: instantory_sql
+          name: bartlebySQL
           property: connectionString
       - key: NEON_DATABASE_URL
         sync: false
@@ -125,5 +125,6 @@ services:
 
 # Define the database
 databases:
-  - name: instantory_sql
+  - name: bartlebySQL
+    type: postgres
     plan: free
