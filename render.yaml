@@ -126,5 +126,4 @@ services:
 # Define the database
 databases:
   - name: bartlebySQL
-    type: postgres
     plan: free
