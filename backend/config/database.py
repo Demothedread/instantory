@@ -119,6 +119,10 @@ class DatabaseConfig:
                 await pool.close()
                 self._pools[db_type] = None
                 logger.info(f"{db_type.value} database pool closed")
+                
+    async def cleanup(self) -> None:
+        """Cleanup database resources on shutdown."""
+        await self.close_pools()
 
 # Global instance
 db_config = DatabaseConfig()

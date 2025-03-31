@@ -4,7 +4,7 @@ from typing import List, Dict, Optional
 
 class CORSConfig:
     """CORS configuration settings."""
-    
+            
     @staticmethod
     def get_origins() -> List[str]:
         """Get allowed origins from environment or default to development origins."""

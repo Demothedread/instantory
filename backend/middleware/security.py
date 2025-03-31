@@ -7,8 +7,8 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from .config.security import get_security_config
-from .config.logging import log_config
+from ..config.security import get_security_config
+from ..config.logging import log_config
 
 logger = log_config.get_logger(__name__)
 security = get_security_config()
