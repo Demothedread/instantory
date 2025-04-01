@@ -20,8 +20,7 @@ class Config:
         """Initialize all configuration components."""
         # No initialization needed as components are already initialized
         # when imported as global instances
-        pass
-    
+
     async def cleanup(self):
         """Cleanup all configuration components."""
         # Clean up database connections

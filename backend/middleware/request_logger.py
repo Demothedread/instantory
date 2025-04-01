@@ -8,7 +8,7 @@ from datetime import datetime
 import uuid
 import urllib.parse as urlparse
 
-from .config.logging import log_config, get_request_logger
+from ..config.logging import log_config, get_request_logger
 
 logger = log_config.get_logger(__name__)
 request_logger = get_request_logger()

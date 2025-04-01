@@ -7,14 +7,13 @@ from werkzeug.exceptions import HTTPException
 import asyncpg.exceptions
 import json
 
-from .config.logging import log_config
+from ..config.logging import log_config
 
 logger = log_config.get_logger(__name__)
 
 class APIError(Exception):
     """Base class for API errors."""
-    def __init__(self, message: str, status_code: int = 500, 
-                 error_code: Optional[str] = None, details: Optional[Dict] = None):
+    def __init__(self, message: str, status_code: int = 500,  error_code: Optional[str] = None, details: Optional[Dict] = None):
         super().__init__(message)
         self.message = message
         self.status_code = status_code

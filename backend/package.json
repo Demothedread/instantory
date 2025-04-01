@@ -1,24 +1,24 @@
 {
-  "name": "init-database",
   "version": "1.0.0",
-  "description": "Database initialization and connection setup script for Instantory",
-  "main": "scripts/init-databases.js",
   "scripts": {
-    "start": "node scripts/init-databases.js",
-    "sync": "node scripts/init-databases.js --sync-only"
+    "sync": "node scripts/init-databases.js --sync-only",
+    "start": "node scripts/init-databases.js"
   },
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.450.0",
-    "@neondatabase/serverless": "^0.6.0",
-    "axios": "^1.6.0",
-    "dotenv": "^16.3.1",
-    "pg": "^8.11.3",
-    "ws": "^8.17.0"
-  },
-  "devDependencies": {},
+  "name": "init-database",
+  "main": "scripts/init-databases.js",
+  "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
   },
-  "author": "pseudø",
-  "license": "MIT"
+  "devDependencies": {},
+  "description": "Database initialization and connection setup script for Instantory",
+  "dependencies": {
+    "ws": "^8.17.0",
+    "pg": "^8.11.3",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.0",
+    "@neondatabase/serverless": "^0.6.0",
+    "@aws-sdk/client-s3": "^3.450.0"
+  },
+  "author": "pseudø"
 }

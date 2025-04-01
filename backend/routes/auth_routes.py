@@ -6,8 +6,8 @@ import jwt
 import bcrypt 
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-from backend.config.database import get_db_pool
-from backend.config.logging import logger
+from ..config.database import get_db_pool
+from ..config.logging import logger
 from quart import Blueprint, request, jsonify
 
 logger = logging.getLogger(__name__)

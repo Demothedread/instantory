@@ -17,9 +17,9 @@ from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from PIL import Image
 from quart import Quart, jsonify, request, send_file, make_response
-from config.security import CORSConfig, get_security_config
-from config.logging import log_config
-from config.database import (
+from .config.security import CORSConfig, get_security_config
+from .config.logging import log_config
+from .config.database import (
     get_metadata_pool,
     get_vector_pool,
     DatabaseConfig,
