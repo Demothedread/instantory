@@ -27,8 +27,7 @@ class ProcessorFactory:
         """Create a batch processor instance."""
         return BatchProcessor(self.db_pool, self.openai_client, image_instruction)
 
-def create_processor_factory(db_pool: asyncpg.Pool, 
-                           openai_client: AsyncOpenAI) -> ProcessorFactory:
+def create_processor_factory(db_pool: asyncpg.Pool, openai_client: AsyncOpenAI) -> ProcessorFactory:
     """Create a processor factory instance."""
     return ProcessorFactory(db_pool, openai_client)
 

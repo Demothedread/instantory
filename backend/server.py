@@ -28,7 +28,7 @@ sys.path.insert(0, str(current_dir.absolute()))
 
 
 #Load environment variables (.env file is optional)
-load_dotenv(verbose=True)
+#load_dotenv(verbose=True)
 # ''''''
 # Import local modules with fallbacks for each module
 try:
@@ -72,7 +72,7 @@ except ImportError:
 
 # Import processor factory with fallback
 try:
-    from services.processor import create_processor_factory
+    from .services.processor import create_processor_factory
 except ImportError:
     logger.warning("Processor factory not available")
     def create_processor_factory(db, client):

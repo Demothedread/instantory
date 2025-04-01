@@ -7,7 +7,7 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 import json
 
-from ...config.storage import get_storage_config
+from ...config.storage import get_storage_config, get_temp_dir
 from ...config.logging import log_config
 
 logger = log_config.get_logger(__name__)
@@ -65,7 +65,7 @@ class BaseProcessor(ABC):
     async def cleanup(self) -> None:
         """Clean up processor resources."""
         if self.temp_dir:
-            storage.cleanup_temp_dir(self.temp_dir)
+            cleanup_temp_dir(self.temp_dir)
         self.status.end_time = datetime.now()
     
     @abstractmethod
@@ -73,9 +73,8 @@ class BaseProcessor(ABC):
         """Process a single file."""
         pass
     
-    async def process_batch(self, file_paths: List[Path], 
-                          batch_size: int = 5) -> ProcessingStatus:
-        """Process a batch of files with concurrency control."""
+    async def process_batch(self, file_paths: List[Path], batch_size: int = 5) -> ProcessingStatus:
+        """Process a batch of files with concurrency control."""                
         try:
             await self.initialize()
             self.status.total_files = len(file_paths)
