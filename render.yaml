@@ -4,7 +4,7 @@ services:
     name: instantory
     runtime: python
     buildCommand: pip install -r requirements.txt && cd backend && npm install --production
-    startCommand: "PYTHONPATH=$PYTHONPATH:. python -m backend.server"
+    startCommand: "PYTHONPATH=$PYTHONPATH: python -m backend.server"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
