@@ -20,8 +20,13 @@ export const authApi = {
   refreshToken: () => api.post(config.auth.endpoints.refresh),
   checkSession: () => api.get(config.auth.endpoints.session),
   
-  // Additional methods can be added here
-  register: (userData) => api.post('/api/auth/register', userData),
+  // User registration
+  register: (userData) => api.post(config.auth.endpoints.register, userData),
+  
+  // Admin authentication
+  adminLogin: (adminData) => api.post(config.auth.endpoints.adminLogin, adminData),
+  getUsers: () => api.get(config.auth.endpoints.adminUsers),
+  updateUser: (userId, userData) => api.put(`${config.auth.endpoints.adminUsers}/${userId}`, userData),
 };
 
 // Add request interceptor for logging and debugging

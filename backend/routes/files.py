@@ -8,8 +8,56 @@ from pathlib import Path
 from quart import Blueprint, jsonify, request, send_file
 from PIL import Image
 
-from ..services.storage.manager import storage_manager
-from ..db import get_db_pool
+# Import with fallbacks to handle different execution contexts
+try:
+    from ..services.storage.manager import storage_manager
+    from ..db import get_db_pool
+except ImportError:
+    # Alternative import path for when running as a module
+    try:
+        from backend.services.storage.manager import storage_manager
+        from backend.db import get_db_pool
+    except ImportError:
+        # Fallback to imports from app context
+        from quart import current_app
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Define fallback storage manager if needed
+        class FallbackStorageManager:
+            async def store_file(self, *args, **kwargs):
+                logger.error("Storage manager not available")
+                return None
+                
+            async def move_to_permanent(self, *args, **kwargs):
+                logger.error("Storage manager not available")
+                return None
+                
+            async def get_file(self, *args, **kwargs):
+                logger.error("Storage manager not available")
+                return None
+                
+            async def delete_file(self, *args, **kwargs):
+                logger.error("Storage manager not available")
+                return False
+                
+            def cleanup_temp_files(self, *args, **kwargs):
+                logger.error("Storage manager not available")
+                
+        # Try to get storage manager from app context
+        def get_storage_manager():
+            if hasattr(current_app, 'storage'):
+                return current_app.storage
+            return FallbackStorageManager()
+            
+        storage_manager = get_storage_manager()
+        
+        # DB pool fallback
+        async def get_db_pool():
+            """Get database pool from app context if available."""
+            if hasattr(current_app, 'db') and hasattr(current_app.db, 'pool'):
+                return current_app.db.pool
+            raise RuntimeError("Database connection not available")
 
 logger = logging.getLogger(__name__)
 

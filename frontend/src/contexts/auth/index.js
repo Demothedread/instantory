@@ -7,18 +7,26 @@ const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const refreshTimerRef = useRef(null);
 
   const clearSession = useCallback(() => {
     setUser(null);
+    setUserData(null);
+    setIsAdmin(false);
     localStorage.removeItem(config.auth.sessionKey);
     if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
   }, []);
 
-  const updateUserSession = useCallback((userData) => {
+  const updateUserSession = useCallback((userData, sessionData = null) => {
     setUser(userData);
+    setIsAdmin(userData?.is_admin || false);
+    if (sessionData) {
+      setUserData(sessionData);
+    }
     localStorage.setItem(config.auth.sessionKey, JSON.stringify(userData));
     setError(null);
   }, []);
@@ -36,13 +44,17 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
       const { data } = await authApi.checkSession();
-      if (data.user) updateUserSession(data.user);
+      if (data.authenticated && data.user) {
+        updateUserSession(data.user, data.data);
+      } else {
+        clearSession();
+      }
     } catch (error) {
       handleAuthError(error);
     } finally {
       setLoading(false);
     }
-  }, [handleAuthError, updateUserSession]);
+  }, [handleAuthError, updateUserSession, clearSession]);
 
   const refreshToken = useCallback(async () => {
     try {
@@ -53,6 +65,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, [handleAuthError, updateUserSession]);
 
+  // Regular user login
   const handleLogin = useCallback(
     async (userData) => {
       setLoading(true);
@@ -63,8 +76,8 @@ export const AuthProvider = ({ children }) => {
         }
         
         const { email, password } = userData;
-        if (!email) {
-          throw new Error('Email is required');
+        if (!email || !password) {
+          throw new Error('Email and password are required');
         }
         
         const { data } = await authApi.login(userData);
@@ -72,7 +85,7 @@ export const AuthProvider = ({ children }) => {
           throw new Error('Invalid server response - missing user data');
         }
         
-        updateUserSession(data.user);
+        updateUserSession(data.user, data.data);
       } catch (error) {
         handleAuthError(error);
       } finally {
@@ -82,6 +95,65 @@ export const AuthProvider = ({ children }) => {
     [handleAuthError, updateUserSession]
   );
 
+  // Admin login with override password
+  const handleAdminLogin = useCallback(
+    async (userData) => {
+      setLoading(true);
+      try {
+        if (!userData || typeof userData !== 'object') {
+          throw new Error('Invalid admin login data format');
+        }
+        
+        const { email, admin_password } = userData;
+        if (!email || !admin_password) {
+          throw new Error('Email and admin password are required');
+        }
+        
+        const { data } = await authApi.adminLogin(userData);
+        if (!data?.user) {
+          throw new Error('Invalid server response - missing user data');
+        }
+        
+        updateUserSession(data.user, data.data);
+      } catch (error) {
+        handleAuthError(error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [handleAuthError, updateUserSession]
+  );
+
+  // User registration
+  const handleRegister = useCallback(
+    async (userData) => {
+      setLoading(true);
+      try {
+        if (!userData || typeof userData !== 'object') {
+          throw new Error('Invalid registration data format');
+        }
+        
+        const { email, password, name } = userData;
+        if (!email || !password || !name) {
+          throw new Error('Email, password, and name are required');
+        }
+        
+        const { data } = await authApi.register(userData);
+        if (!data?.user) {
+          throw new Error('Invalid server response - missing user data');
+        }
+        
+        updateUserSession(data.user, data.data);
+      } catch (error) {
+        handleAuthError(error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [handleAuthError, updateUserSession]
+  );
+
+  // Google login
   const loginWithGoogle = useCallback(
     async (credential) => {
       if (!credential) {
@@ -91,7 +163,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       try {
         const { data } = await authApi.loginWithGoogle(credential);
-        if (data?.user) updateUserSession(data.user);
+        if (data?.user) updateUserSession(data.user, data.data);
         else throw new Error('Invalid response format');
       } catch (error) {
         handleAuthError(error);
@@ -119,6 +191,7 @@ export const AuthProvider = ({ children }) => {
         try {
           const parsedSession = JSON.parse(savedSession);
           setUser(parsedSession);
+          setIsAdmin(parsedSession?.is_admin || false);
           await verifySession();
         } catch (error) {
           console.error('Error parsing session data:', error);
@@ -143,10 +216,13 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
-        setUser,
+        userData,
         loading,
         error,
+        isAdmin,
         login: handleLogin,
+        adminLogin: handleAdminLogin,
+        register: handleRegister,
         loginWithGoogle,
         logout: handleLogout,
         refreshToken,

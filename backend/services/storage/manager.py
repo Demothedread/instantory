@@ -6,10 +6,66 @@ from typing import Optional, Union, BinaryIO, Tuple
 from pathlib import Path
 from PIL import Image
 
-from .s3 import s3_service
-from .vercel_blob import vercel_blob_service
-from ...config.storage import storage_config, StorageType
-from ...config.database import get_vector_pool, get_metadata_pool
+# Import with fallbacks to handle different execution contexts
+try:
+    # Try relative imports first
+    from .s3 import s3_service
+    from .vercel_blob import vercel_blob_service
+    from ...config.storage import storage_config, StorageType
+    from ...config.database import get_vector_pool, get_metadata_pool
+except ImportError:
+    # Alternative import path for when running as a module
+    try:
+        from backend.services.storage.s3 import s3_service
+        from backend.services.storage.vercel_blob import vercel_blob_service
+        from backend.config.storage import storage_config, StorageType
+        from backend.config.database import get_vector_pool, get_metadata_pool
+    except ImportError:
+        # Fallback to app context imports
+        import logging
+        import os
+        from quart import current_app
+        
+        logger = logging.getLogger(__name__)
+        
+        # Stubs for services if imports fail
+        class StubService:
+            async def upload_document(self, *args, **kwargs):
+                logger.error("Storage service not available")
+                return None
+                
+            async def get_document(self, *args, **kwargs):
+                logger.error("Storage service not available")
+                return None
+                
+            async def delete_document(self, *args, **kwargs):
+                logger.error("Storage service not available")
+                return False
+        
+        s3_service = StubService()
+        vercel_blob_service = StubService()
+        
+        # Storage config stub
+        class StorageConfig:
+            def get_temp_dir(self):
+                return os.path.join(os.getcwd(), 'data', 'temp')
+                
+            def cleanup_temp_files(self, user_id=None):
+                pass
+        
+        StorageType = type('StorageType', (), {'S3': 's3', 'VERCEL': 'vercel', 'LOCAL': 'local'})
+        storage_config = StorageConfig()
+        
+        # Database connection stubs
+        async def get_vector_pool():
+            if hasattr(current_app, 'db') and hasattr(current_app.db, 'vector_pool'):
+                return current_app.db.vector_pool
+            raise RuntimeError("Vector database connection not available")
+            
+        async def get_metadata_pool():
+            if hasattr(current_app, 'db') and hasattr(current_app.db, 'pool'):
+                return current_app.db.pool
+            raise RuntimeError("Metadata database connection not available")
 
 logger = logging.getLogger(__name__)
 

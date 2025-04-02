@@ -1,13 +1,35 @@
 """Authentication routes and utilities."""
 import os
 import logging
+import secrets
 from datetime import datetime, timedelta, timezone
 import jwt
 import bcrypt 
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-from ..config.database import get_db_pool
-from ..config.logging import logger
+from functools import wraps
+
+# Import with fallbacks to handle different execution contexts
+try:
+    from ..config.database import get_db_pool
+    from ..config.logging import logger
+except ImportError:
+    # Alternative import path for when running as a module
+    try:
+        from backend.config.database import get_db_pool
+        from backend.config.logging import logger
+    except ImportError:
+        # Fallback to direct imports
+        from quart import current_app
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        async def get_db_pool():
+            """Get database pool from app context if available."""
+            if hasattr(current_app, 'db') and hasattr(current_app.db, 'pool'):
+                return current_app.db.pool
+            raise RuntimeError("Database connection not available")
+
 from quart import Blueprint, request, jsonify
 
 logger = logging.getLogger(__name__)
@@ -15,12 +37,20 @@ logger = logging.getLogger(__name__)
 # Environment variables
 JWT_SECRET = os.getenv('JWT_SECRET')
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+ADMIN_PASSWORD_OVERRIDE = os.getenv('ADMIN_PASSWORD_OVERRIDE')
 ACCESS_TOKEN_EXPIRY = timedelta(minutes=30)
 REFRESH_TOKEN_EXPIRY = timedelta(days=7)
 JWT_ALGORITHM = "HS256"
 
 if not JWT_SECRET:
     raise EnvironmentError("JWT_SECRET is not set")
+    
+# Create a default admin password if not set
+if not ADMIN_PASSWORD_OVERRIDE:
+    # This is a fallback only - in production, always set ADMIN_PASSWORD_OVERRIDE in env
+    logger.warning("ADMIN_PASSWORD_OVERRIDE not set, using a random generated password")
+    ADMIN_PASSWORD_OVERRIDE = secrets.token_urlsafe(16)
+    logger.info(f"Generated admin override password (DO NOT USE IN PRODUCTION): {ADMIN_PASSWORD_OVERRIDE}")
 
 # Blueprint setup
 auth_bp = Blueprint('auth', __name__)
@@ -42,7 +72,7 @@ def verify_token(token: str, expected_type: str) -> dict:
             raise jwt.InvalidTokenError("Invalid token type")
         return payload
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
-        logger.warning("Token verification failed: %s", e)
+        logger.warning(f"Token verification failed: {e}")
         raise
 
 
@@ -54,6 +84,62 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, hashed_password: str) -> bool:
     """Verify a password against its hash."""
     return bcrypt.checkpw(password.encode(), hashed_password.encode())
+
+# --- Authentication Middleware --- #
+
+def require_auth():
+    """Decorator to require authentication for routes."""
+    def decorator(f):
+        @wraps(f)
+        async def decorated_function(*args, **kwargs):
+            try:
+                # Get the access token from cookies
+                access_token = request.cookies.get('access_token')
+                if not access_token:
+                    # Also check Authorization header for API calls
+                    auth_header = request.headers.get('Authorization')
+                    if auth_header and auth_header.startswith('Bearer '):
+                        access_token = auth_header.split(' ')[1]
+                    else:
+                        return jsonify({"error": "Authentication required"}), 401
+                
+                # Verify the token
+                payload = verify_token(access_token, "access")
+                
+                # Attach user info to request for use in route handlers
+                request.user_id = payload.get("id")
+                request.email = payload.get("email")
+                request.is_admin = payload.get("is_admin", False)
+                
+                return await f(*args, **kwargs)
+            except Exception as e:
+                logger.warning(f"Authentication middleware error: {e}")
+                return jsonify({"error": "Authentication failed"}), 401
+        return decorated_function
+    return decorator
+
+def require_admin():
+    """Decorator to require admin privileges for routes."""
+    def decorator(f):
+        @wraps(f)
+        async def decorated_function(*args, **kwargs):
+            try:
+                # First require authentication
+                auth_result = await require_auth()(lambda: None)()
+                if isinstance(auth_result, tuple) and auth_result[1] != 200:
+                    return auth_result
+                
+                # Check if user is admin
+                if not request.is_admin:
+                    return jsonify({"error": "Admin privileges required"}), 403
+                
+                return await f(*args, **kwargs)
+            except Exception as e:
+                logger.warning(f"Admin middleware error: {e}")
+                return jsonify({"error": "Admin privileges required"}), 403
+        return decorated_function
+    return decorator
+
 # --- Database Access Functions --- #
 
 async def get_user_by_email(email: str):
@@ -61,21 +147,22 @@ async def get_user_by_email(email: str):
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         return await conn.fetchrow(
-            "SELECT id, email, password_hash, auth_provider, is_verified, google_id, name "
+            "SELECT id, email, password_hash, auth_provider, is_verified, google_id, name, is_admin "
             "FROM users WHERE email = $1", email
         )
 
-async def create_user(email: str, name: str, password_hash: str = None, auth_provider: str = "email", google_id: str = None, is_verified: bool = False):
+async def create_user(email: str, name: str, password_hash: str = None, auth_provider: str = "email", 
+                     google_id: str = None, is_verified: bool = False, is_admin: bool = False):
     """Create a new user in the database."""
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         return await conn.fetchrow(
             """
-            INSERT INTO users (email, name, password_hash, auth_provider, google_id, is_verified)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, email, name, auth_provider, is_verified
+            INSERT INTO users (email, name, password_hash, auth_provider, google_id, is_verified, is_admin)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id, email, name, auth_provider, is_verified, is_admin
             """,
-            email, name, password_hash, auth_provider, google_id, is_verified
+            email, name, password_hash, auth_provider, google_id, is_verified, is_admin
         )
 
 async def get_user_by_id(user_id: int):
@@ -83,7 +170,7 @@ async def get_user_by_id(user_id: int):
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         return await conn.fetchrow(
-            "SELECT id, email, name, auth_provider, is_verified "
+            "SELECT id, email, name, auth_provider, is_verified, is_admin "
             "FROM users WHERE id = $1", user_id
         )
 
@@ -175,7 +262,8 @@ async def get_user_data(user_id: int):
             "storage": storage_info
         }
 
-async def upsert_user(email: str, name: str, google_id: str = None, auth_provider: str = "email", is_verified: bool = False):
+async def upsert_user(email: str, name: str, google_id: str = None, auth_provider: str = "email", 
+                     is_verified: bool = False, is_admin: bool = False):
     """Create a user if they don't exist, or update their info if they do."""
     pool = await get_db_pool()
     async with pool.acquire() as conn:
@@ -186,9 +274,9 @@ async def upsert_user(email: str, name: str, google_id: str = None, auth_provide
             # Update existing user
             await conn.execute("""
                 UPDATE users 
-                SET name = $1, google_id = $2, auth_provider = $3, is_verified = $4
-                WHERE email = $5
-            """, name, google_id, auth_provider, is_verified, email)
+                SET name = $1, google_id = $2, auth_provider = $3, is_verified = $4, is_admin = $5
+                WHERE email = $6
+            """, name, google_id, auth_provider, is_verified, is_admin, email)
             
             # Fetch updated user
             user = await get_user_by_email(email)
@@ -199,15 +287,29 @@ async def upsert_user(email: str, name: str, google_id: str = None, auth_provide
                 name=name,
                 auth_provider=auth_provider,
                 google_id=google_id,
-                is_verified=is_verified
+                is_verified=is_verified,
+                is_admin=is_admin
             )
             
             # Ensure user has storage
             await create_user_storage(user['id'])
             
         return dict(user)
+
+async def set_user_admin_status(email: str, is_admin: bool = True):
+    """Set a user's admin status by email."""
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE users SET is_admin = $1 WHERE email = $2",
+            is_admin, email
+        )
+        return await get_user_by_email(email)
+
 # --- Authentication Routes --- #
+
 @auth_bp.route('/internal/login_details', methods=['GET'])
+@require_admin()
 async def login_details():
     """Retrieve the login history for a specified user."""
     try:
@@ -264,7 +366,8 @@ async def google_login():
             await log_user_login(user['id'], 'google')
             
             # Create tokens
-            access_token = await create_token({"id": user['id'], "email": user['email']}, "access")
+            access_token = await create_token({"id": user['id'], "email": user['email'], 
+                                             "is_admin": user.get('is_admin', False)}, "access")
             refresh_token = await create_token({"user_id": user['id']}, "refresh")
             
             # Get user data
@@ -291,6 +394,7 @@ async def google_login():
     except Exception as e:
         logger.exception("Google login failed")
         return jsonify({"error": "Google login failed", "details": str(e)}), 500
+
 @auth_bp.route('/register', methods=['POST'])
 async def register():
     """Register a new user via email and password."""
@@ -313,7 +417,8 @@ async def register():
         # Log login
         await log_user_login(user['id'], 'email')
 
-        access_token = await create_token({"id": user['id'], "email": user['email']}, "access")
+        access_token = await create_token({"id": user['id'], "email": user['email'], 
+                                         "is_admin": user.get('is_admin', False)}, "access")
         refresh_token = await create_token({"user_id": user['id']}, "refresh")
 
         response = jsonify({
@@ -329,6 +434,7 @@ async def register():
     except Exception as e:
         logger.exception("Registration failed")
         return jsonify({"error": "Registration failed", "details": str(e)}), 500
+
 @auth_bp.route('/login', methods=['POST'])
 async def login():
     """Authenticate an existing user via email and password."""
@@ -346,7 +452,8 @@ async def login():
         # Log login
         await log_user_login(user['id'], 'email')
 
-        access_token = await create_token({"id": user['id'], "email": user['email']}, "access")
+        access_token = await create_token({"id": user['id'], "email": user['email'], 
+                                         "is_admin": user.get('is_admin', False)}, "access")
         refresh_token = await create_token({"user_id": user['id']}, "refresh")
 
         response = jsonify({
@@ -363,6 +470,64 @@ async def login():
         logger.exception("Login failed")
         return jsonify({"error": "Login failed", "details": str(e)}), 500
 
+@auth_bp.route('/admin/login', methods=['POST'])
+async def admin_login():
+    """Admin login with override password."""
+    try:
+        data = await request.get_json()
+        email, admin_password = data.get('email'), data.get('admin_password')
+
+        if not all([email, admin_password]):
+            return jsonify({"error": "Email and admin password are required"}), 400
+
+        # Verify admin password override
+        if admin_password != ADMIN_PASSWORD_OVERRIDE:
+            return jsonify({"error": "Invalid admin credentials"}), 401
+
+        # Get user or create if doesn't exist
+        user = await get_user_by_email(email)
+        
+        if user:
+            # Upgrade user to admin if needed
+            if not user.get('is_admin'):
+                user = await set_user_admin_status(email, True)
+        else:
+            # Create new admin user
+            password_hash = hash_password(secrets.token_urlsafe(12))  # Random password since login is by admin override
+            user = await create_user(
+                email=email,
+                name=email.split('@')[0],  # Just use email prefix as name
+                password_hash=password_hash,
+                auth_provider="admin_override",
+                is_verified=True,
+                is_admin=True
+            )
+            await create_user_storage(user['id'])
+        
+        # Log login
+        await log_user_login(user['id'], 'admin_override')
+        
+        # Create tokens with admin flag
+        access_token = await create_token({"id": user['id'], "email": user['email'], "is_admin": True}, "access")
+        refresh_token = await create_token({"user_id": user['id']}, "refresh")
+        
+        # Get user data
+        user_data = await get_user_data(user['id'])
+        
+        response = jsonify({
+            "message": "Admin login successful",
+            "user": dict(user),
+            "data": user_data
+        })
+        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Strict')
+        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Strict')
+        
+        return response
+
+    except Exception as e:
+        logger.exception("Admin login failed")
+        return jsonify({"error": "Admin login failed", "details": str(e)}), 500
+
 @auth_bp.route('/refresh', methods=['POST'])
 async def refresh():
     """Refresh the access token using the refresh token."""
@@ -378,7 +543,8 @@ async def refresh():
         if not user:
             return jsonify({"error": "User not found"}), 404
 
-        access_token = await create_token({"id": user['id'], "email": user['email']}, "access")
+        access_token = await create_token({"id": user['id'], "email": user['email'], 
+                                         "is_admin": user.get('is_admin', False)}, "access")
 
         response = jsonify({"message": "Token refreshed", "user": dict(user)})
         response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Strict')
@@ -414,6 +580,7 @@ async def check_session():
                 "authenticated": True,
                 "user": dict(user),
                 "is_verified": user.get("is_verified", False),
+                "is_admin": user.get("is_admin", False),
                 "data": await get_user_data(user_id)
             })
 
@@ -422,3 +589,70 @@ async def check_session():
     except Exception as e:
         logger.warning(f"Session check failed: {e}")
         return jsonify({"authenticated": False}), 401
+
+@auth_bp.route('/admin/users', methods=['GET'])
+@require_admin()
+async def list_users():
+    """List all users (admin only)."""
+    try:
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT id, email, name, auth_provider, is_verified, is_admin, created_at
+                FROM users 
+                ORDER BY id
+                """
+            )
+        return jsonify({"users": [dict(row) for row in rows]})
+    except Exception as e:
+        logger.exception("Failed to list users")
+        return jsonify({"error": "Failed to list users", "details": str(e)}), 500
+
+@auth_bp.route('/admin/users/<int:user_id>', methods=['PUT'])
+@require_admin()
+async def update_user(user_id: int):
+    """Update user properties (admin only)."""
+    try:
+        data = await request.get_json()
+        
+        # Verify user exists
+        user = await get_user_by_id(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        # Update fields that are provided
+        updates = {}
+        valid_fields = ['name', 'is_verified', 'is_admin']
+        for field in valid_fields:
+            if field in data:
+                updates[field] = data[field]
+                
+        if not updates:
+            return jsonify({"error": "No valid update fields provided"}), 400
+            
+        # Construct and execute update query
+        fields = []
+        values = []
+        for i, (field, value) in enumerate(updates.items()):
+            fields.append(f"{field} = ${i+1}")
+            values.append(value)
+        values.append(user_id)  # For the WHERE clause
+        
+        query = f"UPDATE users SET {', '.join(fields)} WHERE id = ${len(values)}"
+        
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            await conn.execute(query, *values)
+            
+            # Fetch updated user
+            updated_user = await get_user_by_id(user_id)
+            
+        return jsonify({
+            "message": "User updated successfully",
+            "user": dict(updated_user)
+        })
+            
+    except Exception as e:
+        logger.exception("Failed to update user")
+        return jsonify({"error": "Failed to update user", "details": str(e)}), 500
