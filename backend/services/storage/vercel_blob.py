@@ -5,6 +5,18 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+class Blob:
+    """
+    Represents a document or object stored in Vercel Blob Storage.
+    """
+    def __init__(self, url: str, filename: str, content_type: str):
+        self.url = url
+        self.filename = filename
+        self.content_type = content_type
+
+    def __repr__(self):
+        return f"Blob(url={self.url}, filename={self.filename}, content_type={self.content_type})"
+
 class VercelBlobService:
     def __init__(self):
         self.token = os.getenv('VERCEL_BLOB_READ_WRITE_TOKEN')
@@ -13,7 +25,7 @@ class VercelBlobService:
         # The upload endpoint per Vercel Blob API documentation.
         self.upload_endpoint = "https://api.vercel.com/v9/blob/upload"
 
-    async def upload_document(self, file_data: bytes, filename: str, content_type: str) -> str:
+    async def upload_document(self, file_data: bytes, filename: str, content_type: str) -> Blob:
         """
         Upload a document (or image) to Vercel Blob Storage.
         
@@ -23,7 +35,7 @@ class VercelBlobService:
             content_type: The MIME type of the file.
             
         Returns:
-            The URL at which the file can be accessed.
+            A Blob object representing the uploaded file.
         """
         headers = {
             "Authorization": f"Bearer {self.token}",
@@ -51,8 +63,8 @@ class VercelBlobService:
                     text = await put_resp.text()
                     logger.error(f"Failed to upload file: {put_resp.status} {text}")
                     raise Exception("Failed to upload file to Vercel Blob")
-        # The put_url typically serves as the public URL to access the blob.
-        return put_url
+        # Return a Blob object representing the uploaded file.
+        return Blob(url=put_url, filename=filename, content_type=content_type)
 
     async def get_document(self, document_url: str) -> Optional[bytes]:
         """
@@ -71,7 +83,7 @@ class VercelBlobService:
                     return None
                 return await resp.read()
 
-    async def delete_document(self, document_url: str) -> bool:
+    async def delete_document(self) -> bool:
         """
         Delete a document from Vercel Blob Storage.
         

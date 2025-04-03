@@ -1,4 +1,5 @@
 const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+const googleClientSecret = process.env.REACT_APP_GOOGLE_CLIENT_SECRET;
 
 // Configuration for authentication
 const authConfig = {
@@ -19,4 +20,4 @@ const authConfig = {
   }
 };
 
-export { googleClientId, authConfig };
+export { googleClientId, googleClientSecret, authConfig };

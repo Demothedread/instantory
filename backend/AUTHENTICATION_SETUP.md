@@ -14,10 +14,10 @@ psql -d bartlebySQL -f backend/update_admin_schema.sql
 psql "postgres://[YOUR_CONNECTION_STRING]" -f backend/update_admin_schema.sql
 ```
 
-## Environment Variables 
+## Environment Variables
 
 ### Backend (Render)
-
+ 
 Make sure the following environment variables are set in your Render dashboard:
 
 ```

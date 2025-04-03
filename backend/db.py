@@ -1,12 +1,18 @@
 import os
 import logging
 import asyncio
+# Removed unused global import of boto3
 from io import BytesIO
 from pathlib import Path
 
 from quart import Blueprint, request, jsonify, send_file
 
-from cleanup import get_db_pool
+from .cleanup import get_metadata_pool, get_vector_pool
+# Import all potential storage modules upfront
+try:
+    from .services.storage import vercel_blob
+except ImportError:
+    vercel_blob = None
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +42,10 @@ class StorageService:
             self.bucket_name = os.getenv('S3_BUCKET_NAME')
 
         elif self.backend == 'vercel':
-            # Import the local vercel_blob module
-            try:
-                from .services.storage import vercel_blob
-            except ImportError:
+            # Check if vercel_blob module was successfully imported
+            if vercel_blob is None:
                 logger.error("vercel_blob module not found; ensure it is installed or the file is present.")
-                raise
+                raise ImportError("vercel_blob module not found")
             self.vercel_blob = vercel_blob
             self.vercel_token = os.getenv('VERCEL_BLOB_READ_WRITE_TOKEN')
 
@@ -95,7 +99,7 @@ class StorageService:
             )
             return True
         except (self.BotoCoreError, self.ClientError) as e:
-            logger.error(f"S3 delete error: {e}")
+            logger.error("S3 delete error: %s", e)
             return False
 
     def _parse_s3_url(self, url: str):
@@ -106,21 +110,29 @@ class StorageService:
         return parts[0], parts[1]
 
     # --- Vercel Blob Methods ---
-    async def _get_document_vercel(self, document_url: str) -> bytes:
+    async def _get_document_vercel(self, document_url: str) -> Optional[bytes]:
         """Retrieve a document from Vercel Blob."""
         try:
-            blob = self.vercel_blob.Blob(self.vercel_token)
+            blob = self.vercel_blob.Blob(self.vercel_token, filename=document_url, content_type='application/octet-stream')
             response = await asyncio.to_thread(blob.get, document_url)
             return response.content
+        except AttributeError as e:
+            logger.error(f"Attribute error while fetching document from Vercel Blob: {e}, URL: {document_url}")
+        except ConnectionError as e:
+            logger.error(f"Connection error while fetching document from Vercel Blob: {e}, URL: {document_url}")
         except Exception as e:
-            logger.error(f"Vercel Blob fetch error: {e}")
-            return None
+            logger.error("Unexpected error while fetching document from Vercel Blob: %s, URL: %s", e, document_url)
+        return None
 
     async def _delete_document_vercel(self, document_url: str) -> bool:
         """Delete a document from Vercel Blob."""
         try:
-            blob = self.vercel_blob.Blob(self.vercel_token)
-            await asyncio.to_thread(blob.delete, document_url)
+            blob = self.vercel_blob.Blob(
+                self.vercel_token,
+                filename=document_url,
+                content_type='application/octet-stream'
+            ) 
+            await asyncio.to_thread(Blob.delete, document_url)
             return True
         except Exception as e:
             logger.error(f"Vercel Blob delete error: {e}")
@@ -129,7 +141,7 @@ class StorageService:
     # --- Generic Storage Methods ---
     async def _get_document_generic(self, document_url: str) -> bytes:
         """Retrieve a document from a generic/local storage (placeholder)."""
-        logger.info("Generic storage: get_document not implemented")
+        logger.info(f"Generic storage: get_document not implemented for URL: {document_url}")
         return None
 
     async def _delete_document_generic(self, document_url: str) -> bool:
@@ -199,7 +211,7 @@ async def process_document(doc_id: int, file_path: str):
     embedding = await compute_embedding(text)
 
     try:
-        async with get_db_pool() as pool:
+        async with get_vector_pool() as pool:
             async with pool.acquire() as conn:
                 await conn.execute(
                     """
@@ -224,12 +236,12 @@ async def process_document(doc_id: int, file_path: str):
 async def get_documents():
     """Retrieve all documents for the current user."""
     try:
-        async with get_db_pool() as pool:
+        async with get_vector_pool() as pool:
             async with pool.acquire() as conn:
                 user_id = getattr(request, 'user_id', request.args.get('user_id'))
                 if not user_id:
-                    return jsonify({"error": "User ID is required"}), 400
-
+                     return jsonify({"error": "User ID is required"}), 400
+         
                 rows = await conn.fetch(
                     """
                     SELECT id, title, author, journal_publisher, publication_year,
@@ -286,7 +298,7 @@ async def create_document():
         if not user_id:
             return jsonify({'error': 'User ID required'}), 400
 
-        async with get_db_pool() as pool:
+        async with get_vector_pool() as pool:
             async with pool.acquire() as conn:
                 row = await conn.fetchrow(
                     """
@@ -335,7 +347,7 @@ async def update_document(doc_id):
         if not user_id:
             return jsonify({'error': 'User ID required'}), 400
 
-        async with get_db_pool() as pool:
+        async with get_metadata_pool() as pool:
             async with pool.acquire() as conn:
                 row = await conn.fetchrow(
                     """
@@ -386,7 +398,7 @@ async def delete_document(doc_id):
         if not user_id:
             return jsonify({'error': 'User ID required'}), 400
 
-        async with get_db_pool() as pool:
+        async with get_vector_pool() as pool:
             async with pool.acquire() as conn:
                 row = await conn.fetchrow(
                     """
@@ -420,7 +432,7 @@ async def search_documents():
         if not query:
             return jsonify({'error': 'Search query is required'}), 400
 
-        async with get_db_pool() as pool:
+        async with get_vector_pool() & get_metadata_pool as pool:
             async with pool.acquire() as conn:
                 where_clause = "user_id = $1"
                 params = [int(user_id)]
