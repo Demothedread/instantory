@@ -70,7 +70,7 @@ class DatabaseConfig:
             'database': parsed.path[1:] if parsed.path else None,
             'host': parsed.hostname,
             'port': parsed.port
-        }
+        }                                          
 
     async def get_pool(self, db_type: DatabaseType) -> Optional[asyncpg.Pool]:
         """Get or create a database connection pool for the specified type.

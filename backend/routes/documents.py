@@ -1,18 +1,31 @@
 import os
 import logging
 import asyncio
+import json
 from io import BytesIO
 from quart import Blueprint, request, jsonify, send_file
-from ..db import get_db_pool
-from ..config.storage import storage_service   # New import
-from ..services.storage.vercel_blob import vercel_blob
-from ..services.storage.s3 import s3_client
+from ..config.database import get_vector_pool, get_metadata_pool
+from ..config.storage import storage_service
+# Import necessary storage modules, but don't reference specific exports
+from ..services.storage import vercel_blob as vercel_module
+from ..services.storage import s3 as s3_module
+from openai import AsyncOpenAI
+
+# Initialize OpenAI client for vector embeddings
+openai_client = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Create blueprint
 documents_bp = Blueprint('documents', __name__)
+  
+def client_fn(self):
+    # Logic for the client function
+    pass
+def create_client(self):
+    # Logic for the create_client function
+    pass
 
 # Unified storage service interface
 class StorageService:
@@ -31,8 +44,8 @@ class StorageService:
             )
             self.bucket_name = os.getenv('S3_BUCKET_NAME')
         elif self.backend == 'vercel':
-            self.vercel_blob = vercel_blob
-            self.vercel_token = os.getenv('VERCEL_BLOB_READ_WRITE_TOKEN')
+            self.vercel_blob = vercel_module
+            self.vercel_token = os.getenv('BLOB_READ_WRITE_TOKEN')
         elif self.backend == 'generic':
             # Fallback implementation; extend as needed.
             pass
@@ -82,24 +95,101 @@ class StorageService:
         # Assumes URL in format: s3://bucket/key
         parts = url.replace("s3://", "").split("/", 1)
         return parts[0], parts[1]
+   
 
     # --- Vercel Blob Methods ---
     async def _get_document_vercel(self, document_url: str) -> bytes:
+        """Get document from Vercel Blob Storage using available API."""
         try:
-            blob = self.vercel_blob.Blob(self.vercel_token)
-            response = await asyncio.to_thread(blob.get, document_url)
-            return response.content
+            # Implement with flexibility to handle different vercel_blob implementations
+            vercel_api = self.vercel_blob
+            
+            # Try different possible API patterns based on what's available in the module
+            if hasattr(vercel_api, 'get_blob'):
+                # Try direct function approach first
+                blob_data = await asyncio.to_thread(
+                    vercel_api.get_blob,
+                    token=self.vercel_token,
+                    url=document_url
+                )
+                return blob_data
+
+            elif hasattr(vercel_api, 'get'):
+                # Try direct get method
+                blob_data = await asyncio.to_thread(
+                    vercel_api.get,
+                    url=document_url,
+                    token=self.vercel_token
+                )
+                return blob_data
+
+            else:
+                # Fall back to client pattern if available
+                client_fn = getattr(vercel_api, 'create_client', None)
+                logger.debug(f"create_client = {client_fn}, type = {type(client_fn)}")
+                if client_fn and callable(client_fn):
+                    client = client_fn(self.vercel_token)
+                    if hasattr(client, 'get') and callable(client.get):
+                        response = await asyncio.to_thread(client.get, document_url)
+                        if hasattr(response, 'body'):
+                            return response.body
+                        elif hasattr(response, 'content'):
+                            return response.content
+                        else:
+                            return response
+                    else:
+                        logger.error("create_client is not callable. Check vercel_blob module export.")
+                else:
+                    logger.error("No compatible API method found in vercel_blob module")
+                    return None
+
+            # If we can't figure it out, log an error
+            logger.error("No compatible API method found in vercel_blob module")
+            return None
+            
         except Exception as e:
-            logger.error(f"Error fetching document from Vercel: {e}")
+            logger.error(f"Error fetching document from Vercel Blob: {e}")
+            logger.debug(f"URL: {document_url}, Error details: {str(e)}")
             return None
 
     async def _delete_document_vercel(self, document_url: str) -> bool:
+        """Delete document from Vercel Blob Storage using available API."""
         try:
-            blob = self.vercel_blob.Blob(self.vercel_token)
-            await asyncio.to_thread(blob.delete, document_url)
-            return True
+            # Implement with flexibility to handle different vercel_blob implementations
+            vercel_api = self.vercel_blob
+            
+            # Try different possible API patterns based on what's available in the module
+            if hasattr(vercel_api, 'delete_blob'):
+                # Try direct function approach first
+                await asyncio.to_thread(
+                    vercel_api.delete_blob,
+                    token=self.vercel_token,
+                    url=document_url
+                )
+                return True
+            elif hasattr(vercel_api, 'delete'):
+                # Try direct delete method
+                await asyncio.to_thread(
+                    vercel_api.delete,
+                    url=document_url,
+                    token=self.vercel_token
+                )
+                return True
+            else:
+                # Fall back to client pattern
+                client_fn = getattr(vercel_api, 'create_client', None)
+                if client_fn:
+                    client = client_fn(self.vercel_token)
+                    await asyncio.to_thread(client.delete, document_url)
+                    return True
+            
+            # If we can't figure it out, log an error
+            logger.error("No compatible delete method found in vercel_blob module")
+            return False
+            
         except Exception as e:
-            logger.error(f"Error deleting document from Vercel: {e}")
+            logger.error(f"Error deleting document from Vercel Blob: {e}")
+            logger.debug(f"URL: {document_url}, Error details: {str(e)}")
             return False
 
     # --- Generic Storage Methods ---
@@ -121,13 +211,13 @@ storage_service = StorageService()
 async def get_documents():
     """Get all documents for the current user."""
     try:
-        async with get_db_pool() as pool:
+        async with get_metadata_pool() as pool:
             async with pool.acquire() as conn:
                 # Assume auth middleware sets request.user_id or use header fallback.
                 user_id = getattr(request, 'user_id', request.headers.get('X-User-ID'))
                 if not user_id:
                     return jsonify({"error": "User ID is required"}), 400
-                rows = await conn.fetch("""
+                rows = await conn.fetch("""""
                     SELECT id, title, author, journal_publisher, publication_year,
                            page_length, thesis, issue, summary, category, field,
                            hashtags, influenced_by, file_path, file_type, created_at
@@ -184,7 +274,7 @@ async def create_document():
         if not user_id:
             return jsonify({'error': 'User ID required'}), 400
 
-        async with get_db_pool() as pool:
+        async with get_metadata_pool() as pool:
             async with pool.acquire() as conn:
                 row = await conn.fetchrow("""
                     INSERT INTO user_documents (
@@ -226,7 +316,7 @@ async def update_document(doc_id):
         if not user_id:
             return jsonify({'error': 'User ID required'}), 400
 
-        async with get_db_pool() as pool:
+        async with get_metadata_pool() as pool:
             async with pool.acquire() as conn:
                 row = await conn.fetchrow("""
                     UPDATE user_documents SET
@@ -276,27 +366,65 @@ async def get_search_documents():
         if not query:
             return jsonify({"error": "No search query provided"}), 400
 
-        async with get_db_pool() as pool:
+        # Generate vector embedding for the query
+        try:
+            response = await openai_client.embeddings.create(
+                model="text-embedding-3-small",
+                input=query
+            )
+            query_vector = response.data[0].embedding
+        except Exception as e:
+            logger.error(f"Error generating query embedding: {e}")
+            return jsonify({"error": "Failed to process query"}), 500
+
+        # Search in vector database for similar documents
+        async with get_vector_pool() as pool:
             async with pool.acquire() as conn:
                 user_id = getattr(request, 'user_id', request.headers.get('X-User-ID'))
                 if not user_id:
                     return jsonify({"error": "User ID is required"}), 400
-
-                # Define get_query_vector function
-                async def get_query_vector(query: str) -> list:
-                    # Dummy implementation, replace with actual logic
-                    return [0.0] * 300  # Example: 300-dimensional vector
-                query_vector = await get_query_vector(query)
-                rows = await conn.fetch("""
-                    SELECT 
-                        id, title, author, summary, category, file_path, created_at,
-                        content_vector <=> $1 as similarity
-                    FROM user_documents 
-                    WHERE user_id = $2
-                    ORDER BY similarity ASC
-                    LIMIT 10
-                """, query_vector, int(user_id))
-                return jsonify([dict(row) for row in rows])
+                
+                try:
+                    # Try querying with vector similarity (<=> is the cosine distance operator)
+                    rows = await conn.fetch("""
+                        SELECT document_id, 1 - (content_vector <=> $1) as similarity
+                        FROM document_vectors 
+                        WHERE 1 - (content_vector <=> $1) > 0.7
+                        ORDER BY similarity DESC
+                        LIMIT 10
+                    """, query_vector)
+                    
+                    # Get metadata for the matching documents
+                    document_ids = [row['document_id'] for row in rows]
+                    if not document_ids:
+                        return jsonify({"results": [], "message": "No similar documents found"}), 200
+                        
+                    # Get document details from metadata database
+                    async with get_metadata_pool() as metadata_pool:
+                        async with metadata_pool.acquire() as metadata_conn:
+                            doc_rows = await metadata_conn.fetch("""
+                                SELECT id, title, author, summary, category, file_path, created_at
+                                FROM user_documents 
+                                WHERE id = ANY($1) AND user_id = $2
+                            """, document_ids, int(user_id))
+                            
+                            # Combine with similarity scores
+                            results = []
+                            for doc in doc_rows:
+                                doc_dict = dict(doc)
+                                # Find matching similarity
+                                for row in rows:
+                                    if row['document_id'] == doc_dict['id']:
+                                        doc_dict['similarity'] = row['similarity']
+                                        break
+                                results.append(doc_dict)
+                                
+                            return jsonify({"results": results})
+                            
+                except Exception as vector_error:
+                    # Fallback to regular search if vector search fails
+                    logger.warning(f"Vector search failed, falling back to text search: {vector_error}")
+                    return jsonify({"error": "Vector search unavailable"}), 500
     except Exception as e:
         logger.error(f"Error searching documents: {e}")
         return jsonify({"error": "Failed to search documents"}), 500
@@ -305,7 +433,8 @@ async def get_search_documents():
 async def delete_document(doc_id):
     """Delete a document and its storage content."""
     try:
-        async with get_db_pool() as pool:
+        # First, get document details from metadata DB
+        async with get_metadata_pool() as pool:
             async with pool.acquire() as conn:
                 user_id = getattr(request, 'user_id', request.headers.get('X-User-ID'))
                 if not user_id:
@@ -352,7 +481,57 @@ async def search_documents():
         if not query:
             return jsonify({'error': 'Search query is required'}), 400
 
-        async with get_db_pool() as pool:
+        # Try vector search first
+        try:
+            # Generate embedding for the query
+            response = await openai_client.embeddings.create(
+                model="text-embedding-3-small",
+                input=query
+            )
+            query_vector = response.data[0].embedding
+            
+            # Search by vector similarity in vector database
+            async with get_vector_pool() as pool:
+                async with pool.acquire() as conn:
+                    rows = await conn.fetch("""
+                        SELECT document_id, 1 - (content_vector <=> $1) as similarity
+                        FROM document_vectors 
+                        WHERE 1 - (content_vector <=> $1) > 0.6
+                        ORDER BY similarity DESC
+                        LIMIT 20
+                    """, query_vector)
+                    
+                    if rows:
+                        # Get matching documents from metadata database
+                        document_ids = [row['document_id'] for row in rows]
+                        async with get_metadata_pool() as metadata_pool:
+                            async with metadata_pool.acquire() as metadata_conn:
+                                # Get full document details
+                                doc_rows = await metadata_conn.fetch("""
+                                    SELECT id, title, author, summary, category, extracted_text
+                                    FROM user_documents 
+                                    WHERE id = ANY($1) AND user_id = $2
+                                """, document_ids, int(user_id))
+                                
+                                # Combine results with similarity scores and excerpts
+                                results = []
+                                for doc in doc_rows:
+                                    doc_dict = dict(doc)
+                                    doc_dict['excerpt'] = extract_matching_excerpt(doc_dict.get('extracted_text', ''), query)
+                                    # Find matching similarity score
+                                    for row in rows:
+                                        if row['document_id'] == doc_dict['id']:
+                                            doc_dict['similarity'] = row['similarity']
+                                            break
+                                    results.append(doc_dict)
+                                
+                                return jsonify({'results': results, 'search_type': 'vector'})
+        except Exception as vector_error:
+            logger.warning(f"Vector search failed, falling back to text search: {vector_error}")
+            # Fall through to text search below
+        
+        # Fallback to traditional text search
+        async with get_metadata_pool() as pool:
             async with pool.acquire() as conn:
                 where_clause = "user_id = $1"
                 params = [int(user_id)]

@@ -84,7 +84,15 @@ OPENAI_API_KEY=your_openai_key
    ```bash
    cd backend
    npm install
+   
+   # Initialize both databases (metadata and vector)
    node scripts/init-databases.js
+   
+   # If you have issues with vector database setup
+   DEBUG=true node scripts/init-databases.js
+   
+   # Or to only test connections without creating tables
+   node scripts/init-databases.js --sync-only
    ```
 
 2. **Deploy on Render**:
@@ -111,7 +119,8 @@ OPENAI_API_KEY=your_openai_key
 The application includes fallback mechanisms for resilience:
 
 1. **Database Fallbacks**:
-   - If Neon is unavailable, vector operations will be disabled but the app will continue to function
+   - If Neon PostgreSQL (vector database) is unavailable, vector search operations will be disabled but the app will continue to function with regular text search
+   - All document data is primarily stored in the main Render PostgreSQL database with vector embeddings stored separately in Neon
    - The main Render PostgreSQL database is required and has no fallback
 
 2. **Storage Fallbacks**:
@@ -139,10 +148,29 @@ The application includes fallback mechanisms for resilience:
 2. Check that the vector extension is available on your Neon database
 3. If vector extension isn't available, the script will automatically create tables with TEXT fields instead
 
+## Vector Search Implementation
+
+The application uses a dual-database approach for document search:
+
+1. **Vector Search** (Primary method when Neon DB is available)
+   - Documents are stored in the main Render PostgreSQL database with their metadata
+   - When documents are uploaded, text is extracted and sent to OpenAI's embedding API
+   - The resulting vector embeddings are stored in Neon PostgreSQL
+   - Search queries are converted to vectors and compared using cosine similarity
+   - This enables semantic search that understands concepts, not just keywords
+
+2. **Text Search** (Fallback method)
+   - If vector search is unavailable (Neon DB unreachable or OpenAI API issues)
+   - Uses PostgreSQL's ILIKE operator for simple text matching
+   - Still provides basic search functionality even when advanced features are down
+
+This hybrid approach ensures the application remains functional even if some components fail, while providing advanced semantic search capabilities when all systems are operational.
+
 ## Monitoring
 
 Monitor your application's database and storage usage through:
-1. Render dashboard for PostgreSQL usage
-2. Neon dashboard for vector database performance
-3. Vercel dashboard for Blob storage usage
-4. AWS CloudWatch for S3 usage and metrics
+1. Render dashboard for PostgreSQL usage (metadata database)
+2. Neon dashboard for vector database performance (vector search)
+3. Vercel dashboard for Blob storage usage (image/document storage)
+4. AWS CloudWatch for S3 usage and metrics (alternative document storage)
+5. OpenAI dashboard for embedding API usage (vector generation)
