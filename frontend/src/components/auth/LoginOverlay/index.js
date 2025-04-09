@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 
 import { AuthContext } from '../../../contexts/auth';
 import { GoogleLogin } from '@react-oauth/google';
@@ -12,9 +12,47 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
     const [name, setName] = useState('');
     const [adminPassword, setAdminPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [mode, setMode] = useState('login'); // ' login', 'register', or 'admin'
+    const [mode, setMode] = useState('login'); // 'login', 'register', or 'admin'
 
-    // Handle Google OAuth login
+    // Initialize Google One Tap when component mounts
+    useEffect(() => {
+        if (window.google && isVisible) {
+            // Only show One Tap if the login overlay is visible
+            window.google.accounts.id.initialize({
+                client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID || window.GOOGLE_CLIENT_ID,
+                callback: handleOneTapResponse,
+                auto_select: true,
+                cancel_on_tap_outside: false,
+            });
+            
+            // Display the One Tap UI
+            window.google.accounts.id.prompt();
+            
+            // Clean up when component unmounts
+            return () => {
+                window.google.accounts.id.cancel();
+            };
+        }
+    }, [isVisible]);
+    
+    // Handle Google One Tap response
+    const handleOneTapResponse = (response) => {
+        if (!response || !response.credential) {
+            console.error('Invalid Google One Tap response');
+            return;
+        }
+        setIsLoading(true);
+        try {
+            // Use the passed prop if available, otherwise use context
+            const loginFn = onGoogleLogin || loginWithGoogle;
+            loginFn(response.credential);
+        } catch (error) {
+            console.error('Google One Tap login failed:', error);
+            setIsLoading(false);
+        }
+    };
+
+    // Handle Google OAuth login (standard button)
     const handleGoogleSuccess = async (credentialResponse) => {
         const credential = credentialResponse?.credential;
         if (!credential) {

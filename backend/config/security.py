@@ -29,6 +29,7 @@ class CORSConfig:
             'X-Requested-With',
             'google-oauth-token',
             'google-client_id',  # Include client_id to support Google sign-in
+            'g_csrf_token',      # For Google One Tap authentication
         ]
     @staticmethod
     def get_methods() -> List[str]:
@@ -107,6 +108,23 @@ class GoogleOAuthConfig:
         if not client_id:
             raise ValueError("GOOGLE_CLIENT_ID environment variable is required")
         return client_id
+        
+    @staticmethod
+    def get_additional_client_ids() -> List[str]:
+        """Get additional Google OAuth client IDs from environment."""
+        additional_ids = os.getenv('ADDITIONAL_GOOGLE_CLIENT_IDS', '')
+        if additional_ids:
+            return [id.strip() for id in additional_ids.split(',') if id.strip()]
+        return []
+        
+    @staticmethod
+    def get_all_client_ids() -> List[str]:
+        """Get all Google OAuth client IDs (primary + additional)."""
+        ids = [GoogleOAuthConfig.get_client_id()]
+        additional_ids = GoogleOAuthConfig.get_additional_client_ids()
+        if additional_ids:
+            ids.extend(additional_ids)
+        return ids
 
     @staticmethod
     def get_client_secret() -> str:

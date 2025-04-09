@@ -8,6 +8,7 @@ import bcrypt
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from functools import wraps
+from typing import Dict, Any, Optional
 
 # Import with fallbacks to handle different execution contexts
 try:
@@ -41,6 +42,10 @@ ADMIN_PASSWORD_OVERRIDE = os.getenv('ADMIN_PASSWORD_OVERRIDE')
 ACCESS_TOKEN_EXPIRY = timedelta(minutes=30)
 REFRESH_TOKEN_EXPIRY = timedelta(days=7)
 JWT_ALGORITHM = "HS256"
+
+# Additional Google OAuth allowed client IDs (for multi-client setups)
+ADDITIONAL_GOOGLE_CLIENT_IDS = os.getenv('ADDITIONAL_GOOGLE_CLIENT_IDS', '').split(',')
+ALLOWED_GOOGLE_CLIENT_IDS = [GOOGLE_CLIENT_ID] + [id for id in ADDITIONAL_GOOGLE_CLIENT_IDS if id]
 
 if not JWT_SECRET:
     raise EnvironmentError("JWT_SECRET is not set")
@@ -333,67 +338,123 @@ async def login_details():
         logger.exception("Failed to fetch login details")
         return jsonify({"error": "Failed to fetch login details", "details": str(e)}), 500
 
+async def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
+    """
+    Verify a Google ID token and return user information.
+    
+    Args:
+        token: The Google ID token to verify
+        
+    Returns:
+        Dictionary of user information from the token or None if verification fails
+    """
+    try:
+        # Create a Google auth request object
+        google_request = google_requests.Request()
+        
+        # Try to verify with the primary client ID first
+        try:
+            id_info = id_token.verify_oauth2_token(token, google_request, GOOGLE_CLIENT_ID)
+        except ValueError:
+            # If that fails, try additional client IDs if configured
+            if len(ALLOWED_GOOGLE_CLIENT_IDS) > 1:
+                # Try each ID in our allowed list
+                for client_id in ALLOWED_GOOGLE_CLIENT_IDS[1:]:  # Skip the primary one we already tried
+                    if not client_id:  # Skip empty strings
+                        continue
+                    try:
+                        id_info = id_token.verify_oauth2_token(token, google_request, client_id.strip())
+                        break  # If successful, exit the loop
+                    except ValueError:
+                        continue
+                else:  # This else belongs to the for loop and executes if no break occurred
+                    raise ValueError('Could not verify audience with any configured client ID')
+            else:
+                # No additional IDs to try
+                raise ValueError('Token verification failed with primary client ID and no alternatives configured')
+        
+        # Verify issuer is Google
+        if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+            raise ValueError('Invalid token issuer')
+            
+        # Verify the token is not expired
+        # (This is actually handled by verify_oauth2_token already, but kept for clarity)
+        if datetime.now(tz=timezone.utc) > datetime.fromtimestamp(id_info['exp'], tz=timezone.utc):
+            raise ValueError('Token has expired')
+            
+        return id_info
+        
+    except ValueError as ve:
+        logger.warning(f"Google token verification failed: {ve}")
+        return None
+
 @auth_bp.route('/google', methods=['POST'])
 async def google_login():
-    """Authenticate a user via Google OAuth."""
+    """Authenticate a user via Google OAuth (works with regular OAuth and One Tap)."""
     try:
         data = await request.get_json()
         credential = data.get('credential')
+        # Also accept g_csrf_token for One Tap responses
+        g_csrf_token = data.get('g_csrf_token')
 
         if not credential:
             return jsonify({"error": "Missing Google OAuth credential"}), 400
+            
+        # If this is a One Tap request with g_csrf_token, verify the CSRF token
+        if g_csrf_token:
+            cookie_csrf_token = request.cookies.get('g_csrf_token')
+            if not cookie_csrf_token or g_csrf_token != cookie_csrf_token:
+                return jsonify({"error": "Invalid CSRF token for Google One Tap"}), 403
 
         # Verify Google token
-        try:
-            # Create a Google auth request object
-            google_request = google_requests.Request()
-            # Verify the token
-            id_info = id_token.verify_oauth2_token(credential, google_request, GOOGLE_CLIENT_ID)
-            
-            # Verify issuer
-            if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-                return jsonify({"error": "Invalid token issuer"}), 403
-            
-            # Extract user info
-            email = id_info.get('email')
-            name = id_info.get('name', email)
-            google_id = id_info.get('sub')
-            
-            # Upsert user (create or update)
-            user = await upsert_user(email, name, google_id, auth_provider="google", is_verified=True)
-            
-            # Log login
-            await log_user_login(user['id'], 'google')
-            
-            # Create tokens
-            access_token = await create_token({"id": user['id'], "email": user['email'], 
-                                             "is_admin": user.get('is_admin', False)}, "access")
-            refresh_token = await create_token({"user_id": user['id']}, "refresh")
-            
-            # Get user data
-            user_data = await get_user_data(user['id'])
-            
-            # Create response
-            response = jsonify({
-                "message": "Google login successful",
-                "user": user,
-                "is_verified": user.get("is_verified", False),
-                "data": user_data
-            })
-            
-            # Set secure cookies
-            response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Strict')
-            response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Strict')
-            
-            return response
-            
-        except ValueError as ve:
-            logger.warning(f"Invalid Google token: {ve}")
-            return jsonify({"error": "Invalid Google token", "details": str(ve)}), 401
+        id_info = await verify_google_token(credential)
+        if not id_info:
+            return jsonify({"error": "Invalid Google token"}), 401
+        
+        # Extract user info
+        email = id_info.get('email')
+        name = id_info.get('name', email)
+        google_id = id_info.get('sub')
+        
+        # Upsert user (create or update)
+        user = await upsert_user(email, name, google_id, auth_provider="google", is_verified=True)
+        
+        # Log login
+        await log_user_login(user['id'], 'google')
+        
+        # Create tokens
+        access_token = await create_token({"id": user['id'], "email": user['email'], 
+                                         "is_admin": user.get('is_admin', False)}, "access")
+        refresh_token = await create_token({"user_id": user['id']}, "refresh")
+        
+        # Get user data
+        user_data = await get_user_data(user['id'])
+        
+        # Create response
+        response = jsonify({
+            "message": "Google login successful",
+            "user": user,
+            "is_verified": user.get("is_verified", False),
+            "data": user_data
+        })
+        
+        # Set secure cookies
+        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Strict')
+        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Strict')
+        
+        return response
 
     except Exception as e:
         logger.exception("Google login failed")
         return jsonify({"error": "Google login failed", "details": str(e)}), 500
+
+@auth_bp.route('/google/one-tap', methods=['POST'])
+async def google_one_tap_login():
+    """
+    Authenticate a user via Google One Tap.
+    This is a convenience endpoint that redirects to the main Google login endpoint.
+    """
+    return await google_login()
 
 @auth_bp.route('/register', methods=['POST'])
 async def register():

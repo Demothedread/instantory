@@ -140,6 +140,12 @@ try:
 except ImportError as e:
     logger.warning(f"OAuth service not available: {e}")
     oauth_service = None
+
+# Check for Google OAuth configuration
+if not os.getenv('GOOGLE_CLIENT_ID'):
+    logger.warning("GOOGLE_CLIENT_ID not set - Google authentication will be unavailable")
+else:
+    logger.info("Google authentication configuration found")
 try:
     openai_api_key = os.getenv('OPENAI_API_KEY')
     if not openai_api_key:
