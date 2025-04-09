@@ -28,7 +28,7 @@ class CORSConfig:
             'Origin',
             'X-Requested-With',
             'google-oauth-token',
-            'client_id',  # Include client_id to support Google sign-in
+            'google-client_id',  # Include client_id to support Google sign-in
         ]
     @staticmethod
     def get_methods() -> List[str]:

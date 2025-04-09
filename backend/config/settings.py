@@ -192,6 +192,7 @@ class Settings:
                 'Accept',
                 'Origin',
                 'X-Requested-With',
-                'google-oauth-token'
+                'google-oauth-token',
+                "google-client-id",
             ]
         }

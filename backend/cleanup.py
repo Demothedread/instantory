@@ -70,7 +70,7 @@ def load_env_variables():
 load_env_variables()
 
 # Directory paths
-DATA_DIR = Path(os.getenv('DATA_DIR', os.path.join(os.path.dirname(__file__), 'data')))
+DATA_DIR = Path(os.getenv('STORAGE_BASE_DIR', os.path.join(os.path.dirname(__file__), 'data')))
 PATHS = {
     'UPLOADS_DIR': DATA_DIR / 'uploads',
     'INVENTORY_IMAGES_DIR': DATA_DIR / 'images' / 'inventory',
