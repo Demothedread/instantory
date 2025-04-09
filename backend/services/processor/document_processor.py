@@ -13,8 +13,8 @@ from openai import AsyncOpenAI
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
 from .base_processor import BaseProcessor
-from ...config.logging import log_config
-from ...config.storage import get_storage_config
+from backend.config.logging import log_config
+from backend.config.storage import get_storage_config
 
 logger = log_config.get_logger(__name__)
 storage = get_storage_config()
@@ -212,7 +212,7 @@ class DocumentProcessor(BaseProcessor):
         """Save document to storage with timestamp."""
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         new_filename = f"{timestamp}_{source_path.name}"
-        dest_path = storage.get_path('DOCUMENT_DIRECTORY') / new_filename
+        dest_path = storage.paths['DOCUMENT_DIRECTORY'] / new_filename
         
         try:
             shutil.copy2(source_path, dest_path)
@@ -231,7 +231,7 @@ class DocumentProcessor(BaseProcessor):
             vector_embedding = await self._compute_vector_embedding(full_text)
             
             # 1. Store metadata in the main metadata database
-            from ...config.database import get_metadata_pool
+            from backend.config.database import get_metadata_pool
             async with (await get_metadata_pool()) as metadata_pool:
                 async with metadata_pool.acquire() as metadata_conn:
                     document_id = await metadata_conn.fetchval('''
@@ -260,7 +260,7 @@ class DocumentProcessor(BaseProcessor):
                     )
             
             # 2. Store the full text and vector embedding in the vector database
-            from ...config.database import get_vector_pool
+            from backend.config.database import get_vector_pool
             async with (await get_vector_pool()) as vector_pool:
                 async with vector_pool.acquire() as vector_conn:
                     try:

@@ -11,8 +11,8 @@ from functools import wraps
 
 # Import with fallbacks to handle different execution contexts
 try:
-    from ..config.database import get_db_pool
-    from ..config.logging import logger
+    from backend.config.database import get_db_pool
+    from backend.config.logging import logger
 except ImportError:
     # Alternative import path for when running as a module
     try:
@@ -152,7 +152,7 @@ async def get_user_by_email(email: str):
         )
 
 async def create_user(email: str, name: str, password_hash: str = None, auth_provider: str = "email", 
-                     google_id: str = None, is_verified: bool = False, is_admin: bool = False):
+                    google_id: str = None, is_verified: bool = False, is_admin: bool = False):
     """Create a new user in the database."""
     pool = await get_db_pool()
     async with pool.acquire() as conn:

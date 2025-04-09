@@ -51,12 +51,10 @@ const config = {
     // They have been moved to the proper fetch API calls if needed
   },
   
-  // FedCM configuration for Google Sign-In
-  fedcm: {
+  // Google Sign-In configuration
+  googleSignIn: {
     enabled: true,
-    providers: [{
-      clientId: googleClientId
-    }]
+    clientId: googleClientId
   },
   
   // Storage configuration

@@ -4,11 +4,11 @@ import asyncio
 import json
 from io import BytesIO
 from quart import Blueprint, request, jsonify, send_file
-from ..config.database import get_vector_pool, get_metadata_pool
-from ..config.storage import storage_service
+from backend.config.database import get_vector_pool, get_metadata_pool
+from backend.config.storage import storage_service
 # Import necessary storage modules, but don't reference specific exports
-from ..services.storage import vercel_blob as vercel_module
-from ..services.storage import s3 as s3_module
+from backend.services.storage import vercel_blob as vercel_module
+from backend.services.storage import s3 as s3_module
 from openai import AsyncOpenAI
 
 # Initialize OpenAI client for vector embeddings

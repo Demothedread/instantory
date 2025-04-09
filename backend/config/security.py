@@ -16,9 +16,8 @@ class CORSConfig:
             'http://localhost:5000',
             'https://vercel.live',
             'https://hocomnia.com',
-            'https://instantory.vercel.app'
+            'https://instantory.vercel.app',"https://instantory.onrender.com ","https://*.vercel.app","https://hocomnia.com/*"
         ]
-    
     @staticmethod
     def get_headers() -> List[str]:
         """Get allowed headers."""
@@ -28,9 +27,9 @@ class CORSConfig:
             'Accept',
             'Origin',
             'X-Requested-With',
-            'google-oauth-token'
+            'google-oauth-token',
+            'client_id',  # Include client_id to support Google sign-in
         ]
-    
     @staticmethod
     def get_methods() -> List[str]:
         """Get allowed methods."""
@@ -96,3 +95,35 @@ def get_security_config() -> SecurityConfig:
 def get_cors_config() -> CORSConfig:
     """Get CORS configuration instance."""
     return CORSConfig()
+    
+    
+class GoogleOAuthConfig:
+    """Google OAuth configuration settings."""
+
+    @staticmethod
+    def get_client_id() -> str:
+        """Get Google OAuth client ID from environment."""
+        client_id = os.getenv('GOOGLE_CLIENT_ID')
+        if not client_id:
+            raise ValueError("GOOGLE_CLIENT_ID environment variable is required")
+        return client_id
+
+    @staticmethod
+    def get_client_secret() -> str:
+        """Get Google OAuth client secret from environment."""
+        client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+        if not client_secret:
+            raise ValueError("GOOGLE_CLIENT_SECRET environment variable is required")
+        return client_secret
+
+    @staticmethod
+    def get_redirect_uri() -> str:
+        """Get Google OAuth redirect URI from environment."""
+        redirect_uri = os.getenv('GOOGLE_REDIRECT_URI')
+        if not redirect_uri:
+            raise ValueError("GOOGLE_REDIRECT_URI environment variable is required")
+        return redirect_uri
+
+def get_google_oauth_config() -> GoogleOAuthConfig:
+    """Get Google OAuth configuration instance."""
+    return GoogleOAuthConfig()

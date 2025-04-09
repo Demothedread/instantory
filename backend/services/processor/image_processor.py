@@ -12,8 +12,8 @@ from openai import AsyncOpenAI
 from tenacity import retry, wait_random_exponential, stop_after_attempt
 
 from .base_processor import BaseProcessor
-from ...config.logging import log_config
-from ...config.storage import get_storage_config
+from config.logging import log_config
+from config.storage import get_storage_config
 
 logger = log_config.get_logger(__name__)
 storage = get_storage_config()

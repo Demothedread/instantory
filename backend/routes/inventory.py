@@ -1,8 +1,8 @@
 """Inventory management routes with image handling."""
 import logging
 from quart import Blueprint, jsonify, request
-from ..db import get_db_pool
-from ..services.storage.manager import storage_manager
+from backend.db import get_db_pool
+from backend.services.storage.manager import storage_manager
 
 logger = logging.getLogger(__name__)
 

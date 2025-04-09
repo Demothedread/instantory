@@ -10,8 +10,8 @@ from openai import AsyncOpenAI
 from .base_processor import BaseProcessor
 from .document_processor import DocumentProcessor
 from .image_processor import ImageProcessor
-from ...config.logging import log_config
-from ...config.storage import get_storage_config
+from config.logging import log_config
+from config.storage import get_storage_config
 
 logger = log_config.get_logger(__name__)
 storage = get_storage_config()
@@ -73,6 +73,20 @@ class BatchProcessor(BaseProcessor):
         self.document_processor = DocumentProcessor(db_pool, openai_client)
         self.image_processor = ImageProcessor(db_pool, openai_client, image_instruction)
         self.batch_status = BatchStatus()
+    
+    async def process_file(self, file_path: Path) -> bool:
+        """Process a single file by delegating to the appropriate processor.
+        
+        This implementation satisfies the abstract method requirement from BaseProcessor.
+        In practice, BatchProcessor uses process_uploads() as its main entry point.
+        """
+        if DocumentProcessor.is_supported_file(file_path):
+            return await self.document_processor.process_file(file_path)
+        elif ImageProcessor.is_supported_file(file_path):
+            return await self.image_processor.process_file(file_path)
+        else:
+            logger.warning(f"Unsupported file type: {file_path}")
+            return False
     
     def _categorize_files(self, upload_dir: Path) -> BatchFiles:
         """Categorize files in upload directory by type."""

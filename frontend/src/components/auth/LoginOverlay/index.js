@@ -12,7 +12,7 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
     const [name, setName] = useState('');
     const [adminPassword, setAdminPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [mode, setMode] = useState('login'); // 'login', 'register', or 'admin'
+    const [mode, setMode] = useState('login'); // ' login', 'register', or 'admin'
 
     // Handle Google OAuth login
     const handleGoogleSuccess = async (credentialResponse) => {

@@ -10,8 +10,8 @@ from PIL import Image
 
 # Import with fallbacks to handle different execution contexts
 try:
-    from ..services.storage.manager import storage_manager
-    from ..db import get_db_pool
+    from backend.services.storage.manager import storage_manager
+    from backend.db import get_db_pool
 except ImportError:
     # Alternative import path for when running as a module
     try:

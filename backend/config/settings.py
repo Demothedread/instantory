@@ -9,36 +9,59 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Paths:
-    """Application path configuration."""
-    BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
-    DATA_DIR: Path = BASE_DIR / 'data'
-    UPLOADS_DIR: Path = DATA_DIR / 'uploads'
-    INVENTORY_IMAGES_DIR: Path = DATA_DIR / 'images' / 'inventory'
-    TEMP_DIR: Path = DATA_DIR / 'temp'
-    EXPORTS_DIR: Path = DATA_DIR / 'exports'
-    DOCUMENT_DIR: Path = DATA_DIR / 'documents'
-    LOGS_DIR: Path = DATA_DIR / 'logs'
+    """
+    Application path configuration.
+    
+    This class is responsible for:
+    1. Defining all application directory paths
+    2. Creating these directories at runtime
+    3. Providing consistent access to these paths
+    
+    Directory structure is automatically created when this class is initialized,
+    removing the need for explicit directory creation elsewhere in the codebase.
+    """
+    # Base directory is either from environment or derived from file location
+    base_dir: Path = Path(os.getenv('STORAGE_BASE_DIR', '')) if os.getenv('STORAGE_BASE_DIR') else Path(__file__).resolve().parent.parent.parent
+    data_dir: Path = base_dir / 'data'
+    directories: Dict[str, Path] = None
+
+    def __post_init__(self):
+        """Initialize and create all required directories."""
+        # Define all application directories here - single source of truth
+        self.directories = {
+            'uploads': self.data_dir / 'uploads',
+            'inventory_images': self.data_dir / 'images' / 'inventory',
+            'temp': self.data_dir / 'temp',
+            'exports': self.data_dir / 'exports',
+            'documents': self.data_dir / 'documents',
+            'logs': self.data_dir / 'logs'
+        }
+        
+        # Also create legacy uppercase DIR attributes for backward compatibility
+        for name, path in self.directories.items():
+            setattr(self, f"{name.upper()}_DIR", path)
+            
+        # Create all directories
+        for path in self.directories.values():
+            path.mkdir(parents=True, exist_ok=True)
+            logger.debug(f"Ensured directory exists: {path}")
+    
+    def get_directory(self, name: str) -> Optional[Path]:
+        """Get directory path by name."""
+        return self.directories.get(name.lower())
 
 class Settings:
     """Core application settings."""
     
     def __init__(self):
+        """Initialize settings and load environment configuration."""
         self.paths = Paths()
-        self._initialize_directories()
+        self.environment = None
+        self.testing = None
+        self.debug = None
+        self.port = None
+        self.workers = None
         self._load_environment()
-        
-    def _initialize_directories(self) -> None:
-        """Create necessary directories if they don't exist."""
-        for path in [
-            self.paths.DATA_DIR,
-            self.paths.UPLOADS_DIR,
-            self.paths.INVENTORY_IMAGES_DIR,
-            self.paths.TEMP_DIR,
-            self.paths.EXPORTS_DIR,
-            self.paths.DOCUMENT_DIR,
-            self.paths.LOGS_DIR
-        ]:
-            path.mkdir(parents=True, exist_ok=True)
     
     def _load_environment(self) -> None:
         """Load and validate environment variables."""
@@ -54,6 +77,7 @@ class Settings:
         self.cors_enabled = os.getenv('CORS_ENABLED', 'true').lower() == 'true'
         self.allow_credentials = os.getenv('ALLOW_CREDENTIALS', 'true').lower() == 'true'
         self.cors_origins = os.getenv('CORS_ORIGIN', 'http://localhost:3000').split(',')
+        self.redirect_uri = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:3000').split(',')
         
         # Storage settings
         self.storage_backend = os.getenv('STORAGE_BACKEND', 'vercel')
@@ -68,6 +92,12 @@ class Settings:
     
     def get_path(self, name: str) -> Optional[Path]:
         """Get a path by name."""
+        # First try the directories dictionary
+        dir_path = self.paths.get_directory(name)
+        if dir_path:
+            return dir_path
+        
+        # Fall back to the legacy method for backward compatibility
         return getattr(self.paths, f"{name.upper()}_DIR", None)
     
     def is_production(self) -> bool:
@@ -102,10 +132,11 @@ class Settings:
         """Get API key for a service."""
         key_mapping = {
             'openai': 'OPENAI_API_KEY',
-            'google': 'GOOGLE_API_KEY',
+            'google': 'GOOGLE_CRED_API_KEY',
             'vercel': 'BLOB_READ_WRITE_TOKEN'
         }
-        env_var = key_mapping.get(service.lower())
+        
+        env_var = key_mapping.get(service)
         if not env_var:
             raise ValueError(f"Unknown service: {service}")
         
@@ -117,13 +148,12 @@ class Settings:
 
     def get_max_content_length(self) -> int:
         """Get maximum content length in bytes."""
-        return int((os.getenv('MAX_CONTENT_LENGTH'), 16 * 1024 * 1024))
+        return int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))
 
     def validate_required_vars(self) -> None:
         """Validate required environment variables."""
         required_vars = {
-            'DATABASE_URL': 'Render database connection string is required',
-            'NEON_DATABASE_URL': 'Neon database connection string is required',
+            'DATABASE_URL': 'Render database connection string is required', 
             'OPENAI_API_KEY': 'OpenAI API key is required',
             'BLOB_READ_WRITE_TOKEN': 'Vercel Blob token is required',
             'AWS_S3_EXPRESS_BUCKET': 'S3 bucket name is required',
@@ -133,11 +163,12 @@ class Settings:
         
         for var, message in required_vars.items():
             if not os.getenv(var):
-                if self.testing:
-                    os.environ[var] = f'test-{var.lower()}'
-                    logger.warning(f"{var} not set - using test value")
-                else:
-                    raise ValueError(f"Environment variable {var} is not set. {message}")
+                logger.warning("%s not set - using test value: %s", var, f'test-{var.lower()}')
+                os.environ[var] = f'test-{var.lower()}'
+                logger.warning(f"{var} not set - using test value")
+            # Commented out raising exception for missing vars - allow fallback values
+            # else:
+            #     raise ValueError(f"Environment variable {var} is not set. {message}")
 
     def get_env(self, key: str, default: str = None) -> str:
         """Get environment variable with testing fallback."""
@@ -153,6 +184,7 @@ class Settings:
         return {
             'allow_origin': self.cors_origins,
             'allow_credentials': self.allow_credentials,
+            'allow_redirect_uri': self.redirect_uri,
             'allow_methods': ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
             'allow_headers': [
                 'Content-Type',

@@ -13,23 +13,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Add the project root and backend directory to sys.path to enable imports
-# .''''''
+# Ensure the backend directory is in the Python path
 current_dir = Path(__file__).resolve().parent
-parent_dir = current_dir.parent
-# Make project root first in path (higher priority)
-if str(parent_dir) not in sys.path:
-    sys.path.insert(0, str(parent_dir))
-# Make backend dir second in path
-if str(current_dir) not in sys.path:
-    sys.path.insert(0, str(current_dir))
-# Also add the absolute paths to make sure imports work in all execution contexts
-sys.path.insert(0, str(current_dir.absolute()))
+sys.path.insert(0, str(current_dir))
 
-
-#Load environment variables (.env file is optional)
-#load_dotenv(verbose=True)
-# ''''''
+# Load environment variables (.env file is optional)
+load_dotenv(verbose=True)
 # Import local modules with fallbacks for each module
 try:
     from cleanup import task_manager, setup_task_cleanup
@@ -72,50 +61,36 @@ except ImportError:
 
 # Import processor factory with fallback
 try:
-    from .services.processor import create_processor_factory
+    from services.processor import create_processor_factory
 except ImportError:
     logger.warning("Processor factory not available")
     def create_processor_factory(db, client):
         return None
 
-# Blueprint module mapping (module_name: bp_variable)
+# Blueprint module mapping and import
 blueprint_modules = {
     'auth': {'file': 'auth_routes', 'bp': 'auth_bp'},
     'inventory': {'file': 'inventory', 'bp': 'inventory_bp'},
     'documents': {'file': 'documents', 'bp': 'documents_bp'},
     'files': {'file': 'files', 'bp': 'files_bp'}
 }
-# Import blueprints with multiple fallback paths to handle different execution contexts
+
+# Import blueprints with fallback mechanism
 blueprints = {}
 for key, config in blueprint_modules.items():
     module_name = config['file']
     bp_name = config['bp']
     blueprints[key] = None
     
-    # Try different import paths to handle both deployment and local development
-    import_paths = [
-        f'backend.routes.{module_name}',  # For when running as module (Render deployment)
-        f'routes.{module_name}',          # For local development
-    ]
-    
-    imported = False
-    for import_path in import_paths:
-        try:
-            module = __import__(import_path, fromlist=[bp_name])
-            blueprints[key] = getattr(module, bp_name)
-            logger.info(f"Loaded blueprint '{key}' from {import_path}")
-            imported = True
-            break
-        except (ImportError, AttributeError) as e:
-            # Use info level for first failure, debug for subsequent ones
-            if import_path == import_paths[0]:
-                logger.info(f"Primary import path failed for {key}: {e}")
-            else:
-                logger.debug(f"Alternative import attempt for {import_path}: {e}")
-    
-    # Create fallback blueprint if all import attempts failed
-    if not imported:
-        logger.warning(f"{key} routes not available after all import attempts")
+    # Simplified import path strategy - prioritize direct imports
+    try:
+        # Primary import path - assuming /backend is the root
+        module = __import__(f'routes.{module_name}', fromlist=[bp_name])
+        blueprints[key] = getattr(module, bp_name)
+        logger.info(f"Loaded blueprint '{key}' from routes.{module_name}")
+    except (ImportError, AttributeError) as e:
+        logger.warning(f"Failed to import {key} blueprint: {e}")
+        # Create fallback blueprint if import failed
         blueprints[key] = Blueprint(key, __name__)
 
 # Get route blueprints

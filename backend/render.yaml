@@ -4,10 +4,10 @@ services:
     name: instantory
     runtime: python
     buildCommand: pip install -r requirements.txt 
-    startCommand: python -m server.py
+    startCommand: cd backend && python server.py
     envVars:
       - key: PYTHONPATH
-        value: "./backend"
+        value: "/backend"
       - key: PYTHON_VERSION
         value: 3.11.0
       - key: NODE_VERSION
@@ -37,7 +37,7 @@ services:
         value: "us-west-2"
       # CORS and security
       - key: CORS_ORIGINS
-        value: https://instantory.vercel.app,https://bartelby.vercel.app,https://hocomnia.com
+        sync: false
       - key: JWT_SECRET
         generateValue: true
       - key: SESSION_SECRET
@@ -65,6 +65,7 @@ services:
       # Logging
       - key: LOG_LEVEL
         value: "info"
+      - key: ADMIN_PASSWORD
   
   # Database initialization service
   - type: web
@@ -100,7 +101,7 @@ services:
     name: instantory-worker
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: "PYTHONPATH=$PYTHONPATH:. python -m backend.scripts.setup_user_storage"
+    startCommand: "cd backend && python -m scripts.setup_user_storage"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0

@@ -7,8 +7,8 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 import json
 
-from ...config.storage import get_storage_config, get_temp_dir
-from ...config.logging import log_config
+from config.storage import get_storage_config, get_temp_dir
+from config.logging import log_config
 
 logger = log_config.get_logger(__name__)
 storage = get_storage_config()
