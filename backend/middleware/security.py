@@ -69,9 +69,10 @@ class SecurityMiddleware:
             headers = security.get_security_headers()
             
             # Modify security headers to allow Google authentication
-            # Disable Cross-Origin Embedder Policy (COEP) that may be blocking Google auth
+            # Disable Cross-Origin policies that may be blocking Google auth
             headers['Cross-Origin-Embedder-Policy'] = 'unsafe-none'
             headers['Cross-Origin-Opener-Policy'] = 'unsafe-none'
+            headers['Cross-Origin-Resource-Policy'] = 'cross-origin'
             
             response.headers.update(headers)
             
@@ -154,6 +155,7 @@ class SecurityMiddleware:
                 # Modify security headers to allow Google authentication
                 security_headers['Cross-Origin-Embedder-Policy'] = 'unsafe-none'
                 security_headers['Cross-Origin-Opener-Policy'] = 'unsafe-none'
+                security_headers['Cross-Origin-Resource-Policy'] = 'cross-origin'
                 
                 # Convert dictionary headers to list of tuples
                 for name, value in security_headers.items():

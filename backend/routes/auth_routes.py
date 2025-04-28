@@ -117,7 +117,7 @@ def require_auth():
                 request.is_admin = payload.get("is_admin", False)
                 
                 return await f(*args, **kwargs)
-            except Exception as e:
+            except ValueError as e:
                 logger.warning(f"Authentication middleware error: {e}")
                 return jsonify({"error": "Authentication failed"}), 401
         return decorated_function
@@ -313,6 +313,28 @@ async def set_user_admin_status(email: str, is_admin: bool = True):
 
 # --- Authentication Routes --- #
 
+@auth_bp.route('/oauth2/callback', methods=['GET'])
+async def oauth2_callback():
+    """
+    OAuth 2.0 callback endpoint to handle authorization responses.
+    """
+    try:
+        code = request.args.get('code')
+        state = request.args.get('state')
+
+        if not code:
+            return jsonify({"error": "Authorization code is missing"}), 400
+
+        # Process the authorization code and state here
+        # Example: Exchange the code for an access token
+        logger.info("OAuth2 callback received with code: %s and state: %s", code, state)
+
+        return jsonify({"message": "OAuth2 callback successful", "code": code, "state": state})
+
+    except Exception as e:
+        logger.exception("OAuth2 callback failed")
+        return jsonify({"error": "OAuth2 callback failed", "details": str(e)}), 500
+
 @auth_bp.route('/internal/login_details', methods=['GET'])
 @require_admin()
 async def login_details():
@@ -337,12 +359,22 @@ async def login_details():
     except Exception as e:
         logger.exception("Failed to fetch login details")
         return jsonify({"error": "Failed to fetch login details", "details": str(e)}), 500
-
+                for client_id in ALLOWED_GOOGLE_CLIENT_IDS[1:]:
+                    # Skip the primary one we already tried
 async def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
     """
-    Verify a Google ID token and return user information.
-    
-    Args:
+                        id_info = id_token.verify_oauth2_token(
+                            token,
+                            google_request,
+                            client_id.strip()
+                        )
+                    raise ValueError(
+                        'Could not verify audience with any configured client ID'
+                    ) from ve
+                raise ValueError(
+                    'Token verification failed with primary client ID '
+                    'and no alternatives configured'
+                )
         token: The Google ID token to verify
         
     Returns:
@@ -356,7 +388,7 @@ async def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
         try:
             id_info = id_token.verify_oauth2_token(token, google_request, GOOGLE_CLIENT_ID)
         except ValueError:
-            # If that fails, try additional client IDs if configured
+        logger.warning("Google token verification failed: %s", ve)
             if len(ALLOWED_GOOGLE_CLIENT_IDS) > 1:
                 # Try each ID in our allowed list
                 for client_id in ALLOWED_GOOGLE_CLIENT_IDS[1:]:  # Skip the primary one we already tried
@@ -385,7 +417,7 @@ async def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
         if 'sub' not in id_info:
             raise ValueError('Token does not contain a Google account ID')
             
-        return id_info
+            logger.warning("Unauthorized client_id: %s", client_id)
         
     except ValueError as ve:
         logger.warning(f"Google token verification failed: {ve}")
