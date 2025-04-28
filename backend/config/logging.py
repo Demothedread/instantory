@@ -85,11 +85,10 @@ class LogConfig:
 class RequestLogger:
     """Logger for HTTP requests with context."""
     
-    def __init__(self, logger: logging.Logger):
-        self.logger = logger
+    def __init__(self, request_logger: logging.Logger):
+        self.logger = request_logger
     
-    def log_request(self, method: str, path: str, status: int, 
-                   duration: float, extra: Optional[Dict[str, Any]] = None) -> None:
+    def log_request(self, method: str, path: str, status: int,duration: float, extra: Optional[Dict[str, Any]] = None) -> None:
         """Log an HTTP request with timing and context."""
         log_data = {
             'method': method,

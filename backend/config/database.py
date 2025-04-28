@@ -1,10 +1,11 @@
 """Database configuration and connection management."""
 import os
-from typing import Optional, Dict, Any
-import asyncpg
 import logging
-from urllib.parse import urlparse
 from enum import Enum
+from typing import Optional, Dict, Any
+from urllib.parse import urlparse
+
+import asyncpg
 
 logger = logging.getLogger(__name__)
 
@@ -20,15 +21,13 @@ class DatabaseConfig:
     1. Single database for both vector and metadata (DATABASE_URL only)
     2. Separate databases (any combination of DATABASE_URL, NEON_DATABASE_URL, 
        VECTOR_DATABASE_URL, METADATA_DATABASE_URL)
-    """
-    
+    """    
     def __init__(self):
         # Initialize connection pools
         self._pools: Dict[DatabaseType, Optional[asyncpg.Pool]] = {
             DatabaseType.VECTOR: None,
             DatabaseType.METADATA: None
         }
-        
         # Get all possible database URLs
         self.database_urls = {
             'default': os.getenv('DATABASE_URL'),
@@ -36,7 +35,7 @@ class DatabaseConfig:
             'vector': os.getenv('VECTOR_DATABASE_URL'),
             'metadata': os.getenv('METADATA_DATABASE_URL')
         }
-        
+
         # Ensure at least one database URL is provided
         if not any(self.database_urls.values()):
             raise ValueError("At least one database URL environment variable is required")
@@ -96,6 +95,8 @@ class DatabaseConfig:
             
             # Create the connection pool
             self._pools[db_type] = await asyncpg.create_pool(
+                client_id=config['client_id'],
+                client_secret=config['client_secret'],
                 user=config['user'],
                 password=config['password'],
                 database=config['database'],
@@ -106,10 +107,13 @@ class DatabaseConfig:
                 max_size=10,
                 command_timeout=60
             )
-            logger.info(f"{db_type.value} database pool created successfully")
+            logger.info("%s database pool created successfully", db_type.value)
             return self._pools[db_type]
-        except Exception as e:
-            logger.error(f"Failed to create {db_type.value} database pool: {e}")
+        except asyncpg.exceptions.PostgresError as e:
+            logger.error("Postgres error while creating %s database pool: %s", db_type.value, e)
+            return None
+        except (ValueError, KeyError) as e:
+            logger.error("Unexpected error while creating %s database pool: %s", db_type.value, e)
             return None
 
     async def close_pools(self) -> None:
@@ -118,7 +122,7 @@ class DatabaseConfig:
             if pool:
                 await pool.close()
                 self._pools[db_type] = None
-                logger.info(f"{db_type.value} database pool closed")
+                logger.info("%s database pool closed", db_type.value)
                 
     async def cleanup(self) -> None:
         """Cleanup database resources on shutdown."""

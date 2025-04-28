@@ -16,7 +16,11 @@ class CORSConfig:
             'http://localhost:5000',
             'https://vercel.live',
             'https://hocomnia.com',
-            'https://instantory.vercel.app',"https://instantory.onrender.com ","https://*.vercel.app","https://hocomnia.com/*"
+            'https://accounts.google.com',
+            'https://*.googleusercontent.com',
+            'https://instantory.vercel.app',
+            'https://instantory.onrender.com',
+            'https://*.vercel.app'
         ]
     @staticmethod
     def get_headers() -> List[str]:
@@ -27,9 +31,13 @@ class CORSConfig:
             'Accept',
             'Origin',
             'X-Requested-With',
+            'X-CSRF-Token',
             'google-oauth-token',
             'google-client_id',  # Include client_id to support Google sign-in
             'g_csrf_token',      # For Google One Tap authentication
+            'X-Requested-With',
+            'Access-Control-Allow-Origin',
+            'Access-Control-Allow-Credentials'
         ]
     @staticmethod
     def get_methods() -> List[str]:
@@ -56,7 +64,24 @@ class CORSConfig:
         """Check if an origin is allowed."""
         if not origin:
             return False
-        return origin in CORSConfig.get_origins()
+            
+        # Get the allowed origins
+        allowed_origins = CORSConfig.get_origins()
+        
+        # Check for exact match first
+        if origin in allowed_origins:
+            return True
+            
+        # Check for wildcard domains (e.g., https://*.vercel.app)
+        for allowed_origin in allowed_origins:
+            if allowed_origin.startswith('https://*.'):
+                # Extract the domain part after the asterisk
+                domain_suffix = allowed_origin.replace('https://*.', '')
+                # Check if the origin ends with this domain suffix
+                if origin.startswith('https://') and origin.endswith(domain_suffix):
+                    return True
+        
+        return False
 
 class SecurityConfig:
     """Security configuration settings."""

@@ -67,6 +67,12 @@ class SecurityMiddleware:
         async def add_security_headers(response: Response) -> Response:
             """Add security headers to response."""
             headers = security.get_security_headers()
+            
+            # Modify security headers to allow Google authentication
+            # Disable Cross-Origin Embedder Policy (COEP) that may be blocking Google auth
+            headers['Cross-Origin-Embedder-Policy'] = 'unsafe-none'
+            headers['Cross-Origin-Opener-Policy'] = 'unsafe-none'
+            
             response.headers.update(headers)
             
             # Add rate limit headers
@@ -145,12 +151,29 @@ class SecurityMiddleware:
                 headers = message.get("headers", [])
                 security_headers = security.get_security_headers()
                 
+                # Modify security headers to allow Google authentication
+                security_headers['Cross-Origin-Embedder-Policy'] = 'unsafe-none'
+                security_headers['Cross-Origin-Opener-Policy'] = 'unsafe-none'
+                
                 # Convert dictionary headers to list of tuples
                 for name, value in security_headers.items():
                     headers.append(
                         (name.lower().encode("latin1"),
                          str(value).encode("latin1"))
                     )
+                
+                # Add CORS headers for Google authentication
+                origin_header = None
+                for header in headers:
+                    if header[0] == b'origin':
+                        origin_header = header[1].decode('latin1')
+                        break
+                
+                if origin_header:
+                    # Allow Google domains
+                    if 'google' in origin_header or 'hocomnia.com' in origin_header:
+                        headers.append((b'access-control-allow-origin', origin_header.encode('latin1')))
+                        headers.append((b'access-control-allow-credentials', b'true'))
                 
                 message["headers"] = headers
             

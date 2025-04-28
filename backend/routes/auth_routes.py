@@ -326,7 +326,7 @@ async def login_details():
         async with pool.acquire() as conn:
             rows = await conn.fetch(
                 """
-                SELECT id, login_time, ip_address, auth_provider, user_agent
+                SELECT user_id, login_time, ip_address, auth_provider, user_agent
                 FROM user_logins
                 WHERE user_id = $1
                 ORDER BY login_time DESC
@@ -381,6 +381,9 @@ async def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
         # (This is actually handled by verify_oauth2_token already, but kept for clarity)
         if datetime.now(tz=timezone.utc) > datetime.fromtimestamp(id_info['exp'], tz=timezone.utc):
             raise ValueError('Token has expired')
+        # Check if the token is for a Google account
+        if 'sub' not in id_info:
+            raise ValueError('Token does not contain a Google account ID')
             
         return id_info
         
@@ -403,13 +406,19 @@ async def google_login():
         # If this is a One Tap request with g_csrf_token, verify the CSRF token
         if g_csrf_token:
             cookie_csrf_token = request.cookies.get('g_csrf_token')
-            if not cookie_csrf_token or g_csrf_token != cookie_csrf_token:
+            if not cookie_csrf_token or g_csrf_token != cookie_csrf_token():
                 return jsonify({"error": "Invalid CSRF token for Google One Tap"}), 403
 
         # Verify Google token
         id_info = await verify_google_token(credential)
         if not id_info:
             return jsonify({"error": "Invalid Google token"}), 401
+
+        # Ensure client_id is in the allowed list
+        client_id = id_info.get('aud')
+        if client_id not in ALLOWED_GOOGLE_CLIENT_IDS:
+            logger.warning(f"Unauthorized client_id: {client_id}")
+            return jsonify({"error": "Unauthorized client_id"}), 403
         
         # Extract user info
         email = id_info.get('email')
