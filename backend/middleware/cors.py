@@ -23,6 +23,9 @@ def setup_cors(app: Quart, enabled: bool = True, allow_credentials: bool = True)
     cors_config = app.config.get('CORS_CONFIG', {})
     allowed_origins = cors_config.get('allow_origin', origins_from_env or [
         'https://hocomnia.com', 
+        'https://vercel.live',
+        'https://*.vercel.app',
+        'https://*.onrender.com',
         'https://accounts.google.com',
         'https://*.google.com',  # Broader coverage for Google domains
         'https://*.googleusercontent.com',
