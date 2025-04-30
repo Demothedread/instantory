@@ -185,8 +185,8 @@ class TestCrossServiceIntegration:
         frontend_url = vercel_config['env']['REACT_APP_BACKEND_URL']
         
         # Verify URLs match
-        assert backend_url == 'https://instantory.onrender.com'
-        assert frontend_url == 'https://instantory.onrender.com'
+        assert backend_url == 'https://bartleby-backend.onrender.com'
+        assert frontend_url == 'https://ibartleby.vercel.app
 
     def test_cors_configuration_match(self):
         # Load both configs

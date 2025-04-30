@@ -52,10 +52,11 @@ END $$;
 
 -- Create or update an admin user for testing (optional)
 -- Uncomment and modify this section if you want to create an admin user
-/*
+
 DO $$ 
 BEGIN
     -- Create or update the admin user
+    PASSWORD=os.getenv('ADMIN_PASSWORD', 'admin'); -- Replace with your method of getting the password
     IF EXISTS (SELECT FROM users WHERE email = 'admin@example.com') THEN
         UPDATE users SET is_admin = TRUE WHERE email = 'admin@example.com';
         RAISE NOTICE 'Updated admin@example.com to have admin privileges';
@@ -67,4 +68,3 @@ BEGIN
         RAISE NOTICE 'Created admin user admin@example.com';
     END IF;
 END $$;
-*/

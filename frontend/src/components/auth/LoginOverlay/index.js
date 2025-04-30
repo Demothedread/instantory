@@ -71,7 +71,7 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
         }
     };
 
-    // Handle email login
+    // Handle email login with improved error handling
     const handleEmailLogin = async (e) => {
         e.preventDefault();
         if (!email || !password) return;
@@ -81,12 +81,21 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
             await login({ email, password });
         } catch (error) {
             console.error('Email login failed:', error);
+            
+            // Check if this might be a CORS error
+            if (error.message && error.message.includes('NetworkError') || 
+                error.name === 'TypeError' || 
+                error.message && error.message.includes('Failed to fetch')) {
+                clearError();
+                // Set a more user-friendly error message
+                console.warn('Authentication server connection issue detected. This could be a CORS error.');
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Handle user registration
+    // Handle user registration with improved error handling
     const handleRegister = async (e) => {
         e.preventDefault();
         if (!email || !password || !name) return;
@@ -96,6 +105,15 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
             await register({ email, password, name });
         } catch (error) {
             console.error('Registration failed:', error);
+            
+            // Detect network and CORS issues
+            if (error.message && error.message.includes('NetworkError') || 
+                error.name === 'TypeError' || 
+                error.message && error.message.includes('Failed to fetch')) {
+                clearError();
+                // Set a more user-friendly error message
+                console.warn('Authentication server connection issue detected. This could be a CORS error.');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -156,6 +174,7 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
                             onChange={(e) => setPassword(e.target.value)}
                             required
                             disabled={isLoading}
+                            autocomplete="new-password"
                         />
                         <button
                             type="submit"
@@ -192,6 +211,7 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
                             onChange={(e) => setAdminPassword(e.target.value)}
                             required
                             disabled={isLoading}
+                            autocomplete="current-password"
                         />
                         <button
                             type="submit"
@@ -229,6 +249,7 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
                             onChange={(e) => setPassword(e.target.value)}
                             required
                             disabled={isLoading}
+                            autocomplete="current-password"
                         />
                         <button
                             type="submit"
@@ -263,6 +284,11 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
                 {error && (
                     <div css={css(styles.errorMessage)} onClick={clearError}>
                         <span>⚠️ {error}</span>
+                        {(error.includes('NetworkError') || error.includes('Failed to fetch') || error.includes('TypeError')) && (
+                            <div css={css(styles.errorDetail)}>
+                                A network error occurred. Please try again later or contact support if the issue persists.
+                            </div>
+                        )}
                     </div>
                 )}
 

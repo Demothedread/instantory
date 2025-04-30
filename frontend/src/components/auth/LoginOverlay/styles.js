@@ -33,6 +33,14 @@ const styles = {
         color: red;
         margin-bottom: 1rem;
         cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 4px;
+        background-color: rgba(255, 0, 0, 0.05);
+    `,
+    errorDetail: css`
+        font-size: 0.85rem;
+        color: #666;
+        margin-top: 0.5rem;
     `,
     loginOptions: css`
         display: flex;

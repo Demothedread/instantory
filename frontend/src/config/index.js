@@ -2,7 +2,7 @@ import { authConfig, googleClientId, googleClientSecret } from './auth';
 
 // Environment variables with fallbacks
 const environment = process.env.NODE_ENV || 'production';
-const apiUrl = process.env.REACT_APP_BACKEND_URL || 'https://instantory.onrender.com';
+const apiUrl = process.env.REACT_APP_BACKEND_URL || 'https://bartelby-backend.onrender.com';
 
 // Environment-specific settings
 const environments = {

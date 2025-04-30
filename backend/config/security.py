@@ -22,7 +22,7 @@ class CORSConfig:
             'https://*.googleusercontent.com',
             'https://*.gstatic.com',
             'https://instantory.vercel.app',
-            'https://instantory.onrender.com',
+            'https://bartleby-backend.onrender.com',
             'https://*.vercel.app'
         ]
     @staticmethod
