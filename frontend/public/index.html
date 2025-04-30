@@ -5,10 +5,20 @@
   <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="WizardBartleby- AI-Powered Document and Image Processing" />
-  <!-- CORS and Security Policy Headers -->
+  
+  <!-- Enhanced CORS and Security Policy Headers for Google Authentication -->
   <meta http-equiv="Cross-Origin-Embedder-Policy" content="unsafe-none">
-  <meta http-equiv="Cross-Origin-Opener-Policy" content="unsafe-none">
+  <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
   <meta http-equiv="Cross-Origin-Resource-Policy" content="cross-origin">
+  
+  <!-- Additional CORS settings for third-party authentication -->
+  <meta http-equiv="Access-Control-Allow-Credentials" content="true">
+  <meta http-equiv="Access-Control-Allow-Methods" content="GET, POST, PUT, DELETE, OPTIONS, PATCH">
+  
+  <!-- Prefetch Google authentication domains for faster loading -->
+  <link rel="dns-prefetch" href="https://accounts.google.com">
+  <link rel="dns-prefetch" href="https://apis.google.com">
+  
   <!-- For all external scripts, add: crossorigin="anonymous" -->
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Josefin+Sans:wght@400;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400& family=Poiret+One&family=Rozha+One&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet" />
   <title>DocumentWizard - AI-Powered Document & Image Processing</title>

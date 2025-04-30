@@ -39,22 +39,28 @@ const config = {
   // API request defaults
   api: {
     timeout: 30000, // 30 seconds
+    withCredentials: true, // Always send credentials for auth flows
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
       'Origin': window.location.origin,
-      'Access-Control-Allow-Credentials': 'true'
-      // Removed browser-specific headers as they may cause issues with axios
-      // The withCredentials option in axios handles CORS credentials
+      'X-Requested-With': 'XMLHttpRequest'
+    },
+    // Common fetch options when not using axios
+    fetchOptions: {
+      credentials: 'include', // Always include credentials for fetch API
+      mode: 'cors' // Explicitly state we're using CORS
     }
-    // Removed mode and credentials as they are not axios options
-    // They have been moved to the proper fetch API calls if needed
   },
   
   // Google Sign-In configuration
   googleSignIn: {
     enabled: true,
-    clientId: googleClientId
+    clientId: googleClientId,
+    cookiePolicy: 'single_host_origin',
+    fetchBasicProfile: true,
+    uxMode: 'popup', // Use popup for better cross-origin handling
+    accessType: 'online'
   },
   
   // Storage configuration

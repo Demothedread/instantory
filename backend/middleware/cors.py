@@ -32,23 +32,40 @@ def setup_cors(app: Quart, enabled: bool = True, allow_credentials: bool = True)
         'https://*.gstatic.com'  # For Google static resources
     ])
     
-    # Handle preflight requests with correct route patterns
-    @app.route('/', methods=['OPTIONS'])
-    async def handle_root_options():
-        """Handle preflight OPTIONS requests for root path."""
-        response = app.response_class()
-        response = await add_cors_headers(response)
-        return response, 204
-    
+    # Single handler for all OPTIONS requests - unified preflight handling
     @app.route('/<path:path>', methods=['OPTIONS'])
+    @app.route('/', methods=['OPTIONS'], defaults={'path': ''})
     async def handle_options(path):
-        """Handle preflight OPTIONS requests for all other paths."""
+        """Handle preflight OPTIONS requests for all paths in a single handler."""
         response = app.response_class()
-        response = await add_cors_headers(response)
+        response = await add_cors_headers(response, force_credentials=True)
+        # Cache preflight response for a longer time
+        response.headers['Access-Control-Max-Age'] = '86400'  # 24 hours
         return response, 204
 
+    async def is_origin_allowed(origin: str) -> bool:
+        """Determine if the origin is allowed based on exact match or pattern."""
+        if not origin:
+            return False
+            
+        # Check for exact match first
+        if origin in allowed_origins:
+            return True
+            
+        # Check for wildcard domains
+        for allowed_origin in allowed_origins:
+            if allowed_origin == '*':
+                return True
+                
+            if allowed_origin.startswith('https://*.'):
+                domain_suffix = allowed_origin.replace('https://*.', '')
+                if origin.startswith('https://') and origin.endswith(domain_suffix):
+                    return True
+                    
+        return False
+
     @app.after_request
-    async def add_cors_headers(response):
+    async def add_cors_headers(response, force_credentials=False):
         """Add CORS headers to responses."""
         origin = request.headers.get('Origin')
         
@@ -56,27 +73,17 @@ def setup_cors(app: Quart, enabled: bool = True, allow_credentials: bool = True)
         if origin:
             logger.debug(f"CORS: Incoming request from origin: {origin}")
         
-        # Simplified origin handling
+        # Origin handling
         if origin:
-            # Check for exact match first
-            if origin in allowed_origins:
-                logger.debug(f"CORS: Direct match for origin: {origin}")
+            # Always respond with the actual origin for authentication requests
+            # rather than a wildcard, which is required for credentials
+            if await is_origin_allowed(origin):
+                logger.debug(f"CORS: Allowed origin: {origin}")
                 response.headers['Access-Control-Allow-Origin'] = origin
-            # Then check for wildcard domains
             else:
-                for allowed_origin in allowed_origins:
-                    if allowed_origin == '*':
-                        response.headers['Access-Control-Allow-Origin'] = origin
-                        logger.debug(f"CORS: Wildcard match for origin: {origin}")
-                        break
-                    elif allowed_origin.startswith('https://*.'):
-                        domain_suffix = allowed_origin.replace('https://*.', '')
-                        if origin.startswith('https://') and origin.endswith(domain_suffix):
-                            response.headers['Access-Control-Allow-Origin'] = origin
-                            logger.debug(f"CORS: Wildcard domain match for origin: {origin}")
-                            break
+                logger.debug(f"CORS: Origin not allowed: {origin}")
         
-        # Add standard CORS headers
+        # Add standard CORS headers with expanded Google auth support
         allowed_methods = cors_config.get('allow_methods', ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'])
         allowed_headers = cors_config.get('allow_headers', [
             'Content-Type',
@@ -90,6 +97,8 @@ def setup_cors(app: Quart, enabled: bool = True, allow_credentials: bool = True)
             'google-oauth-token',
             'google-client_id',
             'g_csrf_token',
+            'X-Google-OAuth-Token',
+            'X-Google-Client-ID',
             'Access-Control-Allow-Origin',
             'Access-Control-Allow-Credentials'
         ])
@@ -97,12 +106,9 @@ def setup_cors(app: Quart, enabled: bool = True, allow_credentials: bool = True)
         response.headers['Access-Control-Allow-Methods'] = ','.join(allowed_methods)
         response.headers['Access-Control-Allow-Headers'] = ','.join(allowed_headers)
         
-        # Always set credentials header when needed
-        if allow_credentials:
+        # Always set credentials for auth flows or when explicitly requested
+        if allow_credentials or force_credentials:
             response.headers['Access-Control-Allow-Credentials'] = 'true'
-        
-        # Cache preflight response for browsers
-        response.headers['Access-Control-Max-Age'] = '3600'
         
         # Set security headers consistently
         # Disable Cross-Origin policies that may be blocking Google auth

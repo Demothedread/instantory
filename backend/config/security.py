@@ -17,7 +17,10 @@ class CORSConfig:
             'https://vercel.live',
             'https://hocomnia.com',
             'https://accounts.google.com',
+            'https://*.google.com',
+            'https://*.googleapis.com',
             'https://*.googleusercontent.com',
+            'https://*.gstatic.com',
             'https://instantory.vercel.app',
             'https://instantory.onrender.com',
             'https://*.vercel.app'

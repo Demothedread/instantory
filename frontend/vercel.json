@@ -9,7 +9,7 @@
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
-    {                                                                
+    {
       "source": "/(.*)",
       "headers": [
         {
@@ -29,28 +29,32 @@
           "value": "cross-origin"
         },
         {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
         },
         {
           "key": "Access-Control-Allow-Methods",
           "value": "GET, POST, PUT, DELETE, OPTIONS, PATCH"
         },
-            {
-              "key": "Access-Control-Allow-Headers",
-              "value": "Content-Type, Authorization, Accept, Origin, X-Requested-With, google-oauth-token"
-            }
-          ]
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, Accept, Origin, X-Requested-With, Content-Length, Accept-Encoding, X-CSRF-Token, google-oauth-token, google-client_id, g_csrf_token, X-Google-OAuth-Token, X-Google-Client-ID, Access-Control-Allow-Origin, Access-Control-Allow-Credentials"
+        },
+        {
+          "key": "Access-Control-Max-Age",
+          "value": "86400"
         }
-      ],
-      "env": {
-        "REACT_APP_BACKEND_URL": "https://instantory.onrender.com",
-        "REACT_APP_GOOGLE_CLIENT_ID": "700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com",
-        "REACT_APP_API_VERSION": "v1",
-        "REACT_APP_STORAGE_PROVIDER": "vercel",
-        "REACT_APP_MAX_UPLOAD_SIZE": "100000000",
-        "REACT_APP_SUPPORTED_IMAGE_TYPES": "image/jpeg,image/png,image/gif,image/webp",
-        "REACT_APP_SUPPORTED_DOC_TYPES": "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain",
-        "BLOB_READ_WRITE_TOKEN": "vercel_blob_rw_s5xuxXH6T3fDx9Oz_AdnmR7yE2uQjnt1cWInfUzpXQdtrpS"
-      }
+      ]
+    }
+  ],
+  "env": {
+    "REACT_APP_BACKEND_URL": "https://instantory.onrender.com",
+    "REACT_APP_GOOGLE_CLIENT_ID": "700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com",
+    "REACT_APP_API_VERSION": "v1",
+    "REACT_APP_STORAGE_PROVIDER": "vercel",
+    "REACT_APP_MAX_UPLOAD_SIZE": "100000000",
+    "REACT_APP_SUPPORTED_IMAGE_TYPES": "image/jpeg,image/png,image/gif,image/webp",
+    "REACT_APP_SUPPORTED_DOC_TYPES": "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain",
+    "BLOB_READ_WRITE_TOKEN": "vercel_blob_rw_s5xuxXH6T3fDx9Oz_AdnmR7yE2uQjnt1cWInfUzpXQdtrpS"
+  }
 }
