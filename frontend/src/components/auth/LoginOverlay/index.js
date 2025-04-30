@@ -35,42 +35,95 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
         }
     }, [isVisible]);
     
-    // Handle Google One Tap response
-    const handleOneTapResponse = (response) => {
-        if (!response || !response.credential) {
-            console.error('Invalid Google One Tap response');
-            return;
-        }
+    const executeLogin = async (credential, onGoogleLogin, loginWithGoogle, setIsLoading) => {
         setIsLoading(true);
         try {
             // Use the passed prop if available, otherwise use context
             const loginFn = onGoogleLogin || loginWithGoogle;
-            loginFn(response.credential);
+            // Ensure loginFn is awaited as it's likely async (calling your backend)
+            await loginFn(credential);
+            // Assuming loginFn handles success actions like redirecting or updating user state
+            // If not, you might add success handling here (e.g., close modal)
+            console.log('Google login successful'); // Or perform post-login actions
         } catch (error) {
-            console.error('Google One Tap login failed:', error);
+            console.error('Google login failed:', error);
+            // You might want to display an error message to the user here
+            // setErrorState(true);
+        } finally {
+            // Always reset loading state, regardless of success or failure
             setIsLoading(false);
         }
     };
-
+    
+    // Handle Google One Tap response
+    const handleOneTapResponse = async (response) => {
+        if (!response || !response.credential) {
+            console.error('Invalid Google One Tap response: No credential');
+            // Optionally reset loading/error state if it was set earlier?
+            // This case might not require isLoading as the prompt failed before calling loginFn
+            return;
+        }
+        // Delegate the actual login execution to the shared function
+        // Pass necessary dependencies if they are not directly accessible in executeLogin scope
+        await executeLogin(
+            response.credential,
+            // Pass props/context values needed by executeLogin if it's a separate function
+            // Assuming onGoogleLogin, loginWithGoogle, setIsLoading are available in scope here
+            onGoogleLogin,
+            loginWithGoogle,
+            setIsLoading
+        );
+    };
+    
     // Handle Google OAuth login (standard button)
+    // Note: This function signature might vary slightly based on the library used (@react-oauth/google etc.)
     const handleGoogleSuccess = async (credentialResponse) => {
         const credential = credentialResponse?.credential;
         if (!credential) {
-            console.error('Invalid Google credential response');
+            console.error('Invalid Google credential response: No credential');
+            // Optionally reset loading/error state
             return;
         }
-        setIsLoading(true);
-        try {
-            // Use the passed prop if available, otherwise use context
-            const loginFn = onGoogleLogin || loginWithGoogle;
-            await loginFn(credential);
-        } catch (error) {
-            console.error('Google login failed:', error);
-        } finally {
-            setIsLoading(false);
-        }
+         // Delegate the actual login execution to the shared function
+        await executeLogin(
+            credential,
+             // Pass props/context values needed by executeLogin if it's a separate function
+            onGoogleLogin,
+            loginWithGoogle,
+            setIsLoading
+        );
     };
-
+    
+    
+    useEffect(() => {
+        // Ensure the Google Identity Services script is loaded BEFORE this component renders.
+        // You typically add <script src="https://accounts.google.com/gsi/client" async defer></script>
+        // in your index.html or use a loader utility.
+        if (window.google && isVisible) {
+            console.log('Initializing Google One Tap...');
+            window.google.accounts.id.initialize({
+                client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID || window.GOOGLE_CLIENT_ID,
+                callback: handleOneTapResponse,
+                auto_select: true,
+                // Consider making this true for better UX, allows user to dismiss easily
+                cancel_on_tap_outside: true, // Changed to true - discuss UX implications
+                // Additional options can be added here, e.g., context, ux_mode
+            });
+    
+            // Display the One Tap UI
+            window.google.accounts.id.prompt();
+            console.log('Google One Tap prompt displayed');
+    
+            // Clean up when component unmounts or isVisible becomes false
+            return () => {
+                 console.log('Cancelling Google One Tap...');
+                 window.google.accounts.id.cancel();
+            };
+        } else if (!window.google && isVisible) {
+             console.warn('Google Identity Services script not loaded.');
+             // Handle case where script isn't loaded - perhaps show an alternative login?
+        }
+    }, [isVisible]);
     // Handle email login with improved error handling
     const handleEmailLogin = async (e) => {
         e.preventDefault();
@@ -270,8 +323,9 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
                         </div>
                     </form>
                 );
+            }
         }
-    };
+    
 
     return (
         <div css={css(styles.overlay)}>
@@ -328,3 +382,4 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
 };
 
 export default LoginOverlay;
+

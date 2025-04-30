@@ -38,9 +38,9 @@ class CORSConfig:
             'google-oauth-token',
             'google-client_id',  # Include client_id to support Google sign-in
             'g_csrf_token',      # For Google One Tap authentication
-            'X-Requested-With',
             'Access-Control-Allow-Origin',
-            'Access-Control-Allow-Credentials'
+            'Access-Control-Allow-Credentials',
+            'Set-Cookie'  # Allow cookies for authentication protocols
         ]
     @staticmethod
     def get_methods() -> List[str]:
@@ -53,13 +53,16 @@ class CORSConfig:
         headers = {
             'Access-Control-Allow-Methods': ','.join(CORSConfig.get_methods()),
             'Access-Control-Allow-Headers': ','.join(CORSConfig.get_headers()),
-            'Access-Control-Allow-Credentials': 'true',
+            'Access-Control-Allow-Credentials': 'true',  # Always allow credentials for sign-in protocols
             'Access-Control-Max-Age': '3600'
         }
-        
+
         if origin and CORSConfig.is_origin_allowed(origin):
             headers['Access-Control-Allow-Origin'] = origin
-        
+        else:
+            # For security, do not set wildcard origin when credentials are allowed
+            headers['Access-Control-Allow-Origin'] = 'null'
+
         return headers
     
     @staticmethod
