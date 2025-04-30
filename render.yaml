@@ -3,6 +3,7 @@ services:
   - type: web
     name: bartleby-backend
     runtime: python
+    plan: free
     buildCommand: pip install -r requirements.txt 
     startCommand: cd backend && python server.py
     envVars:
@@ -60,6 +61,7 @@ services:
         value: "info"
       - key: ADMIN_PASSWORD
         sync: false
+
 # Free Postgres database
 databases:
   - name: bartlebySQL
