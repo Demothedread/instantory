@@ -40,17 +40,34 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
         try {
             // Use the passed prop if available, otherwise use context
             const loginFn = onGoogleLogin || loginWithGoogle;
-            // Ensure loginFn is awaited as it's likely async (calling your backend)
+            
+            // Add CORS debugging logging
+            console.log('Executing Google login with credential', 
+                        credential ? 'credential present' : 'no credential');
+            console.log('Origin:', window.location.origin);
+            
+            // Set g_csrf_token cookie if not already present
+            if (!document.cookie.includes('g_csrf_token') && window.google) {
+                const csrfToken = Math.random().toString(36).substring(2);
+                document.cookie = `g_csrf_token=${csrfToken}; path=/; secure; SameSite=None`;
+            }
+            
+            // Ensure loginFn is awaited as it's likely async
             await loginFn(credential);
-            // Assuming loginFn handles success actions like redirecting or updating user state
-            // If not, you might add success handling here (e.g., close modal)
-            console.log('Google login successful'); // Or perform post-login actions
+            
+            console.log('Google login successful');
         } catch (error) {
             console.error('Google login failed:', error);
-            // You might want to display an error message to the user here
-            // setErrorState(true);
+            
+            // Enhanced error diagnostics for CORS issues
+            if (error.message && (
+                error.message.includes('Network Error') || 
+                error.message.includes('Failed to fetch') ||
+                error.message.includes('CORS'))) {
+                console.warn('Potential CORS issue detected during authentication');
+                if (clearError) clearError();
+            }
         } finally {
-            // Always reset loading state, regardless of success or failure
             setIsLoading(false);
         }
     };
@@ -379,7 +396,6 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
             </div>
         </div>
     );
-};
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              };
 
 export default LoginOverlay;
-

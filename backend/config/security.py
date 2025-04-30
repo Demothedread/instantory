@@ -12,18 +12,16 @@ class CORSConfig:
         if cors_origin:
             return cors_origin.split(',')
         return [
-            'http://localhost:3000',
-            'http://localhost:5000',
-            'https://vercel.live',
+            'https://instantory.vercel.app',
             'https://hocomnia.com',
+            'https://www.hocomnia.com', 
+            'https://bartleby.vercel.app',
             'https://accounts.google.com',
             'https://*.google.com',
             'https://*.googleapis.com',
             'https://*.googleusercontent.com',
-            'https://*.gstatic.com',
-            'https://instantory.vercel.app',
             'https://bartleby-backend.onrender.com',
-            'https://*.vercel.app'
+            'http://localhost:3000'
         ]
     @staticmethod
     def get_headers() -> List[str]:
@@ -34,13 +32,19 @@ class CORSConfig:
             'Accept',
             'Origin',
             'X-Requested-With',
+            'Content-Length',
+            'Accept-Encoding',
             'X-CSRF-Token',
             'google-oauth-token',
-            'google-client_id',  # Include client_id to support Google sign-in
-            'g_csrf_token',      # For Google One Tap authentication
+            'google-client_id',
+            'g_csrf_token',
+            'X-Google-OAuth-Token',
+            'X-Google-Client-ID',
             'Access-Control-Allow-Origin',
             'Access-Control-Allow-Credentials',
-            'Set-Cookie'  # Allow cookies for authentication protocols
+            'Cache-Control',
+            'X-API-Key',
+            'X-Auth-Token'
         ]
     @staticmethod
     def get_methods() -> List[str]:

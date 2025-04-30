@@ -22,16 +22,19 @@ def setup_cors(app: Quart, enabled: bool = True, allow_credentials: bool = True)
     # Get CORS settings from app config
     cors_config = app.config.get('CORS_CONFIG', {})
     allowed_origins = cors_config.get('allow_origin', origins_from_env or [
+        'https://instantory.vercel.app',
         'https://hocomnia.com',
+        'https://www.hocomnia.com', 
+        'https://bartleby.vercel.app',
         'http://localhost:3000',
         'https://vercel.live',
         'https://*.vercel.app', 
-        'https://bartleby.vercel.app',
         'https://*.onrender.com',
         'https://instantory.onrender.com',
         'https://bartleby-backend.onrender.com',
         'https://accounts.google.com',
         'https://*.google.com',  # Broader coverage for Google domains
+        'https://*.googleapis.com',
         'https://*.googleusercontent.com',
         'https://*.gstatic.com'  # For Google static resources
     ])

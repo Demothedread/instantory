@@ -4,11 +4,13 @@ import config from '../config';
 // Create a centralized API instance with common configuration
 const api = axios.create({
   baseURL: config.apiUrl,
-  headers: config.api.headers,
+  headers: {
+    ...config.api.headers,
+    'X-Requested-With': 'XMLHttpRequest',
+    'Origin': window.location.origin
+  },
   timeout: config.api.timeout,
   withCredentials: true
-  // Note: 'mode' and 'credentials' are fetch API options, not axios options
-  // They have been removed because they don't work with axios
 });
 
 // Authentication API endpoints
