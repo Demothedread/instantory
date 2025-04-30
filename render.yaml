@@ -60,43 +60,43 @@ services:
         value: "info"
       - key: ADMIN_PASSWORD
         sync: false
-
+/*
   # Worker service (free tier)
-  - type: worker
-    name: bartleby-worker
-    runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: "cd backend && python -m scripts.setup_user_storage"
-    envVars:
-      - key: PYTHON_VERSION
+  # type: worker
+    #name: bartleby-worker
+    #runtime: python
+   # buildCommand: pip install -r requirements.txt
+   # startCommand: "cd backend && python -m scripts.setup_user_storage"
+  #  envVars:
+     # - key: PYTHON_VERSION
         value: 3.11.0
-      - key: DATABASE_URL
+   #   - key: DATABASE_URL
         fromDatabase:
           name: bartlebySQL
           property: connectionString
-      - key: NEON_DATABASE_URL
+  #    - key: NEON_DATABASE_URL
         sync: false
-      - key: STORAGE_BACKEND
+   #   - key: STORAGE_BACKEND
         value: "generic"
-      - key: BLOB_READ_WRITE_TOKEN
+ #     - key: BLOB_READ_WRITE_TOKEN
         sync: false
-      - key: AWS_ACCESS_KEY_ID
+   #   - key: AWS_ACCESS_KEY_ID
         sync: false
-      - key: AWS_SECRET_ACCESS_KEY
+     # - key: AWS_SECRET_ACCESS_KEY
         sync: false
-      - key: AWS_S3_EXPRESS_BUCKET
+     # - key: AWS_S3_EXPRESS_BUCKET
         sync: false
-      - key: AWS_REGION
+      #- key: AWS_REGION
         value: "us-west-2"
-      - key: DATA_DIR
+     # - key: DATA_DIR
         value: "./data"
-      - key: CORS_ORIGINS
+      #- key: CORS_ORIGINS
         value: "https://hocomnia.com,https://bartleby.vercel.app,http://localhost:3000"
-      - key: PUBLIC_BACKEND_URL
+    #  - key: PUBLIC_BACKEND_URL
         value: "https://bartleby-backend.onrender.com"
-      - key: FRONTEND_URL
+      #- key: FRONTEND_URL
         value: "https://hocomnia.com"
-
+       # #
 # Free Postgres database
 databases:
   - name: bartlebySQL
