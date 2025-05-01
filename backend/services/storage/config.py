@@ -76,7 +76,7 @@ class StorageConfig:
             
         # For permanent storage, organize by file type
         ext = filename.split('.')[-1].lower()
-        if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp']:
+        if ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic']:
             return os.path.join(self.inventory_images_dir, str(user_id), filename)
             
         if ext in ['pdf', 'doc', 'docx', 'txt']:

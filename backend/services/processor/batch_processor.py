@@ -145,9 +145,9 @@ class BatchProcessor(BaseProcessor):
                     if isinstance(result, Exception):
                         logger.error(f"Batch processing error: {result}")
                     else:
-                        if isinstance(result, DocumentProcessor.ProcessingStatus):
+                        if isinstance(result, DocumentProcessor.get_status):
                             self.batch_status.document_status = result
-                        elif isinstance(result, ImageProcessor.ProcessingStatus):
+                        elif isinstance(result, ImageProcessor.get_status):
                             self.batch_status.image_status = result
             
             return self.get_status()

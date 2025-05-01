@@ -7,21 +7,11 @@ for installation using setuptools.
 import os
 from setuptools import setup
 from quart import Quart
-def find_package():
-    """Helper function to find the package directory."""
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    # Assuming the 'backend' package is in the same directory as setup.py
-    # If 'backend' is a subdirectory, adjust the path accordingly.
-    # For setuptools, 'packages' usually expects a list of package names,
-    # or use find_packages() for automatic discovery.
-    # This function seems intended to return the *path* to the package,
-    # which isn't standard for the 'packages' argument.
-    # Consider using setuptools.find_packages() instead if appropriate.
-    # For now, returning the directory path as originally intended.
-    return os.path.join(current_dir, 'backend')
+from backend.routes.auth_routes import auth_bp
 
-
-
+app= Quart(__name__)
+from quart_cors import cors
+app = cors(app, allow_origin="*")
 def find_package():
     """Helper function to find the package directory."""
     import os

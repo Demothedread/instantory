@@ -1,6 +1,7 @@
 """Image processor for handling image files."""
 import base64
 import logging
+import json # Add this import
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
@@ -14,6 +15,7 @@ from tenacity import retry, wait_random_exponential, stop_after_attempt
 from .base_processor import BaseProcessor
 from backend.config.logging import log_config
 from backend.config.storage import get_storage_config
+from ..storage.config import storage_config
 
 logger = log_config.get_logger(__name__)
 storage = get_storage_config()
@@ -21,7 +23,7 @@ storage = get_storage_config()
 class ImageProcessor(BaseProcessor):
     """Processor for image files (PNG, JPG, JPEG, GIF, WEBP)."""
     
-    SUPPORTED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp'}
+    SUPPORTED_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.heic'}
     MAX_SIZE = (512, 512)  # Maximum dimensions for processed images
     
     def __init__(self, db_pool: asyncpg.Pool, openai_client: AsyncOpenAI, instruction: str = None):
@@ -83,11 +85,18 @@ class ImageProcessor(BaseProcessor):
                 img.thumbnail(self.MAX_SIZE, Image.Resampling.LANCZOS)
                 
                 # Generate new filename with timestamp
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                new_filename = f"{timestamp}_{source_path.stem}.jpg"
+                new_filename = "f{timestamp}_{source_path.stem}.jpg"
                 
-                # Save to inventory images directory
-                dest_path = storage.get_path('INVENTORY_IMAGES_DIR') / new_filename
+                # Get the base directory path for inventory images
+                # Assuming storage_config provides a way to get the directory path,
+                # e.g., via a method like get_directory or direct access like paths['...']
+                # Using get_directory as a placeholder for the correct method/access pattern.
+                inventory_dir = storage_config.get_path('INVENTORY_IMAGES_DIR')
+                # Combine the directory path with the new filename
+                dest_path = inventory_dir / new_filename
+                
+                # Save the processed image
+                # Save the processed image
                 img.save(dest_path, "JPEG", quality=85, optimize=True)
                 
                 return dest_path
@@ -108,7 +117,7 @@ class ImageProcessor(BaseProcessor):
     async def _check_image_exists(self, conn: asyncpg.Connection, image_path: Path) -> bool:
         """Check if image already exists in database."""
         try:
-            result = await conn.fetchval(
+            result = await conn.fetch.val(
                 "SELECT EXISTS(SELECT 1 FROM products WHERE image_url = $1)",
                 str(image_path)
             )
@@ -122,7 +131,7 @@ class ImageProcessor(BaseProcessor):
         """Analyze image using OpenAI's GPT-4 model."""
         try:
             response = await self.openai_client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 messages=[
                     {
                         "role": "system",
@@ -156,17 +165,34 @@ class ImageProcessor(BaseProcessor):
                             }
                         ]
                     }
-                ],
-                max_tokens=700
-            )
-            
+                ] # Close the messages list
+            ) # Close the create method call
+
             content = response.choices[0].message.content
-            return content if isinstance(content, dict) else json.loads(content)
-            
+
+            # Ensure content is parsed as JSON if it's a string
+            if isinstance(content, str):
+                try:
+                    # Remove potential markdown code block fences before parsing
+                    if content.startswith("```json"):
+                        content = content.strip("```json").strip()
+                    elif content.startswith("```"):
+                         content = content.strip("```").strip()
+                    return json.loads(content)
+                except json.JSONDecodeError as json_err:
+                    logger.error(f"Failed to parse JSON response from OpenAI: {json_err}")
+                    logger.error(f"Raw content: {content}")
+                    return None # Or raise an error
+            elif isinstance(content, dict):
+                 return content
+            else:
+                 logger.error(f"Unexpected response type from OpenAI: {type(content)}")
+                 return None
+
         except Exception as e:
             logger.error(f"Error analyzing image: {e}")
             return None
-    
+
     async def _store_product_info(self, conn: asyncpg.Connection,
                                 product_info: Dict[str, Any],
                                 image_path: Path) -> None:
