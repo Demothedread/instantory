@@ -1,7 +1,7 @@
 """Error handling middleware and custom exceptions."""
 import json
 import traceback
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Optional, Union, Any # Keep Any for middleware
 from quart import Quart, jsonify, Response
 from werkzeug.exceptions import HTTPException
 import asyncpg.exceptions
@@ -177,6 +177,8 @@ def setup_error_handlers(app: Quart) -> None:
                     status_code=status_code,
                     error_code=f'HTTP_{status_code}'
                 )
+            ) # Close the parenthesis for error_response call
+
 class ErrorHandlingMiddleware:
     """Middleware for consistent error handling at the ASGI level."""
 
@@ -208,25 +210,25 @@ class ErrorHandlingMiddleware:
                     'message': 'An unexpected internal server error occurred.',
                     'status_code': 500
                 }
-                response_body = json.dumps(error_response_data).encode('utf-8')
-
-                # Send the error response back to the client
-                await send({
-                    'type': 'http.response.start',
-                    'status': 500,
-                    'headers': [
-                        (b'content-type', b'application/json'),
-                        (b'content-length', str(len(response_body)).encode('utf-8')),
-                    ]
-                })
-                await send({
-                    'type': 'http.response.body',
-                    'body': response_body,
-                    'more_body': False
-                })
-            else:
-                # For non-HTTP scopes (like WebSocket), re-raise the exception
-                # as we might not know how to handle it or send an error response.
-                raise e
-                # Re-raise non-HTTP errors
-                raise
+                    response_body = json.dumps(error_response_data).encode('utf-8')
+    
+                    # Send the error response back to the client
+                    await send({
+                        'type': 'http.response.start',
+                        'status': 500,
+                        'headers': [
+                            (b'content-type', b'application/json'),
+                            (b'content-length', str(len(response_body)).encode('utf-8')),
+                        ]
+                    })
+                    await send({
+                        'type': 'http.response.body',
+                        'body': response_body,
+                        'more_body': False
+                    })
+                else:
+                    # For non-HTTP scopes (like WebSocket), re-raise the exception
+                    # as we might not know how to handle it or send an error response.
+                    # Re-raise non-HTTP errors
+                    raise e
+                
