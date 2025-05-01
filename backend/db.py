@@ -5,9 +5,7 @@ import asyncio
 from io import BytesIO
 from pathlib import Path
 from typing import Optional
-
 from quart import Blueprint, request, jsonify, send_file
-
 from .cleanup import get_metadata_pool, get_vector_pool
 # Import all potential storage modules upfront
 try:

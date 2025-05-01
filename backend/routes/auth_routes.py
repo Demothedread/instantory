@@ -359,68 +359,49 @@ async def login_details():
     except Exception as e:
         logger.exception("Failed to fetch login details")
         return jsonify({"error": "Failed to fetch login details", "details": str(e)}), 500
-                for client_id in ALLOWED_GOOGLE_CLIENT_IDS[1:]:
-                    # Skip the primary one we already tried
-async def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
-    """
-                        id_info = id_token.verify_oauth2_token(
-                            token,
-                            google_request,
-                            client_id.strip()
-                        )
-                    raise ValueError(
-                        'Could not verify audience with any configured client ID'
-                    ) from ve
-                raise ValueError(
-                    'Token verification failed with primary client ID '
-                    'and no alternatives configured'
-                )
-        token: The Google ID token to verify
-        
-    Returns:
-        Dictionary of user information from the token or None if verification fails
-    """
+
+def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
+    """Verify a Google OAuth2 token."""
     try:
         # Create a Google auth request object
         google_request = google_requests.Request()
-        
+
         # Try to verify with the primary client ID first
         try:
             id_info = id_token.verify_oauth2_token(token, google_request, GOOGLE_CLIENT_ID)
-        except ValueError:
-        logger.warning("Google token verification failed: %s", ve)
-            if len(ALLOWED_GOOGLE_CLIENT_IDS) > 1:
-                # Try each ID in our allowed list
-                for client_id in ALLOWED_GOOGLE_CLIENT_IDS[1:]:  # Skip the primary one we already tried
-                    if not client_id:  # Skip empty strings
-                        continue
-                    try:
-                        id_info = id_token.verify_oauth2_token(token, google_request, client_id.strip())
-                        break  # If successful, exit the loop
-                    except ValueError:
-                        continue
-                else:  # This else belongs to the for loop and executes if no break occurred
-                    raise ValueError('Could not verify audience with any configured client ID')
+        except ValueError as ve:
+            logger.warning("Google token verification failed with primary client ID: %s", ve)
+            id_info = None
+
+        # If verification with the primary client ID fails, try additional client IDs
+        if not id_info and len(ALLOWED_GOOGLE_CLIENT_IDS) > 1:
+            for client_id in ALLOWED_GOOGLE_CLIENT_IDS[1:]:
+                if not client_id:  # Skip empty strings
+                    continue
+                try:
+                    id_info = id_token.verify_oauth2_token(token, google_request, client_id.strip())
+                    break  # Exit loop if successful
+                except ValueError:
+                    continue
             else:
-                # No additional IDs to try
-                raise ValueError('Token verification failed with primary client ID and no alternatives configured')
-        
+                raise ValueError("Could not verify audience with any configured client ID")
+
         # Verify issuer is Google
         if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-            raise ValueError('Invalid token issuer')
-            
+            raise ValueError("Invalid token issuer")
+
         # Verify the token is not expired
-        # (This is actually handled by verify_oauth2_token already, but kept for clarity)
         if datetime.now(tz=timezone.utc) > datetime.fromtimestamp(id_info['exp'], tz=timezone.utc):
-            raise ValueError('Token has expired')
+            raise ValueError("Token has expired")
+
         # Check if the token is for a Google account
         if 'sub' not in id_info:
-            raise ValueError('Token does not contain a Google account ID')
-            
-            logger.warning("Unauthorized client_id: %s", client_id)
-        
+            raise ValueError("Token does not contain a Google account ID")
+
+        return id_info
+
     except ValueError as ve:
-        logger.warning(f"Google token verification failed: {ve}")
+        logger.warning("Google token verification failed: %s", ve)
         return None
 
 @auth_bp.route('/google', methods=['POST'])

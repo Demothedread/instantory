@@ -46,11 +46,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Set project root directory
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(ROOT_DIR)
 
 try:
-    import PyPDF2
+            import PyPDF2
 except ImportError:
     logger.warning("PyPDF2 not installed. PDF processing will be unavailable.")
     PyPDF2 = None
@@ -129,3 +129,36 @@ async def check_task_status(task_id: str) -> Optional[Dict[str, Any]]:
     if not task:
         return None
     return task
+
+async def run_background_task(task_id: str, coro: asyncio.Future) -> None:
+    """Run a background task and update its status."""
+    try:
+        task_manager.update_task(task_id, status='running', message='Task started')
+        await coro
+        task_manager.update_task(task_id, status='completed', message='Task completed', progress=100)
+    except Exception as e:
+        logger.error(f"Error in background task {task_id}: {e}")
+        task_manager.update_task(task_id, status='failed', message=str(e), progress=0)
+async def run_task_with_progress(task_id: str, coro: asyncio.Future) -> None:
+    """Run a background task with progress updates."""
+    try:
+        task_manager.update_task(task_id, status='running', message='Task started')
+        await coro
+        task_manager.update_task(task_id, status='completed', message='Task completed', progress=100)
+    except Exception as e:
+        logger.error(f"Error in background task {task_id}: {e}")
+        task_manager.update_task(task_id, status='failed', message=str(e), progress=0)
+async def run_task_with_progress_and_cleanup(task_id: str, coro: asyncio.Future) -> None:
+    """Run a background task with progress updates and cleanup on completion."""
+    try:
+        task_manager.update_task(task_id, status='running', message='Task started')
+        await coro
+        task_manager.update_task(task_id, status='completed', message='Task completed', progress=100)
+    except Exception as e:
+        logger.error(f"Error in background task {task_id}: {e}")
+        task_manager.update_task(task_id, status='failed', message=str(e), progress=0)
+    finally:
+        # Cleanup expired tasks after completion
+        task_manager.cleanup()
+        # Cleanup expired tasks after completion
+        task_manager.cleanup()
