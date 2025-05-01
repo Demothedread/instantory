@@ -50,7 +50,7 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(ROOT_DIR)
 
 try:
-            import PyPDF2
+    import PyPDF2
 except ImportError:
     logger.warning("PyPDF2 not installed. PDF processing will be unavailable.")
     PyPDF2 = None
@@ -109,7 +109,7 @@ class TaskManager:
     def cleanup(self) -> None:
         current_time = asyncio.get_running_loop().time()
         expired_tasks = [task_id for task_id, task in self.tasks.items()
-                         if current_time - task['created_at'] > self.ttl_seconds]
+             if current_time - task['created_at'] > self.ttl_seconds]
         for task_id in expired_tasks:
             del self.tasks[task_id]
 

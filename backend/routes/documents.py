@@ -127,24 +127,31 @@ class StorageService:
                 # Fall back to client pattern if available
                 client_fn = getattr(vercel_api, 'create_client', None)
                 logger.debug(f"create_client = {client_fn}, type = {type(client_fn)}")
+                # Check if client_fn exists AND is callable
                 if client_fn and callable(client_fn):
                     client = client_fn(self.vercel_token)
                     if hasattr(client, 'get') and callable(client.get):
                         response = await asyncio.to_thread(client.get, document_url)
+                        # Attempt to extract content based on common response attributes
                         if hasattr(response, 'body'):
                             return response.body
                         elif hasattr(response, 'content'):
                             return response.content
                         else:
+                            # Assume the response itself might be the content if no specific attribute found
+                            logger.warning("Response object from client.get has no 'body' or 'content', returning response directly.")
                             return response
                     else:
-                        logger.error("create_client is not callable. Check vercel_blob module export.")
+                        # Log if the created client object doesn't have a usable 'get' method
+                        logger.error("Client object created via 'create_client' does not have a callable 'get' method.")
+                        return None # Cannot proceed without a get method
                 else:
-                    logger.error("No compatible API method found in vercel_blob module")
+                    # Log if 'create_client' attribute exists but is not callable
+                    logger.error("Attribute 'create_client' in vercel_blob module is not a callable function.")
                     return None
 
-            # If we can't figure it out, log an error
-            logger.error("No compatible API method found in vercel_blob module")
+            # This part might be unreachable if the logic above covers all cases, but kept for safety.
+            logger.error("Fell through all checks: No compatible API method found in vercel_blob module for getting document.")
             return None
             
         except Exception as e:
