@@ -11,10 +11,6 @@ from pathlib import Path
 
 # Add the current directory to the Python path
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-
-# Local imports
-from middleware.cors import default_cors_setup
-from routes.auth_routes import auth_bp
 # Third party imports
 from dotenv import load_dotenv
 

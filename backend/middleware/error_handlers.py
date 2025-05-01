@@ -13,10 +13,10 @@ logger = log_config.get_logger(__name__)
 class APIError(Exception):
     """Base class for API errors."""
     def __init__(self,
-                 message: str,
-                 status_code: int = 500,
-                 error_code: Optional[str] = None,
-                 details: Optional[Dict] = None):
+        message: str,
+        status_code: int = 500,
+        error_code: Optional[str] = None,
+        details: Optional[Dict] = None):
         super().__init__(message)
         self.message = message
         self.status_code = status_code
@@ -210,25 +210,23 @@ class ErrorHandlingMiddleware:
                     'message': 'An unexpected internal server error occurred.',
                     'status_code': 500
                 }
-                    response_body = json.dumps(error_response_data).encode('utf-8')
+                response_body = json.dumps(error_response_data).encode('utf-8')
     
-                    # Send the error response back to the client
-                    await send({
-                        'type': 'http.response.start',
-                        'status': 500,
-                        'headers': [
-                            (b'content-type', b'application/json'),
-                            (b'content-length', str(len(response_body)).encode('utf-8')),
-                        ]
+                # Send the error response back to the client
+                await send({
+                    'type': 'http.response.start',
+                    'status': 500,
+                    'headers': [
+                        (b'content-type', b'application/json'),
+                        (b'content-length', str(len(response_body)).encode('utf-8')),
+                    ]
+                })
+                await send({
+                    'type': 'http.response.body',
+                    'body': response_body,
+                    'more_body': False
                     })
-                    await send({
-                        'type': 'http.response.body',
-                        'body': response_body,
-                        'more_body': False
-                    })
-                else:
-                    # For non-HTTP scopes (like WebSocket), re-raise the exception
-                    # as we might not know how to handle it or send an error response.
-                    # Re-raise non-HTTP errors
-                    raise e
-                
+            else:
+                # For non-HTTP scopes (like WebSocket), re-raise the exception
+                # as we might not know how to handle it or send an error response.
+                raise e
