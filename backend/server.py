@@ -1,12 +1,25 @@
+"""
+Server module for the Instantory backend application.
+Handles initialization, routing, and core application functionality.
+"""
 # Core imports
-import os
 import sys
-from pathlib import Path
-from dotenv import load_dotenv
+import os
 import asyncio
-import logging 
-from .middleware.cors import setup_cors
-from .routes.auth_routes import auth_bp
+import logging
+from pathlib import Path
+
+# Add the current directory to the Python path
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
+# Local imports
+from middleware.cors import default_cors_setup
+from routes.auth_routes import auth_bp
+# Third party imports
+from dotenv import load_dotenv
+
+# Local imports
+
 
 # Configure basic logging first
 logging.basicConfig(
@@ -185,7 +198,7 @@ app.config.update(default_config)
 cors_origins = os.getenv('CORS_ORIGINS', '*').split(',')
 
 # Apply CORS settings directly to the app instance
-setup_cors(app, cors_origins)
+default_cors_setup = apply_cors(app, cors_origins)
 
 # Production settings
 if os.getenv('ENVIRONMENT', '').lower() == 'production':
