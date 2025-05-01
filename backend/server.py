@@ -5,8 +5,8 @@ from pathlib import Path
 from dotenv import load_dotenv
 import asyncio
 import logging 
-from middleware.cors import setup_cors
-from routes.auth_routes import auth_bp
+from backend.middleware.cors import setup_cors
+from backend.routes.auth_routes import auth_bp
 
 # Configure basic logging first
 logging.basicConfig(
