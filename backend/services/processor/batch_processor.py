@@ -10,8 +10,8 @@ from openai import AsyncOpenAI
 from .base_processor import BaseProcessor
 from .document_processor import DocumentProcessor
 from .image_processor import ImageProcessor
-from config.logging import log_config
-from config.storage import get_storage_config
+from backend.config.logging import log_config
+from backend.config.storage import get_storage_config
 
 logger = log_config.get_logger(__name__)
 storage = get_storage_config()

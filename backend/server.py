@@ -4,13 +4,10 @@ import sys
 from pathlib import Path
 from dotenv import load_dotenv
 import asyncio
-import logging
-import middleware
-import routes
-import scripts
-from middleware.cors import setup_cors
-from routes.auth_routes import auth_bp, inventory_bp, documents_bp, files_bp
-from services.oauth import create_oauth_service
+import logging 
+from .middleware.cors import setup_cors
+from .routes.auth_routes import auth_bp
+
 # Configure basic logging first
 logging.basicConfig(
     level=logging.INFO,
@@ -186,7 +183,9 @@ app.config.update(default_config)
 
 # CORS configuration - use parameter names compatible with quart-cors
 cors_origins = os.getenv('CORS_ORIGINS', '*').split(',')
-app = setup_cors(app, cors_origins)
+
+# Apply CORS settings directly to the app instance
+setup_cors(app, cors_origins)
 
 # Production settings
 if os.getenv('ENVIRONMENT', '').lower() == 'production':

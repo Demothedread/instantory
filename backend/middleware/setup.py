@@ -1,13 +1,11 @@
 """Middleware setup for the backend application."""
-
 from typing import Dict, Any
 from quart import Quart
-
 from .cors import setup_cors
 from .error_handlers import setup_error_handlers
 from .request_logger import setup_request_logging
 from .security import setup_security
-from routes.auth_routes import auth_bp
+from ..routes.auth_routes import auth_bp
 
 def setup_middleware(app: Quart, settings: Any) -> None:
     """Set up all middleware components for the application."""

@@ -5,10 +5,11 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 from pathlib import Path
 from abc import ABC, abstractmethod
+from backend.config import cleanup_temp_files
 import json
 
-from config.storage import get_storage_config, get_temp_dir
-from config.logging import log_config
+from backend.config.storage import get_storage_config, get_temp_dir
+from backend.config.logging import log_config
 
 logger = log_config.get_logger(__name__)
 storage = get_storage_config()
@@ -65,7 +66,7 @@ class BaseProcessor(ABC):
     async def cleanup(self) -> None:
         """Clean up processor resources."""
         if self.temp_dir:
-            cleanup_temp_dir(self.temp_dir)
+            cleanup_temp_files  (self.temp_dir)
         self.status.end_time = datetime.now()
     
     @abstractmethod
