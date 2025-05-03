@@ -3,13 +3,13 @@ import config from '../config';
 
 // Create a centralized API instance with common configuration
 const api = axios.create({
-  baseURL: config.apiUrl,
+  baseURL: config.apiUrl || 'https://backend-bartleby-mn96.onrender.com',
   headers: {
     ...config.api.headers,
     'X-Requested-With': 'XMLHttpRequest',
     'Origin': window.location.origin
   },
-  timeout: config.api.timeout,
+  timeout: config.api.timeout || 30000,
   withCredentials: true
 });
 
@@ -18,7 +18,7 @@ export const authApi = {
   // User session management
   login: (userData) => api.post(config.auth.endpoints.login, userData),
   loginWithGoogle: (credential) => api.post(config.auth.endpoints.googleLogin, { credential }),
-  logout: () => api.post(config.auth.endpoints.logout),
+  logout: () => api.post(config.auth.endpoints.logout),      
   refreshToken: () => api.post(config.auth.endpoints.refresh),
   checkSession: () => api.get(config.auth.endpoints.session),
   

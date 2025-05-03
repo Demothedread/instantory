@@ -1,30 +1,47 @@
-import { AuthContext, AuthProvider } from './contexts/auth';
-import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useState, useRef, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { css } from '@emotion/react';
+import { AuthContext } from './contexts/auth';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
-import HowToUseOverlay from './components/common/HowToUseOverlay';
-import LoginOverlay from './components/auth/LoginOverlay';
+// Layout components
 import Navigation from './components/common/Navigation';
 import RolodexToggle from './components/display/RolodexToggle';
-import { BrowserRouter as Router } from 'react-router-dom';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import UserMenu from './components/common/UserMenu';
-import { colors } from './styles/theme/colors';
-import config from './config';
-import { css } from '@emotion/react';
-import { dataApi } from './services/api';
-import { layout } from './styles/layouts/constraints';
+import HowToUseOverlay from './components/common/HowToUseOverlay';
+
+// Page components
+import LandingPage from './components/landing/LandingPage';
+import Dashboard from './components/dashboard/Dashboard';
+import ProcessingHub from './components/upload/ProcessHub';
+import InventoryView from './pages/InventoryView';
+import DocumentsView from './pages/DocumentsView';
+import NotFound from './pages/NotFound';
+import AuthCallback from './components/auth/authCallback';
+
+// Auth componentsa
+import LoginOverlay from './components/auth/LoginOverlay';
+
+// Services
+import dataApi from './services/api';
+
+// Styles
 import { neoDecorocoBase } from './styles/components/neo-decoroco/base';
+import { layout } from './styles/layouts/constraints';
+import { colors } from './styles/theme/colors';
 import { typography } from './styles/theme/typography';
 
 function App() {
-  const { user, loginWithGoogle, logout } = useContext(AuthContext);
+  const { user, loading: authLoading } = useContext(AuthContext);
   const [inventory, setInventory] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [showHowTo, setShowHowTo] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showRolodex, setShowRolodex] = useState(false);
-
+  const [isExpanded, setIsExpanded] = useState(true);
+  
   const hasInitializedRef = useRef(false);
 
   const fetchData = useCallback(async () => {
@@ -34,7 +51,7 @@ function App() {
         dataApi.getInventory(),
         dataApi.getDocuments()
       ]);
-
+      
       // Add error checking for API responses
       if (!inventoryResponse || !documentsResponse) {
         throw new Error('Invalid API response');
@@ -66,98 +83,116 @@ function App() {
     }
   }, [user, fetchData]);
 
-  const handleProcessFiles = useCallback(async () => {
-    setLoading(true);
-    try {
-      await dataApi.processFiles();
-      await fetchData();
-    } catch (err) {
-      setError('Error processing files.');
-      console.error('File processing error:', err);
-      setTimeout(() => setError(null), 5000);
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchData]);
-
-  const appStyles = {
-    header: css`
-      ${neoDecorocoBase.panel};
-      height: ${layout.heights.header};
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 ${layout.spacing.md};
-    `,
-    mainSection: css`
-      flex: 1;
-      overflow-y: auto;
-      padding: ${layout.spacing.lg};
-    `,
-    uploadSection: css`
-      margin-bottom: ${layout.spacing.lg};
-      opacity: 0.7;
-    `,
-    error: css`
-      ${neoDecorocoBase.panel};
-      background-color: rgba(255, 0, 0, 0.1);
-      color: red;
-      padding: ${layout.spacing.md};
-      margin-bottom: ${layout.spacing.lg};
-    `,
-  };
+  // Show loading spinner while checking authentication
+  if (authLoading) {
+    return (
+      <div css={css`
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background: ${colors.darkGradient};
+      `}>
+        <div css={css`
+          ${neoDecorocoBase.spinner}
+        `}>Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <Router>
-      <div
-        css={css`
-          background: ${colors.darkGradient};
-          color: ${colors.textLight};
-          font-family: ${typography.fonts.primary};
-          overflow: hidden;
-          height: 100vh;
-          display: flex;
-          flex-direction: column;
-        `}
-      >
+      <div css={css`
+        background: ${colors.darkGradient};
+        color: ${colors.textLight};
+        font-family: ${typography.fonts.primary};
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-rows: auto 1fr auto;
+        grid-template-areas:
+          "nav header"
+          "nav main"
+          "nav footer";
+      `}>
         <Navigation />
-
-        <header css={appStyles.header}>
+        
+        <header css={css`
+          grid-area: header;
+          ${neoDecorocoBase.panel};
+          height: ${layout.heights.header};
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          padding: 0 ${layout.spacing.md};
+        `}>
           {user && <UserMenu user={user} />}
         </header>
 
-        <main css={appStyles.mainSection}>
-          {error && <div css={appStyles.error}>{error}</div>}
+        <main css={css`
+          grid-area: main;
+          padding: ${layout.spacing.lg};
+          overflow-y: auto;
+          position: relative;
+        `}>
+          {error && (
+            <div css={css`
+              ${neoDecorocoBase.alert};
+              margin-bottom: ${layout.spacing.lg};
+            `}>
+              {error}
+            </div>
+          )}
 
           {!user && (
-            <LoginOverlay
-              isVisible={!user}
-              onGoogleLogin={loginWithGoogle}
-            />
+            <LoginOverlay isVisible={!user} />
           )}
 
-          {user && (
-            <>
-              <div css={appStyles.uploadSection}>
-                <button onClick={handleProcessFiles}>
-                  {loading ? 'Loading...' : 'Process Files'}
-                </button>
-              </div>
-
-              {showRolodex && (
-                <RolodexToggle inventory={inventory} documents={documents} />
-              )}
-            </>
-          )}
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={!user ? <LandingPage /> : <Navigate to="/dashboard" />} />
+            <Route path="/auth-callback" element={<AuthCallback />} />
+            
+            {/* Protected routes */}
+            <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/" />} />
+            <Route path="/process" element={user ? <ProcessingHub /> : <Navigate to="/" />} />
+            <Route path="/inventory" element={user ? <InventoryView /> : <Navigate to="/" />} />
+            <Route path="/documents" element={user ? <DocumentsView /> : <Navigate to="/" />} />
+            
+            {/* 404 route */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
         </main>
 
-        <footer css={appStyles.header}>
-          {user && <UserMenu user={user} />}
+        <footer css={css`
+          grid-area: footer;
+          ${neoDecorocoBase.panel};
+          height: ${layout.heights.footer || '60px'};
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 ${layout.spacing.md};
+        `}>
+          <button 
+            css={css`
+              ${neoDecorocoBase.button};
+              background: none;
+              border: none;
+              color: ${colors.neonTeal};
+              &:hover {
+                color: ${colors.neonGold};
+                text-shadow: 0 0 10px ${colors.neonGold};
+              }
+            `}
+            onClick={() => setShowHowTo(true)}
+          >
+            How to Use Bartleby
+          </button>
         </footer>
-
-        <HowToUseOverlay isOpen={showHowTo} onClose={() => setShowHowTo(false)} />
-        <SpeedInsights />
       </div>
+
+      <HowToUseOverlay isOpen={showHowTo} onClose={() => setShowHowTo(false)} />
+      <SpeedInsights />
     </Router>
   );
 }

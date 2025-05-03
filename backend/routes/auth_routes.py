@@ -9,30 +9,27 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from functools import wraps
 from typing import Dict, Any, Optional
+import json
+import urllib.parse
+import aiohttp
+from quart import redirect
+from quart import Blueprint, request, jsonify
 
 # Import with fallbacks to handle different execution contexts
 try:
     from backend.config.database import get_db_pool
     from backend.config.logging import logger
 except ImportError:
-    # Alternative import path for when running as a module
-    try:
-        from backend.config.database import get_db_pool
-        from backend.config.logging import logger
-    except ImportError:
-        # Fallback to direct imports
-        from quart import current_app
-        import logging
-        logger = logging.getLogger(__name__)
-        
-        async def get_db_pool():
-            """Get database pool from app context if available."""
-            if hasattr(current_app, 'db') and hasattr(current_app.db, 'pool'):
-                return current_app.db.pool
-            raise RuntimeError("Database connection not available")
-
-from quart import Blueprint, request, jsonify
-
+# Alternative import path for when running as a module
+    from quart import current_app
+    logger = logging.getLogger(__name__) 
+    
+    async def get_db_pool():
+        """Get database pool from app context if available."""
+        if hasattr(current_app, 'db') and hasattr(current_app.db, 'pool'):
+            return current_app.db.pool
+        raise RuntimeError("Database connection not available")
+    
 logger = logging.getLogger(__name__)
 
 # Environment variables
@@ -145,6 +142,121 @@ def require_admin():
         return decorated_function
     return decorator
 
+# --- Authentication Ridirect Handler --- #
+
+async def exchange_google_code(code: str) -> Optional[Dict[str, Any]]:
+    """Exchange Google authorization code for tokens."""
+    try:
+        # Get OAuth configuration
+        client_id = os.getenv('GOOGLE_CLIENT_ID')
+        client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+        redirect_uri = os.getenv('GOOGLE_REDIRECT_URI')
+        
+        if not all([client_id, client_secret, redirect_uri]):
+            logger.error("Missing required Google OAuth configuration")
+            return None
+        
+        # Exchange code for tokens
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                'https://oauth2.googleapis.com/token',
+                data={
+                    'code': code,
+                    'client_id': client_id,
+                    'client_secret': client_secret,
+                    'redirect_uri': redirect_uri,
+                    'grant_type': 'authorization_code'
+                }
+            ) as response:
+                if response.status != 200:
+                    error_body = await response.text()
+                    logger.error(f"Google token exchange failed: {response.status} - {error_body}")
+                    return None
+                
+                return await response.json()
+                
+    except Exception as e:
+        logger.exception(f"Failed to exchange Google code for tokens: {e}")
+        return None
+
+
+@auth_bp.route('/google/callback', methods=['GET'])
+async def google_callback():
+    """
+    Handle the Google OAuth redirect callback.
+    Validates the authorization code, retrieves user information,
+    creates or updates the user in the database, sets authentication cookies,
+    and redirects back to the frontend.
+    """
+    try:
+        # Get the authorization code from the query parameters
+        code = request.args.get('code')
+        state = request.args.get('state')  # Can be used for CSRF protection
+        
+        if not code:
+            logger.error("No authorization code received from Google")
+            return redirect(f"{os.getenv('FRONTEND_URL', 'https://hocomnia.com')}?auth_error=no_code")
+        
+        # Exchange the code for access and ID tokens
+        token_data = await exchange_google_code(code)
+        if not token_data:
+            logger.error("Failed to exchange Google authorization code for tokens")
+            return redirect(f"{os.getenv('FRONTEND_URL', 'https://hocomnia.com')}?auth_error=token_exchange")
+        
+        # Extract ID token
+        id_token_value = token_data.get('id_token')
+        if not id_token_value:
+            logger.error("No ID token received from Google")
+            return redirect(f"{os.getenv('FRONTEND_URL', 'https://hocomnia.com')}?auth_error=no_id_token")
+        
+        # Verify the ID token
+        id_info = verify_google_token(id_token_value)
+        if not id_info:
+            logger.error("Failed to verify Google ID token")
+            return redirect(f"{os.getenv('FRONTEND_URL', 'https://hocomnia.com')}?auth_error=invalid_token")
+        
+        # Extract user info
+        email = id_info.get('email')
+        name = id_info.get('name', email)
+        google_id = id_info.get('sub')
+        
+        # Create or update the user
+        user = await upsert_user(email, name, google_id, auth_provider="google", is_verified=True)
+        
+        # Log the login
+        await log_user_login(user['id'], 'google')
+        
+        # Create authentication tokens
+        access_token = await create_token({"id": user['id'], "email": user['email'], "is_admin": user.get('is_admin', False)}, "access")
+        refresh_token = await create_token({"user_id": user['id']}, "refresh")
+        
+        # Get user data for sending to frontend
+        user_data = await get_user_data(user['id'])
+        
+        # Build authentication info to send to frontend
+        auth_info = {
+            "authenticated": True,
+            "userId": user['id'],
+            "email": user['email'],
+            "isAdmin": user.get('is_admin', False)
+        }
+        
+        # Redirect to frontend with authentication success indicator
+        frontend_url = os.getenv('FRONTEND_URL', 'https://hocomnia.com')
+        safe_auth_info = urllib.parse.quote(json.dumps(auth_info))
+        redirect_url = f"{frontend_url}/auth-callback?auth={safe_auth_info}"
+        
+        # Create response with redirect and secure cookies
+        response = redirect(redirect_url)
+        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='None')
+        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='None')
+        
+        return response
+
+    except Exception as e:
+        logger.exception(f"Google callback failed: {e}")
+        return redirect(f"{os.getenv('FRONTEND_URL', 'https://hocomnia.com')}?auth_error=server_error")
+    
 # --- Database Access Functions --- #
 
 async def get_user_by_email(email: str):
@@ -404,6 +516,27 @@ def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
         logger.warning("Google token verification failed: %s", ve)
         return None
 
+@auth_bp.route('/google/login', methods=['GET'])
+async def initiate_google_login():
+    """
+    Initiate the Google OAuth flow by redirecting to Google's authorization endpoint.
+    """
+    try:
+        # Generate a random state for CSRF protection
+        state = secrets.token_urlsafe(16)
+        
+        # Store state in session or use another method to verify it in the callback
+        # For example, you could store it in Redis with a short expiration
+        
+        # Generate the OAuth URL
+        oauth_url = GoogleOAuthConfig.get_oauth_url(state)
+        
+        # Redirect to Google's authorization endpoint
+        return redirect(oauth_url)
+    except Exception as e:
+        logger.exception(f"Failed to initiate Google login: {e}")
+        return jsonify({"error": "Failed to initiate Google login"}), 500
+    
 @auth_bp.route('/google', methods=['POST'])
 async def google_login():
     """Authenticate a user via Google OAuth (works with regular OAuth and One Tap)."""
@@ -500,8 +633,7 @@ async def register():
         # Log login
         await log_user_login(user['id'], 'email')
 
-        access_token = await create_token({"id": user['id'], "email": user['email'], 
-                                         "is_admin": user.get('is_admin', False)}, "access")
+        access_token = await create_token({"id": user['id'], "email": user['email'],  "is_admin": user.get('is_admin', False)}, "access")
         refresh_token = await create_token({"user_id": user['id']}, "refresh")
 
         response = jsonify({
@@ -535,8 +667,7 @@ async def login():
         # Log login
         await log_user_login(user['id'], 'email')
 
-        access_token = await create_token({"id": user['id'], "email": user['email'], 
-                                         "is_admin": user.get('is_admin', False)}, "access")
+        access_token = await create_token({"id": user['id'], "email": user['email'], "is_admin": user.get('is_admin', False)}, "access")
         refresh_token = await create_token({"user_id": user['id']}, "refresh")
 
         response = jsonify({
@@ -626,8 +757,7 @@ async def refresh():
         if not user:
             return jsonify({"error": "User not found"}), 404
 
-        access_token = await create_token({"id": user['id'], "email": user['email'], 
-                                         "is_admin": user.get('is_admin', False)}, "access")
+        access_token = await create_token({"id": user['id'], "email": user['email'], "is_admin": user.get('is_admin', False)}, "access")
 
         response = jsonify({"message": "Token refreshed", "user": dict(user)})
         response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Strict')

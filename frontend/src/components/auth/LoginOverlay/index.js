@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from 'react';
 
 import { AuthContext } from '../../../contexts/auth';
 import { GoogleLogin } from '@react-oauth/google';
+ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { css } from '@emotion/react';
 import styles from './styles';
 
@@ -345,57 +346,59 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
     
 
     return (
-        <div css={css(styles.overlay)}>
-            <div css={css(styles.panel)}>
-                <h2 css={css(styles.title)}>
-                    {mode === 'register' ? 'Create Your Account' : 
-                     mode === 'admin' ? 'Admin Access' : 'Welcome to Bartleby'}
-                </h2>
+        <GoogleOAuthProvider clientId={config.googleClientId}>
+            <div css={css(styles.overlay)}>
+                <div css={css(styles.panel)}>
+                    <h2 css={css(styles.title)}>
+                        {mode === 'register' ? 'Create Your Account' : 
+                        mode === 'admin' ? 'Admin Access' : 'Welcome to Bartleby'}
+                    </h2>
 
-                {error && (
-                    <div css={css(styles.errorMessage)} onClick={clearError}>
-                        <span>⚠️ {error}</span>
-                        {(error.includes('NetworkError') || error.includes('Failed to fetch') || error.includes('TypeError')) && (
-                            <div css={css(styles.errorDetail)}>
-                                A network error occurred. Please try again later or contact support if the issue persists.
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                <div css={css(styles.loginOptions)}>
-                    {mode !== 'admin' && (
-                        <>
-                            <div css={css(styles.googleLoginWrapper)}>
-                                <GoogleLogin
-                                    onSuccess={handleGoogleSuccess}
-                                    onError={(error) => console.error('Google Login Failed:', error)}
-                                    theme="outline"
-                                    size="large"
-                                    shape="pill"
-                                    width="300px"
-                                />
-                            </div>
-
-                            <div css={css(styles.divider)}>
-                                <div css={css(styles.dividerLine)} />
-                                <span css={css(styles.dividerText)}>or</span>
-                                <div css={css(styles.dividerLine)} />
-                            </div>
-                        </>
+                    {error && (
+                        <div css={css(styles.errorMessage)} onClick={clearError}>
+                            <span>⚠️ {error}</span>
+                            {(error.includes('NetworkError') || error.includes('Failed to fetch') || error.includes('TypeError')) && (
+                                <div css={css(styles.errorDetail)}>
+                                    A network error occurred. Please try again later or contact support if the issue persists.
+                                </div>
+                            )}
+                        </div>
                     )}
 
-                    {renderForm()}
-                </div>
+                    <div css={css(styles.loginOptions)}>
+                        {mode !== 'admin' && (
+                            <>
+                                <div css={css(styles.googleLoginWrapper)}>
+                                    <GoogleLogin
+                                        onSuccess={handleGoogleSuccess}
+                                        onError={(error) => console.error('Google Login Failed:', error)}
+                                        theme="outline"
+                                        size="large"
+                                        shape="pill"
+                                        width="300px"
+                                    />
+                                </div>
 
-                <div css={css(styles.footer)}>
-                    <span css={css(styles.footerText)}>
-                        {mode === 'admin' ? 'Admin Portal Access' : 'Secure Authentication'}
-                    </span>
+                                <div css={css(styles.divider)}>
+                                    <div css={css(styles.dividerLine)} />
+                                    <span css={css(styles.dividerText)}>or</span>
+                                    <div css={css(styles.dividerLine)} />
+                                </div>
+                            </>
+                        )}
+
+                        {renderForm()}
+                    </div>
+
+                    <div css={css(styles.footer)}>
+                        <span css={css(styles.footerText)}>
+                            {mode === 'admin' ? 'Admin Portal Access' : 'Secure Authentication'}
+                        </span>
+                    </div>
                 </div>
             </div>
-        </div>
+        </GoogleOAuthProvider>
     );
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              };
+};
 
 export default LoginOverlay;

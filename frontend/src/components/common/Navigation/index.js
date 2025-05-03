@@ -17,13 +17,23 @@ const Navigation = () => {
     { path: '/about', label: 'About', icon: 'i️' },
     { path: '/kaboodles', label: 'Kaboodles', icon: '📦' },
     { path: '/resources', label: 'Resources', icon: '📚' },
+    {
+      path: '/dashboard',
+      label: 'Dashboard',
+      icon: 'i🗄️',
+      submenu: [
+      { path: '/dashboard/process', label: 'Process', icon: '⚙️' },
+      { path: '/dashboard/inventory', label: 'Inventory', icon: '📋' },
+      { path: '/dashboard/documents', label: 'Documents', icon: '📄' },
+      ],
+    },
     { path: '/terms', label: 'Terms', icon: '📜' },
   ];
 
   return (
-    <>
+    <> 
       <button 
-        css={[styles.toggle, isOpen && 'open']}
+        css={[styles.mobileToggle, isOpen && 'open']}
         onClick={() => setIsOpen(!isOpen)}
         aria-label="Toggle navigation"
       >
@@ -36,17 +46,31 @@ const Navigation = () => {
         </div>
 
         <div css={styles.menu}>
-          {navItems.map((item) => (
-            <div key={item.path} css={styles.menuItem}>
-              <Link
-                to={item.path}
-                css={[styles.link, location.pathname === item.path && 'active']}
-              >
-                <span css={styles.icon}>{item.icon}</span>
-                {item.label}
-              </Link>
-            </div>
-          ))}
+          {navItems.map((item) => 
+            item.menu && (
+              <div key={item.path} css={styles.menuItem}>
+                <Link
+                  to={item.path}
+                  css={[styles.link, location.pathname === item.path && 'active']}
+                >
+                  <span css={styles.icon}>{item.icon}</span>
+                  {item.label}
+                </Link>
+                <div css={styles.submenuItems}>
+                  {item.submenu.map((subItem) => (
+                    <Link
+                      key={subItem.path}
+                      to={subItem.path}
+                      css={[styles.link, location.pathname === subItem.path && 'active']}
+                    >
+                      <span css={styles.icon}>{subItem.icon}</span>
+                      {subItem.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )
+          )}
         </div>
       </nav>
     </>

@@ -176,6 +176,35 @@ class GoogleOAuthConfig:
         if not redirect_uri:
             raise ValueError("GOOGLE_REDIRECT_URI environment variable is required")
         return redirect_uri
+    
+    @staticmethod
+    def get_oauth_url(state: Optional[str] = None) -> str:
+        """
+        Generate the Google OAuth authorization URL.
+        
+        Args:
+            state: Optional state parameter for CSRF protection
+            
+        Returns:
+            The authorization URL to redirect users to
+        """
+        client_id = GoogleOAuthConfig.get_client_id()
+        redirect_uri = GoogleOAuthConfig.get_redirect_uri()
+        
+        params = {
+            'client_id': client_id,
+            'redirect_uri': redirect_uri,
+            'response_type': 'code',
+            'scope': 'email profile',
+            'access_type': 'offline',
+            'prompt': 'select_account'
+        }
+        
+        if state:
+            params['state'] = state
+            
+        query_string = urllib.parse.urlencode(params)
+        return f"https://accounts.google.com/o/oauth2/v2/auth?{query_string}"
 
 def get_google_oauth_config() -> GoogleOAuthConfig:
     """Get Google OAuth configuration instance."""

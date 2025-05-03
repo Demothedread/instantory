@@ -149,8 +149,8 @@ class StorageService:
                             logger.error("Client object created via 'create_client' does not have a callable 'get' method.")
                             return None  # Cannot proceed without a get method
                     except Exception as client_error:
-                        logger.error(f"Error creating client using create_client_fn: {client_error}")
-                        return None
+                        Logger.error(f"Error creating client using create_client_fn: {client_error}")
+                            return None
                     try:
                         client = create_client_fn(self.vercel_token)
                         if hasattr(client, 'get') and callable(client.get):
@@ -177,7 +177,10 @@ class StorageService:
             logger.error(f"Error fetching document from Vercel Blob: {e}")
             logger.debug(f"URL: {document_url}, Error details: {str(e)}")
             return None
-
+        except Exception as e:
+            logger.error(f"Error fetching document from Vercel Blob: {e}")
+            logger.debug(f"URL: {document_url}, Error details: {str(e)}")
+            return None
     async def _delete_document_vercel(self, document_url: str) -> bool:
         """Delete document from Vercel Blob Storage using available API."""
         try:

@@ -20,15 +20,16 @@ origins_from_env = {
 # 'Access-Control-Allow-Credentials' is 'true'. List specific origins.
 # We explicitly list accounts.google.com as required.
 ALLOWED_ORIGINS: Set[str] = origins_from_env.union({
-    'https://instantory.vercel.app',
     'https://hocomnia.com',
     'https://www.hocomnia.com',
+    'https://instantory.vercel.app',
     'https://bartleby.vercel.app',
-    'http://localhost:3000', # For local development
-    'https://vercel.live', # For Vercel previews
-    'https://bartleby-backend.onrender.com', # Backend hosting
-    'https://accounts.google.com', # Google Sign-In
-    # Add other specific origins if needed, avoid wildcards with credentials.
+    'http://localhost:3000',
+    'https://vercel.live',
+    'https://backend-bartleby-mn96.onrender.com',
+    'https://accounts.google.com',
+    'https://apis.google.com',
+    'https://www.googleapis.com'
 })
 
 ALLOWED_METHODS: str = ','.join(['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'])
