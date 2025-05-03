@@ -165,6 +165,21 @@ export const styles = {
   tableContainer: css`
     ${neoDecorocoBase.panel}
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* For smooth scrolling on iOS */
+    
+    /* Hide scrollbar for cleaner look but maintain functionality */
+    &::-webkit-scrollbar {
+      height: 4px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: ${colors.neonTeal};
+      border-radius: 2px;
+    }
     
     table {
       ${neoDecorocoBase.table}

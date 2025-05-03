@@ -76,4 +76,38 @@ export const typography = {
   },
 };
 
+export const responsiveTypography = {
+  title: css`
+    font-size: ${typography.sizes['4xl']};
+    
+    @media (max-width: ${layout.breakpoints.md}) {
+      font-size: ${typography.sizes['2xl']};
+    }
+    
+    @media (max-width: ${layout.breakpoints.sm}) {
+      font-size: ${typography.sizes.xl};
+    }
+  `,
+  
+  subtitle: css`
+    font-size: ${typography.sizes.xl};
+    
+    @media (max-width: ${layout.breakpoints.md}) {
+      font-size: ${typography.sizes.lg};
+    }
+    
+    @media (max-width: ${layout.breakpoints.sm}) {
+      font-size: ${typography.sizes.base};
+    }
+  `,
+  
+  body: css`
+    font-size: ${typography.sizes.base};
+    
+    @media (max-width: ${layout.breakpoints.sm}) {
+      font-size: ${typography.sizes.sm};
+    }
+  `
+};
+
 export default typography;

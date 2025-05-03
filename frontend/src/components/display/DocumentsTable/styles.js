@@ -252,7 +252,21 @@ const styles = {
 
   tableContainer: css`
     overflow-x: auto;
-    margin-bottom: 20px;
+    -webkit-overflow-scrolling: touch; /* For smooth scrolling on iOS */
+    
+    /* Hide scrollbar for cleaner look but maintain functionality */
+    &::-webkit-scrollbar {
+      height: 4px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: ${colors.neonTeal};
+      border-radius: 2px;
+    }
 
     table {
       width: 100%;

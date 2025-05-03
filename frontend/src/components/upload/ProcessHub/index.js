@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 
 import { AuthContext } from '../../../contexts/auth';
-import ProcessImagesButton from '../../upload/ProcessImagesButton';
+import ProcessImagesButton from '../ProcessImagesButton';
 import { css } from '@emotion/react';
 import styles from './styles';
 import { useNavigate } from 'react-router-dom';

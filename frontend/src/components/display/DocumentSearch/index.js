@@ -1,85 +1,84 @@
-import React, { useState } from 'react';
-
+import React, { useState, useCallback } from 'react';
+import { css } from '@emotion/react';
+import axios from 'axios';
 import config from '../../../config';
 import styles from './styles';
 
-const DocumentSearch = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterCategory, setFilterCategory] = useState('');
+const DocumentSearch = ({ onSearchResults }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [error, setError] = useState('');
   const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [filterCategory, setFilterCategory] = useState('');
 
-  const categories = [
-    'All',
-    'Research Papers',
-    'Articles',
-    'Books',
-    'Reports',
-    'Documentation',
-    'Other'
-  ];
+  const categories = ['All Categories', 'Research', 'Reports', 'Articles', 'Case Law', 'Statutes/Regulations', 'Financial Documents', 'Other'];
+
+  const handleFilterSelect = (category) => {
+    setFilterCategory(category === 'All Categories' ? '' : category);
+    setShowFilterMenu(false);
+  };
+
+  const clearError = () => setError('');
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!searchTerm.trim()) return;
+    
+    if (!searchQuery.trim()) {
+      setError('Please enter a search query');
+      return;
+    }
 
-    setIsLoading(true);
-    setError(null);
+    setIsSearching(true);
+    setError('');
 
     try {
-      const response = await fetch(`${config.apiUrl}/api/documents/search`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
+      const response = await axios.post(
+        `${config.apiUrl}/api/documents/search`,
+        {
+          query: searchQuery,
+          category: filterCategory
         },
-        credentials: 'include',
-        body: JSON.stringify({
-          query: searchTerm,
-          category: filterCategory === 'All' ? '' : filterCategory
-        })
-      });
+        {
+          withCredentials: true
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error('Search failed. Please try again.');
+      if (response.data.results) {
+        // Pass the results up to parent component
+        if (onSearchResults) {
+          onSearchResults(response.data.results, searchQuery);
+        }
+      } else {
+        setError('No results found for your query');
       }
-
-      const data = await response.json();
-      setSearchResults(data.results || []);
-    } catch (err) {
-      setError(err.message);
-      setSearchResults([]);
+    } catch (error) {
+      console.error('Error searching documents:', error);
+      setError(error.response?.data?.error || 'An error occurred during search');
     } finally {
-      setIsLoading(false);
+      setIsSearching(false);
     }
-  };
-
-  const handleFilterSelect = (category) => {
-    setFilterCategory(category);
-    setShowFilterMenu(false);
   };
 
   return (
     <div css={styles.container}>
-      <h1 css={styles.title}>Document Search</h1>
-
+      <h2 css={styles.title}>Document Search</h2>
+      
       <div css={styles.filterSection}>
-        <form css={styles.searchInputGroup} onSubmit={handleSearch}>
+        <form css={styles.searchForm} onSubmit={handleSearch}>
           <input
             type="text"
             css={styles.searchInput}
-            placeholder="Enter your search query..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search documents by content, author, title or topic..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            disabled={isSearching}
           />
           <button 
             type="submit" 
             css={styles.searchButton}
-            disabled={isLoading}
+            disabled={isSearching}
           >
-            {isLoading ? 'Searching...' : 'Search'}
+            {isSearching ? 'Searching...' : 'Search'}
           </button>
         </form>
 
@@ -112,29 +111,6 @@ const DocumentSearch = () => {
       {error && (
         <div css={styles.errorMessage}>
           {error}
-        </div>
-      )}
-
-      {searchResults.length > 0 && (
-        <div css={styles.searchResults}>
-          {searchResults.map((result, index) => (
-            <div key={index} css={styles.resultCard}>
-              <h4>{result.title}</h4>
-              <div css={styles.resultCategory}>{result.category}</div>
-              <div css={styles.resultSummary}>{result.summary}</div>
-              <div css={styles.resultMetadata}>
-                {result.author && `By ${result.author} • `}
-                {result.publication_year && `${result.publication_year} • `}
-                {result.journal_publisher}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {searchResults.length === 0 && searchTerm && !isLoading && !error && (
-        <div css={styles.errorMessage}>
-          No results found. Try adjusting your search terms.
         </div>
       )}
     </div>
