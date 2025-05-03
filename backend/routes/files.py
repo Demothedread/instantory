@@ -14,10 +14,6 @@ try:
     from backend.db import get_db_pool
 except ImportError:
     # Alternative import path for when running as a module
-    try:
-        from backend.services.storage.manager import storage_manager
-        from backend.db import get_db_pool
-    except ImportError:
         # Fallback to imports from app context
         from quart import current_app
         import logging

@@ -17,25 +17,26 @@ const ProcessingHub = () => {
   const handleProcessComplete = async (results) => {
     setProcessedItems(results || []);
     setProcessingComplete(true);
+    
     // Auto-navigate to results after a delay
-    setTimeout(() => { 
+    setTimeout(() => {
       if (results && results.length > 0) {
-      // Navigate based on what was processed
-      const hasInventory = results.some(item => item.type === 'inventory');
-      const hasDocuments = results.some(item => item.type === 'document');
-      
-      if (hasInventory && !hasDocuments) {
-        navigate('/inventory');
-      } else if (hasDocuments && !hasInventory) {
-        navigate('/documents');
+        // Navigate based on what was processed
+        const hasInventory = results.some(item => item.type === 'inventory');
+        const hasDocuments = results.some(item => item.type === 'document');
+        
+        if (hasInventory && !hasDocuments) {
+          navigate('/inventory');
+        } else if (hasDocuments && !hasInventory) {
+          navigate('/documents');
+        } else {
+          navigate('/dashboard'); // Both types or no results
+        }
       } else {
-        navigate('/dashboard'); // Both types or no results
+        navigate('/dashboard');
       }
-    } else {
-      navigate('/dashboard');
-    } 
-  }, 3000);
-};
+    }, 3000);
+  };
 
   return (
     <div css={styles.container}>
@@ -72,7 +73,8 @@ const ProcessingHub = () => {
               <h2 css={styles.sectionTitle}>Upload Files</h2>
               <ProcessImagesButton 
                 isAuthenticated={!!user} 
-                onProcess={handleProcessComplete} 
+                onProcess={handleProcessComplete}
+                maxFiles={10} 
               />
             </div>
             
@@ -92,15 +94,7 @@ const ProcessingHub = () => {
                   <div css={styles.instructionText}>
                     <h4>Images</h4>
                     <p>Upload images of products or items for inventory categorization</p>
-                  </div>
-                </div>
-                
-                <div css={styles.instructionItem}>
-                  <span css={styles.instructionIcon}>💡</span>
-                  <div css={styles.instructionText}>
-                    <h4>Processing</h4>
-                    <p>Our AI will analyze content, extract details, and organize your uploads</p>
-                  </div>
+                  </div>        
                 </div>
               </div>
             </div>

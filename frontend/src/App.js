@@ -1,35 +1,30 @@
-import React, { useContext, useEffect, useState, useRef, useCallback } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { css } from '@emotion/react';
-import { AuthContext } from './contexts/auth';
-import { SpeedInsights } from '@vercel/speed-insights/react';
+import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 
+import AuthCallback from './components/auth/authCallback';
+import { AuthContext } from './contexts/auth';
+import Dashboard from './components/dashboard/Dashboard';
+import DocumentsView from './pages/DocumentsView';
+import HowToUseOverlay from './components/common/HowToUseOverlay';
+import InventoryView from './pages/InventoryView';
+// Page components
+import LandingPage from './components/landing/LandingPage';
+// Auth componentsa
+import LoginOverlay from './components/auth/LoginOverlay';
 // Layout components
 import Navigation from './components/common/Navigation';
+import NotFound from './pages/NotFound';
+import ProcessingHub from './components/upload/ProcessHub';
 import RolodexToggle from './components/display/RolodexToggle';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import UserMenu from './components/common/UserMenu';
-import HowToUseOverlay from './components/common/HowToUseOverlay';
-
-// Page components
-import LandingPage from './components/landing/LandingPage';
-import Dashboard from './components/dashboard/Dashboard';
-import ProcessingHub from './components/upload/ProcessHub';
-import InventoryView from './pages/InventoryView';
-import DocumentsView from './pages/DocumentsView';
-import NotFound from './pages/NotFound';
-import AuthCallback from './components/auth/authCallback';
-
-// Auth componentsa
-import LoginOverlay from './components/auth/LoginOverlay';
-
+import { colors } from './styles/theme/colors';
+import { css } from '@emotion/react';
 // Services
 import dataApi from './services/api';
-
+import { layout } from './styles/layouts/constraints';
 // Styles
 import { neoDecorocoBase } from './styles/components/neo-decoroco/base';
-import { layout } from './styles/layouts/constraints';
-import { colors } from './styles/theme/colors';
 import { typography } from './styles/theme/typography';
 
 function App() {
