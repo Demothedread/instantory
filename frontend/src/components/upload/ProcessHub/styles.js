@@ -75,7 +75,7 @@ const styles = {
     ${neoDecorocoBase.panel}
     background: rgba(20, 20, 25, 0.5);
     border: 1px solid ${colors.borderLight};
-    border-radius: ${layout.radius.lg};
+    border-radius: ${layout.borderRadius.lg};
     padding: ${layout.spacing.xl};
     margin-bottom: ${layout.spacing.xl};
   `,
