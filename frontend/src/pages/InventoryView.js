@@ -8,6 +8,7 @@ import { layout } from '../styles/layouts/constraints';
 import { neoDecorocoBase } from '../styles/components/neo-decoroco/base';
 import { typography } from '../styles/theme/typography';
 import { animations } from '../styles/theme/animations';
+import config from '../config';
 
 const InventoryView = () => {
   const [inventory, setInventory] = useState([]);

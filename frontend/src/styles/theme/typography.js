@@ -1,3 +1,8 @@
+// Import the css utility from styled-components or @emotion/react
+import { css } from '@emotion/react';
+// Import layout breakpoints from your layout theme file
+import layout from './layout';
+
 export const typography = {
   // Font families
   fonts: {

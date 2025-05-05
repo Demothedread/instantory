@@ -8,6 +8,8 @@ import { layout } from '../styles/layouts/constraints';
 import { neoDecorocoBase } from '../styles/components/neo-decoroco/base';
 import { typography } from '../styles/theme/typography';
 import { animations } from '../styles/theme/animations';
+// Import config containing apiUrl for API requests
+import config from '../config';
 
 const DocumentsView = () => {
   const [documents, setDocuments] = useState([]);
