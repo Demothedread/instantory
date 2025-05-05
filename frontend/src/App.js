@@ -13,7 +13,7 @@ import LandingPage from './components/landing/LandingPage';
 import LoginOverlay from './components/auth/LoginOverlay';
 // Layout components
 import Navigation from './components/common/Navigation';
-import NotFound from './pages/NotFound';
+import NotFound from './pages/404NotFound';
 import ProcessingHub from './components/upload/ProcessHub';
 import RolodexToggle from './components/display/RolodexToggle';
 import { SpeedInsights } from '@vercel/speed-insights/react';
