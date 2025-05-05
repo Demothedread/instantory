@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 
 import { AuthContext } from '../../contexts/auth';
 import { GoogleLogin } from '@react-oauth/google';
-import { colors } from '../../styles/theme/colors';
 import { css } from '@emotion/react';
-import { useContext } from 'react';
+// Removed unused 'colors' import
 
-const LandingPage = () => {r
-  const { loginWithGoogle, login, error, clearError } = useContext(AuthContext);
+const LandingPage = () => {
+  const { loginWithGoogle, login, error, clearError, user } = useContext(AuthContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -31,160 +30,152 @@ const LandingPage = () => {r
   };
 
   return (
-    <div css={styles.container}>
-      <section css={styles.heroSection}>
-        <div css={styles.mascotContainer}>
-          <img 
-            src="/assets/1216BartMascotNoBkg/1216BartMascotNoBkg.png" 
-            alt="Bartleby Mascot"
-            css={styles.heroMascot}
-          />
-        </div>
-        
-        <h1 css={styles.heroTitle}>Welcome to Bartleby</h1>
-        <p css={styles.heroSubtitle}>Your AI-Powered Document & Inventory Assistant</p>
-        
-        <div css={styles.heroActions}>
-          <Link to="/login" css={styles.primaryButton}>Get Started</Link>
-          <Link to="/about" css={styles.secondaryButton}>Learn More</Link>
-        </div>
-      </section>
-
-      <section css={styles.featuresSection}>
-        <h2 css={styles.sectionTitle}>Intelligent Processing</h2>
-        
-        <div css={styles.featureCards}>
-          <div css={styles.featureCard}>
-            <div css={css`${styles.featureIcon}; background-image: url('/assets/icons/document.svg');`}></div>
-            <h3>Smart Document Analysis</h3>
-            <p>Upload documents and let our AI extract key information, summaries, and insights automatically.</p>
-          </div>
-
-          <div css={styles.featureCard}>
-            <div css={css`${styles.featureIcon}; background-image: url('/assets/icons/inventory.svg');`}></div>
-            <h3>Inventory Management</h3>
-            <p>Organize and track your inventory with AI-powered categorization and detailed analytics.</p>
-          </div>
-
-          <div css={styles.featureCard}>
-            <div css={css`${styles.featureIcon}; background-image: url('/assets/icons/export.svg');`}></div>
-            <h3>Easy Export</h3>
-            <p>Export your organized data in multiple formats for seamless integration with other tools.</p>
-          </div>
-        </div>
-      </section>
-
-      <section css={styles.workflowSection}>
-        <h2 css={styles.sectionTitle}>How It Works</h2>
-        
-        <div css={styles.workflowSteps}>
-          <div css={styles.workflowStep}>
-            <div css={styles.stepNumber}>1</div>
-            <h3>Upload</h3>
-            <p>Upload your documents or inventory images</p>
-          </div>
-          
-          <div css={styles.workflowStep}>
-            <div css={styles.stepNumber}>2</div>
-            <h3>Process</h3>
-            <p>Our AI analyzes and organizes your content</p>
-          </div>
-          
-          <div css={styles.workflowStep}>
-            <div css={styles.stepNumber}>3</div>
-            <h3>Organize</h3>
-            <p>View and manage your organized data</p>
-          </div>
-          
-          <div css={styles.workflowStep}>
-            <div css={styles.stepNumber}>4</div>
-            <h3>Export</h3>
-            <p>Export your data in your preferred format</p>
-          </div>
-        </div>
-      </section>
-
-      <section css={styles.ctaSection}>
-        <h2 css={styles.ctaTitle}>Ready to Get Started?</h2>
-        <p css={styles.ctaText}>Join thousands of users who are already experiencing the power of AI-assisted organization.</p>
-        <Link to="/login" css={styles.ctaButton}>Start Processing Today</Link>
-      </section>
+  <div css={styles.container}>
+    <section css={styles.heroSection}>
+      <div css={styles.mascotContainer}>
+        <img 
+          src="/assets/1216BartMascotNoBkg/1216BartMascotNoBkg.png" 
+          alt="Bartleby Mascot"
+          css={styles.heroMascot}
+        />
+      </div>
       
-        <div css={styles.rightPanel}>
-          <div css={styles.authPanel}>
-            <h2 css={styles.authTitle}>Welcome</h2>
-            
-            {error && (
-              <div css={styles.errorMessage} onClick={clearError}>
-                {error}
-              </div>
-            )}
-            
-            <div css={styles.googleButton}>
-              <GoogleLogin
-                onSuccess={handleGoogleLogin}
-                onError={() => console.error('Google Login Failed')}
-                theme="filled_black"
-                shape="pill"
-                size="large"
-                text="continue_with"
-                width="100%"
+      <h1 css={styles.heroTitle}>Welcome to Bartleby</h1>
+      <p css={styles.heroSubtitle}>Your AI-Powered Document & Inventory Assistant</p>
+      
+      <div css={styles.heroActions}>
+        {/* If not logged in, show login button, otherwise show dashboard */}
+        {!user ? (
+          <Link to="/login" css={styles.primaryButton}>Get Started</Link>
+        ) : (
+          <Link to="/dashboard" css={styles.primaryButton}>Go to Dashboard</Link>
+        )}
+        <Link to="/about" css={styles.secondaryButton}>Learn More</Link>
+      </div>
+    </section>
+
+    <section css={styles.featuresSection}>
+      <h2 css={styles.sectionTitle}>Intelligent Processing</h2>
+      
+      <div css={styles.featureCards}>
+        <div css={styles.featureCard}>
+          <div css={css`${styles.featureIcon}; background-image: url('/assets/icons/document.svg');`}></div>
+          <h3>Smart Document Analysis</h3>
+          <p>Upload documents and let our AI extract key information, summaries, and insights automatically.</p>
+        </div>
+
+        <div css={styles.featureCard}>
+          <div css={css`${styles.featureIcon}; background-image: url('/assets/icons/inventory.svg');`}></div>
+          <h3>Inventory Management</h3>
+          <p>Organize and track your inventory with AI-powered categorization and detailed analytics.</p>
+        </div>
+
+        <div css={styles.featureCard}>
+          <div css={css`${styles.featureIcon}; background-image: url('/assets/icons/export.svg');`}></div>
+          <h3>Easy Export</h3>
+          <p>Export your organized data in multiple formats for seamless integration with other tools.</p>
+        </div>
+    </div>
+    </section>
+    <section css={styles.workflowSection}>
+      <h2 css={styles.sectionTitle}>How It Works</h2>
+      <div css={styles.workflowSteps}>
+        <div css={styles.workflowStep}>
+          <div css={styles.stepNumber}>1</div>
+          <h3>Upload</h3>
+          <p>Upload your documents or inventory images</p>
+        </div>
+        <div css={styles.workflowStep}>
+          <div css={styles.stepNumber}>2</div>
+          <h3>Process</h3>
+          <p>Our AI analyzes and organizes your content</p>
+        </div>
+        <div css={styles.workflowStep}>
+          <div css={styles.stepNumber}>3</div>
+          <h3>Organize</h3>
+          <p>View and manage your organized data</p>
+        </div>
+        <div css={styles.workflowStep}>
+          <div css={styles.stepNumber}>4</div>
+          <h3>Export</h3>
+          <p>Export your data in your preferred format</p>
+        </div>
+      </div>
+    </section>
+    <section css={styles.ctaSection}>
+      <h2 css={styles.ctaTitle}>Ready to Get Started?</h2>
+        <p css={styles.ctaText}>Join thousands of users who are already experiencing the power of AI-assisted organization.</p>
+        <Link to={user ? "/process" : "/login"} css={styles.ctaButton}>
+          Start Processing Today
+        </Link>
+    </section>
+    <section css={styles.contentWrapper}>
+      <div css={styles.rightPanel}>
+        <div css={styles.authPanel}>
+          <h2 css={styles.authTitle}>Welcome</h2>=
+          {error && (
+            <div css={styles.errorMessage} onClick={clearError}>
+              {error}
+            </div>
+          )}
+          <div css={styles.googleButton}>
+            <GoogleLogin
+              onSuccess={handleGoogleLogin}
+              onError={() => console.error('Google Login Failed')}
+              theme="filled_black"
+              shape="pill"
+              size="large"
+              text="continue_with"
+              width="100%"
+            />
+          </div>
+          
+          <div css={styles.divider}>
+            <span css={styles.dividerLine}></span>
+            <span css={styles.dividerText}>or</span>
+            <span css={styles.dividerLine}></span>
+          </div>
+          
+          <form css={styles.loginForm} onSubmit={handleEmailLogin}>
+            <div css={styles.inputGroup}>
+              <input
+                type="email"
+                placeholder="Email Address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                css={styles.input}
+                required
               />
             </div>
             
-            <div css={styles.divider}>
-              <span css={styles.dividerLine}></span>
-              <span css={styles.dividerText}>or</span>
-              <span css={styles.dividerLine}></span>
+            <div css={styles.inputGroup}>
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                css={styles.input}
+                required
+              />
             </div>
             
-            <form css={styles.loginForm} onSubmit={handleEmailLogin}>
-              <div css={styles.inputGroup}>
-                <input
-                  type="email"
-                  placeholder="Email Address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  css={styles.input}
-                  required
-                />
-              </div>
-              
-              <div css={styles.inputGroup}>
-                <input
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  css={styles.input}
-                  required
-                />
-              </div>
-              
-              <button 
-                type="submit" 
-                css={isLoading ? [styles.loginButton, styles.loading] : styles.loginButton}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Signing In...' : 'Sign In'}
-              </button>
-            </form>
-            
-            <div css={styles.registerLink}>
-              <p>
-                Don't have an account? <a href="/register">Create Account</a>
-              </p>
-            </div>
-          </div>
+            <button 
+              type="submit" 
+              css={isLoading ? [styles.loginButton, styles.loading] : styles.loginButton}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Signing In...' : 'Sign In'}
+            </button>
+          </form>
           
-          <div css={styles.workflowStep}>
-            <div css={styles.stepNumber}>4</div>
-            <h3>Export</h3>
-            <p>Export your data in your preferred format</p>
+          <div css={styles.registerLink}>
+             <p>
+                Don't have an account? <a href="/register">Create Account</a>
+            </p>
+            </div>
           </div>
-        </div>
+       </div>
       </section>
-
       <section css={styles.ctaSection}>
         <h2 css={styles.ctaTitle}>Ready to Get Started?</h2>
         <p css={styles.ctaText}>Join thousands of users who are already experiencing the power of AI-assisted organization.</p>
@@ -199,16 +190,211 @@ const styles = {
     position: relative;
     min-height: 100vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     padding: 2rem;
     background: linear-gradient(135deg, #1A1A1A 0%, #2C1F3E 100%);
     overflow: hidden;
   `,
-  
+
+  heroSection: css`
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto 3rem auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  `,
+
+  mascotContainer: css`
+    margin-bottom: 1.5rem;
+  `,
+
+  heroMascot: css`
+    width: 120px;
+    height: auto;
+    border-radius: 50%;
+    box-shadow: 0 4px 24px rgba(64, 224, 208, 0.15);
+    background: #fff;
+  `,
+
+  heroTitle: css`
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 3rem;
+    font-weight: 700;
+    color: #D4AF37;
+    margin-bottom: 0.5rem;
+  `,
+
+  heroSubtitle: css`
+    font-family: 'Playfair Display', serif;
+    font-size: 1.25rem;
+    color: #F5F2E9;
+    margin-bottom: 2rem;
+  `,
+
+  heroActions: css`
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+  `,
+
+  primaryButton: css`
+    background: linear-gradient(135deg, #40E0D0 0%, #1A9485 100%);
+    color: #fff;
+    font-weight: 600;
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    border: none;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: background 0.3s;
+    &:hover {
+      background: linear-gradient(135deg, #1A9485 0%, #40E0D0 100%);
+    }
+  `,
+
+  secondaryButton: css`
+    background: transparent;
+    color: #40E0D0;
+    font-weight: 600;
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    border: 1px solid #40E0D0;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: background 0.3s, color 0.3s;
+    &:hover {
+      background: #40E0D0;
+      color: #fff;
+    }
+  `,
+
+  featuresSection: css`
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto 3rem auto;
+    padding: 2rem 0;
+    text-align: center;
+  `,
+
+  sectionTitle: css`
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 2rem;
+    color: #D4AF37;
+    margin-bottom: 2rem;
+  `,
+
+  featureCards: css`
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  `,
+
+  featureCard: css`
+    background: rgba(26, 26, 26, 0.7);
+    border-radius: 15px;
+    padding: 2rem 1.5rem;
+    min-width: 220px;
+    max-width: 320px;
+    flex: 1 1 220px;
+    box-shadow: 0 4px 24px rgba(64, 224, 208, 0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 1rem;
+  `,
+
+  workflowSection: css`
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto 3rem auto;
+    padding: 2rem 0;
+    text-align: center;
+  `,
+
+  workflowSteps: css`
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+  `,
+
+  workflowStep: css`
+    background: rgba(26, 26, 26, 0.7);
+    border-radius: 15px;
+    padding: 1.5rem 1rem;
+    min-width: 160px;
+    max-width: 200px;
+    flex: 1 1 160px;
+    box-shadow: 0 4px 24px rgba(64, 224, 208, 0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 1rem;
+  `,
+
+  stepNumber: css`
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #40E0D0 0%, #1A9485 100%);
+    color: #fff;
+    font-weight: 700;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+  `,
+
+  ctaSection: css`
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto 2rem auto;
+    padding: 2rem 0;
+    text-align: center;
+  `,
+
+  ctaTitle: css`
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 2rem;
+    color: #D4AF37;
+    margin-bottom: 1rem;
+  `,
+
+  ctaText: css`
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    color: #F5F2E9;
+    margin-bottom: 2rem;
+  `,
+
+  ctaButton: css`
+    background: linear-gradient(135deg, #40E0D0 0%, #1A9485 100%);
+    color: #fff;
+    font-weight: 600;
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    border: none;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: background 0.3s;
+    &:hover {
+      background: linear-gradient(135deg, #1A9485 0%, #40E0D0 100%);
+    }
+  `,
+
   // Decorative elements
   decorElement1: css`
-    position: absolute;
+    position: absolute
     top: -150px;
     right: -150px;
     width: 450px;
@@ -401,46 +587,7 @@ const styles = {
     font-family: 'Cinzel Decorative', serif;
     font-size: 2rem;
     text-align: center;
-    margin-bottom: 1.5rem;
-    background: linear-gradient(45deg, #40E0D0 0%, #F5F2E9 50%, #40E0D0 100%);
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    text-shadow: 0 0 10px rgba(64, 224, 208, 0.3);
-  `,
-  
-  errorMessage: css`
-    background: rgba(146, 71, 71, 0.2);
-    border: 1px solid #924747;
-    border-radius: 8px;
-    padding: 0.8rem;
-    margin-bottom: 1.5rem;
-    color: #F5F2E9;
-    text-align: center;
-    cursor: pointer;
-    font-family: 'Josefin Sans', sans-serif;
-  `,
-  
-  googleButton: css`
-    width: 100%;
-    margin-bottom: 1.5rem;
-  `,
-  
-  divider: css`
-    display: flex;
-    align-items: center;
-    margin-bottom: 1.5rem;
-  `,
-  
-  dividerLine: css`
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #40E0D0, transparent);
-  `,
-  
-  dividerText: css`
-    padding: 0 1rem;
-    color: #F5F2E9;
+// Keyframes are defined in global CSS; remove unused variable.
     font-family: 'Josefin Sans', sans-serif;
     font-size: 0.9rem;
   `,

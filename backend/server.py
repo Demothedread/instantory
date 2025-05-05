@@ -209,6 +209,7 @@ async def init_services():
         logger.error(f"Service initialization failed: {init_err}")
         logger.warning("Application will run with limited functionality")
 
+from .routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
 # Register blueprints (if available)
 if auth_bp:
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
@@ -218,8 +219,6 @@ if documents_bp:
     app.register_blueprint(documents_bp, url_prefix="/api/documents")
 if files_bp:
     app.register_blueprint(files_bp, url_prefix="/api/files")
-
-from routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
 
 # Register the blueprint
 app.register_blueprint(process_bp)

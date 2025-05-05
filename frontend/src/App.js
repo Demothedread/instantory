@@ -1,6 +1,12 @@
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
 
+import About from './pages/About';
+import Resources from './pages/Resources';
+import Kaboodles from './pages/Kaboodles';
+import Terms from './pages/Terms';
+import MediaHub from './pages/MediaHub';
+
 import AuthCallback from './components/auth/authCallback';
 import { AuthContext } from './contexts/auth';
 import Dashboard from './components/dashboard/Dashboard';
@@ -146,13 +152,22 @@ function App() {
           <Routes>
             {/* Public routes */}
             <Route path="/" element={!user ? <LandingPage /> : <Navigate to="/dashboard" />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/resources" element={<Resources />} />
             <Route path="/auth-callback" element={<AuthCallback />} />
             
-            {/* Protected routes */}
+            {/* Protected routes with consistent pattern */}
             <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/" />} />
             <Route path="/process" element={user ? <ProcessingHub /> : <Navigate to="/" />} />
             <Route path="/inventory" element={user ? <InventoryView /> : <Navigate to="/" />} />
             <Route path="/documents" element={user ? <DocumentsView /> : <Navigate to="/" />} />
+            <Route path="/kaboodles" element={user ? <Kaboodles /> : <Navigate to="/" />} />
+            
+            {/* Media hub for focused file viewing/analysis */}
+            <Route path="/media-hub" element={user ? <MediaHub /> : <Navigate to="/" />} />
+            
+            {/* Terms page - public */}
+            <Route path="/terms" element={<Terms />} />
             
             {/* 404 route */}
             <Route path="*" element={<NotFound />} />

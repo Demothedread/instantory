@@ -14,19 +14,14 @@ const Navigation = () => {
 
   const navItems = [
     { path: '/', label: 'Home', icon: '🏠' },
-    { path: '/about', label: 'About', icon: 'i️' },
-    { path: '/kaboodles', label: 'Kaboodles', icon: '📦' },
+    { path: '/about', label: 'About', icon: 'ℹ️' },
+    { path: '/dashboard', label: 'Dashboard', icon: '📊' },
+    { path: '/process', label: 'Process Files', icon: '⚙️' },
+    { path: '/inventory', label: 'Inventory', icon: '📦' },
+    { path: '/documents', label: 'Documents', icon: '📄' },
+    { path: '/kaboodles', label: 'Kaboodles', icon: '🗂️' },
     { path: '/resources', label: 'Resources', icon: '📚' },
-    {
-      path: '/dashboard',
-      label: 'Dashboard',
-      icon: 'i🗄️',
-      submenu: [
-      { path: '/dashboard/process', label: 'Process', icon: '⚙️' },
-      { path: '/dashboard/inventory', label: 'Inventory', icon: '📋' },
-      { path: '/dashboard/documents', label: 'Documents', icon: '📄' },
-      ],
-    },
+    { path: '/media-hub', label: 'Media Hub', icon: '🖼️' },
     { path: '/terms', label: 'Terms', icon: '📜' },
   ];
 
