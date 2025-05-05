@@ -1,8 +1,8 @@
 import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { css } from '@emotion/react';
-import { AuthContext } from '../../../contexts/auth';
-import HowToUseOverlay from '../../common/HowToUseOverlay';
+import { AuthContext } from '../../contexts/auth';
+import HowToUseOverlay from '../common/HowToUseOverlay';
 
 
 const Dashboard = () => {
