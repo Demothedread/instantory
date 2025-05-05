@@ -219,7 +219,7 @@ if documents_bp:
 if files_bp:
     app.register_blueprint(files_bp, url_prefix="/api/files")
 
-from backend.routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
+from routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
 
 # Register the blueprint
 app.register_blueprint(process_bp)

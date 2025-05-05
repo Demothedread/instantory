@@ -14,6 +14,7 @@ import urllib.parse
 import aiohttp
 from quart import redirect
 from quart import Blueprint, request, jsonify
+from ..config.security import GoogleOAuthConfig
 
 # Import with fallbacks to handle different execution contexts
 try:

@@ -1,5 +1,6 @@
 """Security configuration for the application."""
 import os
+import urllib.parse  # Import for URL encoding in GoogleOAuthConfig
 from typing import List, Dict, Optional
 
 class CORSConfig:
