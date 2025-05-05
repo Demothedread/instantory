@@ -15,7 +15,7 @@ import HowToUseOverlay from './components/common/HowToUseOverlay';
 import InventoryView from './pages/InventoryView';
 // Page components
 import LandingPage from './components/landing/LandingPage';
-// Auth componentsa
+// Auth components
 import LoginOverlay from './components/auth/LoginOverlay';
 // Layout components
 import Navigation from './components/common/Navigation';
