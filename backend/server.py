@@ -18,7 +18,7 @@ from hypercorn.config import Config as HypercornConfig
 from hypercorn.asyncio import serve
 
 # Import routes
-from backend.routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
+from routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
 
 # Add the current directory to the Python path
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
