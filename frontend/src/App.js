@@ -1,5 +1,6 @@
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { AuthContext, AuthProvider } from './contexts/auth';
 
 import About from './pages/About';
 import Resources from './pages/Resources';
@@ -8,7 +9,6 @@ import Terms from './pages/Terms';
 import MediaHub from './pages/MediaHub';
 
 import AuthCallback from './components/auth/authCallback';
-import { AuthContext } from './contexts/auth';
 import Dashboard from './components/dashboard/Dashboard';
 import DocumentsView from './pages/DocumentsView';
 import HowToUseOverlay from './components/common/HowToUseOverlay';

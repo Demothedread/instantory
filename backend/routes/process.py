@@ -1,8 +1,10 @@
 """Processing routes for batch document and image analysis."""
 import logging
 import os
+import asyncio
+import uuid
+from datetime import datetime
 from quart import Blueprint, request, jsonify
-from backend.db import get_db_pool
 from backend.config.database import get_metadata_pool
 from backend.services.processor import create_processor_factory, BatchProcessor
 from backend.services.storage.manager import storage_manager
@@ -100,6 +102,72 @@ async def process_batch_async(task_id, processor, files, user_id):
     except Exception as e:
         logger.error(f"Error in async batch processing: {e}")
         await store_task_status(task_id, "failed", 0, user_id, error=str(e))
+
+async def store_task_status(task_id, status, progress, user_id, result=None, error=None):
+    """Store processing task status in the database."""
+    try:
+        pool = await get_metadata_pool()
+        async with pool.acquire() as conn:
+            # Create status record if it doesn't exist
+            await conn.execute(
+                """
+                INSERT INTO processing_tasks (task_id, user_id, status, progress, created_at) 
+                VALUES ($1, $2, $3, $4, NOW())
+                ON CONFLICT (task_id) 
+                DO UPDATE SET status = $3, progress = $4, updated_at = NOW()
+                """,
+                task_id, user_id, status, progress
+            )
+            
+            # Store result data if available
+            if result:
+                await conn.execute(
+                    """
+                    UPDATE processing_tasks 
+                    SET result_data = $1
+                    WHERE task_id = $2
+                    """,
+                    result, task_id
+                )
+                
+            # Store error if available
+            if error:
+                await conn.execute(
+                    """
+                    UPDATE processing_tasks 
+                    SET error_message = $1
+                    WHERE task_id = $2
+                    """,
+                    error, task_id
+                )
+                
+    except Exception as e:
+        logger.error(f"Failed to store task status: {e}")
+        # Don't re-raise, as this is a background process
+
+async def get_task_status(task_id, user_id):
+    """Get processing task status from the database."""
+    try:
+        pool = await get_metadata_pool()
+        async with pool.acquire() as conn:
+            result = await conn.fetchrow(
+                """
+                SELECT task_id, status, progress, 
+                       result_data, error_message, 
+                       created_at, updated_at
+                FROM processing_tasks 
+                WHERE task_id = $1 AND user_id = $2
+                """,
+                task_id, user_id
+            )
+            
+            if result:
+                return dict(result)
+            return None
+            
+    except Exception as e:
+        logger.error(f"Failed to get task status: {e}")
+        return None
 
 @process_bp.route('/api/processing-status/<task_id>', methods=['GET'])
 async def get_processing_status(task_id):

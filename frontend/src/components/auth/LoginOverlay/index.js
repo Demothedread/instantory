@@ -346,7 +346,7 @@ const LoginOverlay = ({ isVisible, onGoogleLogin }) => {
     
 
     return (
-        <GoogleOAuthProvider clientId={config.googleClientId}>
+        <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID || window.GOOGLE_CLIENT_ID}>
             <div css={css(styles.overlay)}>
                 <div css={css(styles.panel)}>
                     <h2 css={css(styles.title)}>

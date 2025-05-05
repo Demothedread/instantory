@@ -17,6 +17,9 @@ from quart_cors import cors
 from hypercorn.config import Config as HypercornConfig
 from hypercorn.asyncio import serve
 
+# Import routes
+from .routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
+
 # Add the current directory to the Python path
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
@@ -209,7 +212,6 @@ async def init_services():
         logger.error(f"Service initialization failed: {init_err}")
         logger.warning("Application will run with limited functionality")
 
-from .routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
 # Register blueprints (if available)
 if auth_bp:
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
