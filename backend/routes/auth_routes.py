@@ -12,6 +12,7 @@ from typing import Dict, Any, Optional
 import json
 import urllib.parse
 import aiohttp
+import quart_auth
 from quart import redirect, current_app, Blueprint, request, jsonify
 from quart_auth import QuartAuth, AuthUser, login_user, logout_user, login_required, current_user
 from ..config.security import GoogleOAuthConfig
