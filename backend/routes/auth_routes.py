@@ -12,8 +12,8 @@ from typing import Dict, Any, Optional
 import json
 import urllib.parse
 import aiohttp
-from quart import redirect
-from quart import Blueprint, request, jsonify
+from quart import redirect, current_app, Blueprint, request, jsonify
+from quart_auth import QuartAuth, AuthUser, login_user, logout_user, login_required, current_user
 from ..config.security import GoogleOAuthConfig
 
 # Import with fallbacks to handle different execution contexts
@@ -21,8 +21,7 @@ try:
     from backend.config.database import get_db_pool
     from backend.config.logging import logger
 except ImportError:
-# Alternative import path for when running as a module
-    from quart import current_app
+    # Alternative import path for when running as a module
     logger = logging.getLogger(__name__) 
     
     async def get_db_pool():
@@ -30,8 +29,6 @@ except ImportError:
         if hasattr(current_app, 'db') and hasattr(current_app.db, 'pool'):
             return current_app.db.pool
         raise RuntimeError("Database connection not available")
-    
-logger = logging.getLogger(__name__)
 
 # Environment variables
 JWT_SECRET = os.getenv('JWT_SECRET')
@@ -41,24 +38,49 @@ ACCESS_TOKEN_EXPIRY = timedelta(minutes=30)
 REFRESH_TOKEN_EXPIRY = timedelta(days=7)
 JWT_ALGORITHM = "HS256"
 
-# Additional Google OAuth allowed client IDs (for multi-client setups)
+# Additional allowed Google client IDs (for multi-client setups)
 ADDITIONAL_GOOGLE_CLIENT_IDS = os.getenv('ADDITIONAL_GOOGLE_CLIENT_IDS', '').split(',')
 ALLOWED_GOOGLE_CLIENT_IDS = [GOOGLE_CLIENT_ID] + [id for id in ADDITIONAL_GOOGLE_CLIENT_IDS if id]
 
+# Backend URL
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://hocomnia.com')
+
 if not JWT_SECRET:
     raise EnvironmentError("JWT_SECRET is not set")
-    
-# Create a default admin password if not set
-if not ADMIN_PASSWORD_OVERRIDE:
-    # This is a fallback only - in production, always set ADMIN_PASSWORD_OVERRIDE in env
-    logger.warning("ADMIN_PASSWORD_OVERRIDE not set, using a random generated password")
-    ADMIN_PASSWORD_OVERRIDE = secrets.token_urlsafe(16)
-    logger.info(f"Generated admin override password (DO NOT USE IN PRODUCTION): {ADMIN_PASSWORD_OVERRIDE}")
 
 # Blueprint setup
 auth_bp = Blueprint('auth', __name__)
 
+# --- Custom Auth User Class --- #
+
+class BartlebyAuthUser(AuthUser):
+    """Extended AuthUser class with additional user data."""
+    
+    def __init__(self, auth_id, user_data=None):
+        super().__init__(auth_id)
+        self.user_data = user_data or {}
+    
+    @property
+    def user_id(self):
+        return self.auth_id
+    
+    @property
+    def is_admin(self):
+        return self.user_data.get('is_admin', False)
+    
+    @property
+    def email(self):
+        return self.user_data.get('email', '')
+    
+    @property
+    def name(self):
+        return self.user_data.get('name', '')
+
 # --- Utility Functions --- #
+
+def setup_auth(app):
+    """Setup QuartAuth on the application."""
+    QuartAuth(app)
 
 async def create_token(payload: dict, token_type: str) -> str:
     """Create a signed JWT token with an expiration."""
@@ -88,6 +110,7 @@ def verify_password(password: str, hashed_password: str) -> bool:
     """Verify a password against its hash."""
     return bcrypt.checkpw(password.encode(), hashed_password.encode())
 
+
 # --- Authentication Middleware --- #
 
 def require_auth():
@@ -96,10 +119,9 @@ def require_auth():
         @wraps(f)
         async def decorated_function(*args, **kwargs):
             try:
-                # Get the access token from cookies
+                # Get the access token from cookies or Authorization header
                 access_token = request.cookies.get('access_token')
                 if not access_token:
-                    # Also check Authorization header for API calls
                     auth_header = request.headers.get('Authorization')
                     if auth_header and auth_header.startswith('Bearer '):
                         access_token = auth_header.split(' ')[1]
@@ -115,11 +137,12 @@ def require_auth():
                 request.is_admin = payload.get("is_admin", False)
                 
                 return await f(*args, **kwargs)
-            except ValueError as e:
+            except Exception as e:
                 logger.warning(f"Authentication middleware error: {e}")
                 return jsonify({"error": "Authentication failed"}), 401
         return decorated_function
     return decorator
+
 
 def require_admin():
     """Decorator to require admin privileges for routes."""
@@ -143,121 +166,7 @@ def require_admin():
         return decorated_function
     return decorator
 
-# --- Authentication Ridirect Handler --- #
 
-async def exchange_google_code(code: str) -> Optional[Dict[str, Any]]:
-    """Exchange Google authorization code for tokens."""
-    try:
-        # Get OAuth configuration
-        client_id = os.getenv('GOOGLE_CLIENT_ID')
-        client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
-        redirect_uri = os.getenv('GOOGLE_REDIRECT_URI')
-        
-        if not all([client_id, client_secret, redirect_uri]):
-            logger.error("Missing required Google OAuth configuration")
-            return None
-        
-        # Exchange code for tokens
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                'https://oauth2.googleapis.com/token',
-                data={
-                    'code': code,
-                    'client_id': client_id,
-                    'client_secret': client_secret,
-                    'redirect_uri': redirect_uri,
-                    'grant_type': 'authorization_code'
-                }
-            ) as response:
-                if response.status != 200:
-                    error_body = await response.text()
-                    logger.error(f"Google token exchange failed: {response.status} - {error_body}")
-                    return None
-                
-                return await response.json()
-                
-    except Exception as e:
-        logger.exception(f"Failed to exchange Google code for tokens: {e}")
-        return None
-
-
-@auth_bp.route('/google/callback', methods=['GET'])
-async def google_callback():
-    """
-    Handle the Google OAuth redirect callback.
-    Validates the authorization code, retrieves user information,
-    creates or updates the user in the database, sets authentication cookies,
-    and redirects back to the frontend.
-    """
-    try:
-        # Get the authorization code from the query parameters
-        code = request.args.get('code')
-        state = request.args.get('state')  # Can be used for CSRF protection
-        
-        if not code:
-            logger.error("No authorization code received from Google")
-            return redirect(f"{os.getenv('FRONTEND_URL', 'https://hocomnia.com')}?auth_error=no_code")
-        
-        # Exchange the code for access and ID tokens
-        token_data = await exchange_google_code(code)
-        if not token_data:
-            logger.error("Failed to exchange Google authorization code for tokens")
-            return redirect(f"{os.getenv('FRONTEND_URL', 'https://hocomnia.com')}?auth_error=token_exchange")
-        
-        # Extract ID token
-        id_token_value = token_data.get('id_token')
-        if not id_token_value:
-            logger.error("No ID token received from Google")
-            return redirect(f"{os.getenv('FRONTEND_URL', 'https://hocomnia.com')}?auth_error=no_id_token")
-        
-        # Verify the ID token
-        id_info = verify_google_token(id_token_value)
-        if not id_info:
-            logger.error("Failed to verify Google ID token")
-            return redirect(f"{os.getenv('FRONTEND_URL', 'https://hocomnia.com')}?auth_error=invalid_token")
-        
-        # Extract user info
-        email = id_info.get('email')
-        name = id_info.get('name', email)
-        google_id = id_info.get('sub')
-        
-        # Create or update the user
-        user = await upsert_user(email, name, google_id, auth_provider="google", is_verified=True)
-        
-        # Log the login
-        await log_user_login(user['id'], 'google')
-        
-        # Create authentication tokens
-        access_token = await create_token({"id": user['id'], "email": user['email'], "is_admin": user.get('is_admin', False)}, "access")
-        refresh_token = await create_token({"user_id": user['id']}, "refresh")
-        
-        # Get user data for sending to frontend
-        user_data = await get_user_data(user['id'])
-        
-        # Build authentication info to send to frontend
-        auth_info = {
-            "authenticated": True,
-            "userId": user['id'],
-            "email": user['email'],
-            "isAdmin": user.get('is_admin', False)
-        }
-        
-        # Redirect to frontend with authentication success indicator
-        frontend_url = os.getenv('FRONTEND_URL', 'https://hocomnia.com')
-        safe_auth_info = urllib.parse.quote(json.dumps(auth_info))
-        redirect_url = f"{frontend_url}/auth-callback?auth={safe_auth_info}"
-        
-        # Create response with redirect and secure cookies
-        response = redirect(redirect_url)
-        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='None')
-        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='None')
-        
-        return response
-
-    except Exception as e:
-        logger.exception(f"Google callback failed: {e}")
-        return redirect(f"{os.getenv('FRONTEND_URL', 'https://hocomnia.com')}?auth_error=server_error")
-    
 # --- Database Access Functions --- #
 
 async def get_user_by_email(email: str):
@@ -268,6 +177,17 @@ async def get_user_by_email(email: str):
             "SELECT id, email, password_hash, auth_provider, is_verified, google_id, name, is_admin "
             "FROM users WHERE email = $1", email
         )
+
+
+async def get_user_by_google_id(google_id: str):
+    """Retrieve a user by Google ID from the database."""
+    pool = await get_db_pool()
+    async with pool.acquire() as conn:
+        return await conn.fetchrow(
+            "SELECT id, email, auth_provider, is_verified, google_id, name, is_admin "
+            "FROM users WHERE google_id = $1", google_id
+        )
+
 
 async def create_user(email: str, name: str, password_hash: str = None, auth_provider: str = "email", 
                     google_id: str = None, is_verified: bool = False, is_admin: bool = False):
@@ -283,6 +203,7 @@ async def create_user(email: str, name: str, password_hash: str = None, auth_pro
             email, name, password_hash, auth_provider, google_id, is_verified, is_admin
         )
 
+
 async def get_user_by_id(user_id: int):
     """Retrieve a user by ID from the database."""
     pool = await get_db_pool()
@@ -291,6 +212,7 @@ async def get_user_by_id(user_id: int):
             "SELECT id, email, name, auth_provider, is_verified, is_admin "
             "FROM users WHERE id = $1", user_id
         )
+
 
 async def create_user_storage(user_id: int):
     """Create storage entries for a new user."""
@@ -319,6 +241,7 @@ async def create_user_storage(user_id: int):
         
     return storage_path
 
+
 async def get_user_storage(user_id: int):
     """Get storage information for a user."""
     storage_backend = os.getenv('STORAGE_BACKEND', 'generic').lower()
@@ -338,11 +261,9 @@ async def get_user_storage(user_id: int):
             }
         return None
 
+
 async def log_user_login(user_id: int, auth_provider: str):
-    """
-    Log a user login event in the user_logins table using the internal Render-hosted PostgreSQL database.
-    """
-    # Retrieve IP address and User-Agent from the request
+    """Log a user login event."""
     ip_address = request.remote_addr or request.headers.get('X-Forwarded-For', 'unknown').split(',')[0].strip()
     user_agent = request.headers.get('User-Agent', '')
     pool = await get_db_pool()
@@ -355,6 +276,7 @@ async def log_user_login(user_id: int, auth_provider: str):
             user_id, ip_address, auth_provider, user_agent
         )
     logger.info(f"Login event recorded for user {user_id} via {auth_provider}")
+
 
 async def get_user_data(user_id: int):
     """Retrieve a user's inventory, documents, and storage information."""
@@ -380,21 +302,28 @@ async def get_user_data(user_id: int):
             "storage": storage_info
         }
 
+
 async def upsert_user(email: str, name: str, google_id: str = None, auth_provider: str = "email", 
                      is_verified: bool = False, is_admin: bool = False):
     """Create a user if they don't exist, or update their info if they do."""
     pool = await get_db_pool()
-    async with pool.acquire() as conn:
-        # Try to find existing user
+    
+    # Check for existing user by google_id first (preferred) or email
+    user = None
+    if google_id:
+        user = await get_user_by_google_id(google_id)
+    
+    if not user:
         user = await get_user_by_email(email)
-        
+    
+    async with pool.acquire() as conn:
         if user:
             # Update existing user
             await conn.execute("""
                 UPDATE users 
-                SET name = $1, google_id = $2, auth_provider = $3, is_verified = $4, is_admin = $5
-                WHERE email = $6
-            """, name, google_id, auth_provider, is_verified, is_admin, email)
+                SET name = $1, google_id = $2, auth_provider = $3, is_verified = $4
+                WHERE email = $5
+            """, name, google_id, auth_provider, is_verified, email)
             
             # Fetch updated user
             user = await get_user_by_email(email)
@@ -414,6 +343,7 @@ async def upsert_user(email: str, name: str, google_id: str = None, auth_provide
             
         return dict(user)
 
+
 async def set_user_admin_status(email: str, is_admin: bool = True):
     """Set a user's admin status by email."""
     pool = await get_db_pool()
@@ -424,80 +354,28 @@ async def set_user_admin_status(email: str, is_admin: bool = True):
         )
         return await get_user_by_email(email)
 
-# --- Authentication Routes --- #
 
-@auth_bp.route('/oauth2/callback', methods=['GET'])
-async def oauth2_callback():
-    """
-    OAuth 2.0 callback endpoint to handle authorization responses.
-    """
-    try:
-        code = request.args.get('code')
-        state = request.args.get('state')
+# --- Google Authentication --- #
 
-        if not code:
-            return jsonify({"error": "Authorization code is missing"}), 400
-
-        # Process the authorization code and state here
-        # Example: Exchange the code for an access token
-        logger.info("OAuth2 callback received with code: %s and state: %s", code, state)
-
-        return jsonify({"message": "OAuth2 callback successful", "code": code, "state": state})
-
-    except Exception as e:
-        logger.exception("OAuth2 callback failed")
-        return jsonify({"error": "OAuth2 callback failed", "details": str(e)}), 500
-
-@auth_bp.route('/internal/login_details', methods=['GET'])
-@require_admin()
-async def login_details():
-    """Retrieve the login history for a specified user."""
-    try:
-        user_id = request.args.get('user_id')
-        if not user_id:
-            return jsonify({"error": "Missing user_id parameter"}), 400
-        
-        pool = await get_db_pool()
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                """
-                SELECT user_id, login_time, ip_address, auth_provider, user_agent
-                FROM user_logins
-                WHERE user_id = $1
-                ORDER BY login_time DESC
-                """,
-                int(user_id)
-            )
-        return jsonify({"login_details": [dict(row) for row in rows]})
-    except Exception as e:
-        logger.exception("Failed to fetch login details")
-        return jsonify({"error": "Failed to fetch login details", "details": str(e)}), 500
-
-def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
-    """Verify a Google OAuth2 token."""
+async def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
+    """Verify a Google OAuth2 token and validate the issuer."""
     try:
         # Create a Google auth request object
         google_request = google_requests.Request()
 
-        # Try to verify with the primary client ID first
-        try:
-            id_info = id_token.verify_oauth2_token(token, google_request, GOOGLE_CLIENT_ID)
-        except ValueError as ve:
-            logger.warning("Google token verification failed with primary client ID: %s", ve)
-            id_info = None
-
-        # If verification with the primary client ID fails, try additional client IDs
-        if not id_info and len(ALLOWED_GOOGLE_CLIENT_IDS) > 1:
-            for client_id in ALLOWED_GOOGLE_CLIENT_IDS[1:]:
-                if not client_id:  # Skip empty strings
-                    continue
-                try:
-                    id_info = id_token.verify_oauth2_token(token, google_request, client_id.strip())
-                    break  # Exit loop if successful
-                except ValueError:
-                    continue
-            else:
-                raise ValueError("Could not verify audience with any configured client ID")
+        # Try to verify with all allowed client IDs
+        id_info = None
+        for client_id in ALLOWED_GOOGLE_CLIENT_IDS:
+            if not client_id:  # Skip empty strings
+                continue
+            try:
+                id_info = id_token.verify_oauth2_token(token, google_request, client_id.strip())
+                break  # Exit loop if successful
+            except ValueError:
+                continue
+                
+        if not id_info:
+            raise ValueError("Could not verify audience with any configured client ID")
 
         # Verify issuer is Google
         if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
@@ -513,177 +391,180 @@ def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
 
         return id_info
 
-    except ValueError as ve:
-        logger.warning("Google token verification failed: %s", ve)
+    except Exception as e:
+        logger.warning(f"Google token verification failed: {e}")
         return None
 
-@auth_bp.route('/google/login', methods=['GET'])
-async def initiate_google_login():
-    """
-    Initiate the Google OAuth flow by redirecting to Google's authorization endpoint.
-    """
-    try:
-        # Generate a random state for CSRF protection
-        state = secrets.token_urlsafe(16)
-        
-        # Store state in session or use another method to verify it in the callback
-        # For example, you could store it in Redis with a short expiration
-        
-        # Generate the OAuth URL
-        oauth_url = GoogleOAuthConfig.get_oauth_url(state)
-        
-        # Redirect to Google's authorization endpoint
-        return redirect(oauth_url)
-    except Exception as e:
-        logger.exception(f"Failed to initiate Google login: {e}")
-        return jsonify({"error": "Failed to initiate Google login"}), 500
-    
+
+# --- Authentication Routes --- #
+
 @auth_bp.route('/google', methods=['POST'])
 async def google_login():
-    """Authenticate a user via Google OAuth (works with regular OAuth and One Tap)."""
+    """Authenticate a user via Google OAuth credential."""
     try:
         data = await request.get_json()
         credential = data.get('credential')
-        # Also accept g_csrf_token for One Tap responses
-        g_csrf_token = data.get('g_csrf_token')
 
         if not credential:
-            return jsonify({"error": "Missing Google OAuth credential"}), 400
+            return jsonify({"error": "Missing Google credential"}), 400
             
-        # If this is a One Tap request with g_csrf_token, verify the CSRF token
-        if g_csrf_token:
-            cookie_csrf_token = request.cookies.get('g_csrf_token')
-            if not cookie_csrf_token or g_csrf_token != cookie_csrf_token():
-                return jsonify({"error": "Invalid CSRF token for Google One Tap"}), 403
-
         # Verify Google token
         id_info = await verify_google_token(credential)
         if not id_info:
-            return jsonify({"error": "Invalid Google token"}), 401
+            return jsonify({"error": "Invalid Google credential"}), 401
 
-        # Ensure client_id is in the allowed list
-        client_id = id_info.get('aud')
-        if client_id not in ALLOWED_GOOGLE_CLIENT_IDS:
-            logger.warning(f"Unauthorized client_id: {client_id}")
-            return jsonify({"error": "Unauthorized client_id"}), 403
-        
         # Extract user info
         email = id_info.get('email')
         name = id_info.get('name', email)
         google_id = id_info.get('sub')
+        picture = id_info.get('picture')
         
-        # Upsert user (create or update)
-        user = await upsert_user(email, name, google_id, auth_provider="google", is_verified=True)
+        # Create or update user
+        user = await upsert_user(
+            email=email, 
+            name=name, 
+            google_id=google_id, 
+            auth_provider="google", 
+            is_verified=True
+        )
         
         # Log login
         await log_user_login(user['id'], 'google')
         
-        # Create tokens
-        access_token = await create_token({"id": user['id'], "email": user['email'], 
-                                         "is_admin": user.get('is_admin', False)}, "access")
+        # Create tokens for cookie-based auth (for backward compatibility)
+        access_token = await create_token(
+            {"id": user['id'], "email": user['email'], "is_admin": user.get('is_admin', False)}, 
+            "access"
+        )
         refresh_token = await create_token({"user_id": user['id']}, "refresh")
         
         # Get user data
         user_data = await get_user_data(user['id'])
         
+        # Add profile picture if available
+        if picture:
+            user['picture_url'] = picture
+        
+        # Login using Quart-Auth
+        auth_user = BartlebyAuthUser(int(user['id']), {
+            'email': user['email'],
+            'name': user.get('name'),
+            'is_admin': user.get('is_admin', False),
+            'picture_url': picture
+        })
+        login_user(auth_user)
+        
         # Create response
         response = jsonify({
-            "message": "Google login successful",
+            "authenticated": True,
             "user": user,
-            "is_verified": user.get("is_verified", False),
             "data": user_data
         })
         
-        # Set secure cookies
-        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Strict')
-        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Strict')
+        # Set secure cookies - use SameSite=None for cross-site requests
+        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='None')
+        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='None')
         
         return response
 
     except Exception as e:
-        logger.exception("Google login failed")
-        return jsonify({"error": "Google login failed", "details": str(e)}), 500
+        logger.exception(f"Google login failed: {e}")
+        return jsonify({"error": "Authentication failed", "details": str(e)}), 500
 
-@auth_bp.route('/google/one-tap', methods=['POST'])
-async def google_one_tap_login():
-    """
-    Authenticate a user via Google One Tap.
-    This is a convenience endpoint that redirects to the main Google login endpoint.
-    """
-    return await google_login()
 
-@auth_bp.route('/register', methods=['POST'])
-async def register():
-    """Register a new user via email and password."""
+@auth_bp.route('/session', methods=['GET'])
+async def check_session():
+    """Check if the user is authenticated and retrieve their data."""
     try:
-        data = await request.get_json()
-        email, password, name = data.get('email'), data.get('password'), data.get('name')
-
-        if not all([email, password, name]):
-            return jsonify({"error": "Email, password, and name are required"}), 400
-
-        if await get_user_by_email(email):
-            return jsonify({"error": "User already exists"}), 409
-
-        password_hash = hash_password(password)
-        user = await create_user(email, name, password_hash)
-        
-        # Create user storage
-        await create_user_storage(user['id'])
-        
-        # Log login
-        await log_user_login(user['id'], 'email')
-
-        access_token = await create_token({"id": user['id'], "email": user['email'],  "is_admin": user.get('is_admin', False)}, "access")
-        refresh_token = await create_token({"user_id": user['id']}, "refresh")
-
-        response = jsonify({
-            "message": "Registration successful",
-            "user": dict(user),
-            "data": await get_user_data(user['id'])
-        })
-        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Strict')
-        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Strict')
-
-        return response
-
-    except Exception as e:
-        logger.exception("Registration failed")
-        return jsonify({"error": "Registration failed", "details": str(e)}), 500
-
-@auth_bp.route('/login', methods=['POST'])
-async def login():
-    """Authenticate an existing user via email and password."""
-    try:
-        data = await request.get_json()
-        email, password = data.get('email'), data.get('password')
-
-        if not all([email, password]):
-            return jsonify({"error": "Email and password are required"}), 400
-
-        user = await get_user_by_email(email)
-        if not user or not verify_password(password, user['password_hash']):
-            return jsonify({"error": "Invalid email or password"}), 401
+        # First try to use Quart-Auth
+        if current_user and not current_user.is_anonymous:
+            user_id = current_user.user_id
+            user = await get_user_by_id(user_id)
             
-        # Log login
-        await log_user_login(user['id'], 'email')
+            if user:
+                return jsonify({
+                    "authenticated": True,
+                    "user": dict(user),
+                    "is_verified": user.get("is_verified", False),
+                    "is_admin": user.get("is_admin", False),
+                    "data": await get_user_data(user_id)
+                })
+        
+        # Fall back to legacy JWT-based authentication
+        access_token = request.cookies.get('access_token')
+        if not access_token:
+            return jsonify({"authenticated": False}), 401
 
-        access_token = await create_token({"id": user['id'], "email": user['email'], "is_admin": user.get('is_admin', False)}, "access")
-        refresh_token = await create_token({"user_id": user['id']}, "refresh")
+        payload = verify_token(access_token, "access")
+        user_id = payload.get('id')
 
-        response = jsonify({
-            "message": "Login successful",
-            "user": dict(user),
-            "data": await get_user_data(user['id'])
-        })
-        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Strict')
-        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Strict')
+        user = await get_user_by_id(user_id)
+        if user:
+            # Also login with Quart-Auth for future requests
+            auth_user = BartlebyAuthUser(int(user['id']), {
+                'email': user['email'],
+                'name': user.get('name'),
+                'is_admin': user.get('is_admin', False)
+            })
+            login_user(auth_user)
+            
+            return jsonify({
+                "authenticated": True,
+                "user": dict(user),
+                "is_verified": user.get("is_verified", False),
+                "is_admin": user.get("is_admin", False),
+                "data": await get_user_data(user_id)
+            })
+
+        return jsonify({"authenticated": False}), 404
+
+    except Exception as e:
+        logger.warning(f"Session check failed: {e}")
+        return jsonify({"authenticated": False}), 401
+
+
+@auth_bp.route('/refresh', methods=['POST'])
+async def refresh():
+    """Refresh the access token using the refresh token."""
+    try:
+        refresh_token = request.cookies.get('refresh_token')
+        if not refresh_token:
+            return jsonify({"error": "Missing refresh token"}), 401
+
+        payload = verify_token(refresh_token, "refresh")
+        user_id = payload.get('user_id')
+
+        user = await get_user_by_id(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        access_token = await create_token(
+            {"id": user['id'], "email": user['email'], "is_admin": user.get('is_admin', False)}, 
+            "access"
+        )
+
+        response = jsonify({"message": "Token refreshed", "user": dict(user)})
+        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='None')
 
         return response
 
     except Exception as e:
-        logger.exception("Login failed")
-        return jsonify({"error": "Login failed", "details": str(e)}), 500
+        logger.exception(f"Token refresh failed: {e}")
+        return jsonify({"error": "Token refresh failed"}), 500
+
+
+@auth_bp.route('/logout', methods=['POST'])
+async def logout():
+    """Log out the current user by clearing auth cookies."""
+    # Logout using Quart-Auth
+    logout_user()
+    
+    # Also clear the legacy JWT cookies
+    response = jsonify({"message": "Logout successful"})
+    response.delete_cookie("access_token")
+    response.delete_cookie("refresh_token")
+    return response
+
 
 @auth_bp.route('/admin/login', methods=['POST'])
 async def admin_login():
@@ -730,143 +611,15 @@ async def admin_login():
         user_data = await get_user_data(user['id'])
         
         response = jsonify({
-            "message": "Admin login successful",
+            "authenticated": True,
             "user": dict(user),
             "data": user_data
         })
-        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Strict')
-        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='Strict')
+        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='None')
+        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='None')
         
         return response
 
     except Exception as e:
-        logger.exception("Admin login failed")
-        return jsonify({"error": "Admin login failed", "details": str(e)}), 500
-
-@auth_bp.route('/refresh', methods=['POST'])
-async def refresh():
-    """Refresh the access token using the refresh token."""
-    try:
-        refresh_token = request.cookies.get('refresh_token')
-        if not refresh_token:
-            return jsonify({"error": "Missing refresh token"}), 401
-
-        payload = verify_token(refresh_token, "refresh")
-        user_id = payload.get('user_id')
-
-        user = await get_user_by_id(user_id)
-        if not user:
-            return jsonify({"error": "User not found"}), 404
-
-        access_token = await create_token({"id": user['id'], "email": user['email'], "is_admin": user.get('is_admin', False)}, "access")
-
-        response = jsonify({"message": "Token refreshed", "user": dict(user)})
-        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='Strict')
-
-        return response
-
-    except Exception as e:
-        logger.exception("Token refresh failed")
-        return jsonify({"error": "Token refresh failed", "details": str(e)}), 500
-
-@auth_bp.route('/logout', methods=['POST'])
-async def logout():
-    """Log out the current user."""
-    response = jsonify({"message": "Logout successful"})
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
-    return response
-
-@auth_bp.route('/session', methods=['GET'])
-async def check_session():
-    """Check if the user is authenticated and retrieve their data."""
-    try:
-        access_token = request.cookies.get('access_token')
-        if not access_token:
-            return jsonify({"authenticated": False}), 401
-
-        payload = verify_token(access_token, "access")
-        user_id = payload.get('id')
-
-        user = await get_user_by_id(user_id)
-        if user:
-            return jsonify({
-                "authenticated": True,
-                "user": dict(user),
-                "is_verified": user.get("is_verified", False),
-                "is_admin": user.get("is_admin", False),
-                "data": await get_user_data(user_id)
-            })
-
-        return jsonify({"authenticated": False}), 404
-
-    except Exception as e:
-        logger.warning(f"Session check failed: {e}")
-        return jsonify({"authenticated": False}), 401
-
-@auth_bp.route('/admin/users', methods=['GET'])
-@require_admin()
-async def list_users():
-    """List all users (admin only)."""
-    try:
-        pool = await get_db_pool()
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                """
-                SELECT id, email, name, auth_provider, is_verified, is_admin, created_at
-                FROM users 
-                ORDER BY id
-                """
-            )
-        return jsonify({"users": [dict(row) for row in rows]})
-    except Exception as e:
-        logger.exception("Failed to list users")
-        return jsonify({"error": "Failed to list users", "details": str(e)}), 500
-
-@auth_bp.route('/admin/users/<int:user_id>', methods=['PUT'])
-@require_admin()
-async def update_user(user_id: int):
-    """Update user properties (admin only)."""
-    try:
-        data = await request.get_json()
-        
-        # Verify user exists
-        user = await get_user_by_id(user_id)
-        if not user:
-            return jsonify({"error": "User not found"}), 404
-        
-        # Update fields that are provided
-        updates = {}
-        valid_fields = ['name', 'is_verified', 'is_admin']
-        for field in valid_fields:
-            if field in data:
-                updates[field] = data[field]
-                
-        if not updates:
-            return jsonify({"error": "No valid update fields provided"}), 400
-            
-        # Construct and execute update query
-        fields = []
-        values = []
-        for i, (field, value) in enumerate(updates.items()):
-            fields.append(f"{field} = ${i+1}")
-            values.append(value)
-        values.append(user_id)  # For the WHERE clause
-        
-        query = f"UPDATE users SET {', '.join(fields)} WHERE id = ${len(values)}"
-        
-        pool = await get_db_pool()
-        async with pool.acquire() as conn:
-            await conn.execute(query, *values)
-            
-            # Fetch updated user
-            updated_user = await get_user_by_id(user_id)
-            
-        return jsonify({
-            "message": "User updated successfully",
-            "user": dict(updated_user)
-        })
-            
-    except Exception as e:
-        logger.exception("Failed to update user")
-        return jsonify({"error": "Failed to update user", "details": str(e)}), 500
+        logger.exception(f"Admin login failed: {e}")
+        return jsonify({"error": "Authentication failed", "details": str(e)}), 500

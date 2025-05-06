@@ -165,7 +165,7 @@ class GoogleOAuthConfig:
     @staticmethod
     def get_client_secret() -> str:
         """Get Google OAuth client secret from environment."""
-        client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+        client_secret = os.getenv('GOOGLE_CLIENT_SECRET') || 
         if not client_secret:
             raise ValueError("GOOGLE_CLIENT_SECRET environment variable is required")
         return client_secret

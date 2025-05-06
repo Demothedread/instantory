@@ -10,6 +10,8 @@ from backend.config.database import get_vector_pool, get_metadata_pool
 from backend.config.storage import storage_service
 # Import necessary storage modules, but don't reference specific exports
 from backend.services.storage import vercel_blob as vercel_module
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 # s3_module is not used, so removed import
 
 # Initialize OpenAI client for vector embeddings
@@ -17,29 +19,23 @@ openai_client = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
 # Configure logging
 logger = logging.getLogger(__name__)
-
-# Create blueprint
 def client_fn(_):
     """Empty client function placeholder."""
+    # Empty function implementation
+    return None
     pass
     # Empty function implementation
 # Unified storage service interface
 class StorageService:
     """Service for handling document storage backends."""
 
-    def __init__(self):
-        self.backend = os.getenv('STORAGE_BACKEND', 'generic').lower()
         if self.backend == 's3':
-            import boto3
-            from botocore.exceptions import BotoCoreError, ClientError
-            self.boto3 = boto3
-            self.boto_core_error = BotoCoreError
-            self.client_error = ClientError
+            # Imports moved to top for PEP8 compliance
             self.s3_client = boto3.client(
                 's3',
                 aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
                 aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
-            )
+            ) 
             self.bucket_name = os.getenv('S3_BUCKET_NAME')
         elif self.backend == 'vercel':
             self.vercel_blob = vercel_module
@@ -75,11 +71,13 @@ class StorageService:
             bucket, key = self._parse_s3_url(document_url)
             response = await asyncio.to_thread(
                 self.s3_client.get_object,
+            response = await asyncio.to_thread(
+                self.s3_client.get_object,
                 Bucket=bucket,
                 Key=key
             )
             return await asyncio.to_thread(response['Body'].read)
-        except (self.boto_core_error, self.client_error) as err:
+        except (BotoCoreError, ClientError) as err:
             logger.error(
                 "Error fetching document from S3: %s", err
             )
@@ -89,8 +87,6 @@ class StorageService:
                 "An error occurred: %s", err
             )
             return None
-    async def _delete_document_s3(self, document_url: str) -> bool:
-        """Delete document from S3 storage."""
         try:
             bucket, key = self._parse_s3_url(document_url)
             await asyncio.to_thread(
@@ -101,6 +97,8 @@ class StorageService:
             return True
         except (self.boto_core_error, self.client_error) as err:
             logger.error(
+        except (BotoCoreError, ClientError) as err:
+            logger.error(
                 "Error deleting document from S3: %s", err
             )
             return False
@@ -109,15 +107,27 @@ class StorageService:
                 "An error occurred while deleting from S3: %s", err
             )
             return False
-
-    def _parse_s3_url(self, url: str):
         # Assumes URL in format:
         # s3://bucket/key
         parts = url.replace("s3://", "").split("/", 1)
         return parts[0], parts[1]
     async def _get_document_vercel(self, document_url: str) -> bytes:
         """Get document from Vercel Blob Storage using available API."""
-        try:
+    def _make_create_client_fn_callable(self, create_client_fn):
+        """
+        Ensure create_client_fn is always callable.
+        If it's a class or module with a Client attribute,
+        wrap it in a function that instantiates Client.
+        """
+        if callable(create_client_fn):
+            return create_client_fn
+        if hasattr(create_client_fn, 'Client'):
+            def wrapper(token):
+                return getattr(create_client_fn, 'Client')(token)
+            return wrapper
+        return None
+
+    async def _get_document_vercel(self, document_url: str) -> bytes:
             # Implement with flexibility to handle different vercel_blob implementations
             vercel_api = self.vercel_blob
 
@@ -147,41 +157,111 @@ class StorageService:
                 create_client_fn,
                 type(create_client_fn)
             )
-            # Double check if create_client_fn exists AND is callable
-            if create_client_fn is not None and callable(create_client_fn):
-                try:
-                    client = create_client_fn(self.vercel_token)
-                    if hasattr(client, 'get') and callable(client.get):
-                        response = await asyncio.to_thread(
-                            client.get,
-                            document_url
+            
+            # Inspect create_client_fn more thoroughly
+            if create_client_fn is not None:
+                logger.debug("create_client_fn attributes: %r", dir(create_client_fn))
+                
+                # Check if it's a callable object
+                if callable(create_client_fn):
+                    try:
+                        # Try to create client with the function
+                        client = create_client_fn(self.vercel_token)
+                        if hasattr(client, 'get') and callable(client.get):
+                            response = await asyncio.to_thread(
+                                client.get,
+                                document_url
+                            )
+                            # Attempt to extract content based on common response attributes
+                            if hasattr(response, 'body'):
+                                return response.body
+                            if hasattr(response, 'content'):
+                                return response.content
+                            # Assume the response itself might be the content
+                            # if no specific attribute found
+                            return response
+                    # Try to handle the case where create_client might be a module or class
+                    # instead of a function
+                    logger.warning(
+                        "'create_client' is not callable. "
+                        "Inspecting if it's a module or class."
+                    )
+        
+                    # Check if it's a module with a client class
+                    if hasattr(create_client_fn, 'Client'):
+                        try:
+                            client_class = getattr(
+                                create_client_fn,
+                                'Client'
+                            )
+                            client = client_class(self.vercel_token)
+        
+                            if hasattr(client, 'get') and callable(client.get):
+                                response = await asyncio.to_thread(
+                                    client.get,
+                                    document_url
+                                )
+                                if hasattr(response, 'body'):
+                                    return response.body
+                                if hasattr(response, 'content'):
+                                    return response.content
+                                return response
+                        except Exception as class_error:
+                            logger.error(
+                                "Error creating client from Client class: %s",
+                                class_error
+                            )
+                    else:
+                        logger.error(
+                            "'create_client' attribute exists in "
+                            "vercel_blob module but is not callable "
+                            "(type: %r) and doesn't have a "
+                            "Client attribute.",
+                            type(create_client_fn)
                         )
-                        # Attempt to extract content based on common response attributes
-                        if hasattr(response, 'body'):
-                            return response.body
-                        if hasattr(response, 'content'):
-                            return response.content
-                        # Assume the response itself might be the content
-                        # if no specific attribute found
-                        return response
-                    # Log if the created client object doesn't have a usable 'get' method
-                    logger.error(
-                        "Client object created via "
-                        "'create_client' does not have a "
-                        "callable 'get' method."
+                                return response
+            try:
+                # Import moved to top for PEP8 compliance
+                client = Client(self.vercel_token)
+                if hasattr(client, 'get') and callable(client.get):
+                    response = await asyncio.to_thread(
+                        client.get,
+                        document_url
                     )
-                    return None  # Cannot proceed without a get method
-                except Exception as client_error:
-                    logger.error(
-                        "Error creating client using create_client_fn: %s",
-                        client_error
+                    if hasattr(response, 'body'):
+                        return response.body
+                    if hasattr(response, 'content'):
+                        return response.content
+                    return response
+            except ImportError:
+                logger.warning(
+                    "Could not import Client directly from vercel_blob"
+                )
+            except Exception as direct_error:
+                logger.error(
+                    "Error using direct Client import: %s",
+                    direct_error
+                )
+
+            return None
+            try:
+                from backend.services.storage.vercel_blob import Client
+                client = Client(self.vercel_token)
+                if hasattr(client, 'get') and callable(client.get):
+                    response = await asyncio.to_thread(
+                        client.get,
+                        document_url
                     )
-                    return None
-            # Log if 'create_client' attribute exists but is not callable
-            logger.error(
-                "Attribute 'create_client' in vercel_blob module "
-                "is not a callable function."
-            )
+                    if hasattr(response, 'body'):
+                        return response.body
+                    if hasattr(response, 'content'):
+                        return response.content
+                    return response
+            except ImportError:
+                logger.warning("Could not import Client directly from vercel_blob")
+            except Exception as direct_error:
+                logger.error("Error using direct Client import: %s", direct_error)
+            
             return None
         except Exception as err:
             logger.error(
@@ -220,30 +300,19 @@ class StorageService:
             # Fall back to client pattern
             create_client_fn = getattr(vercel_api, 'create_client', None)
             if create_client_fn is not None and callable(create_client_fn):
-                try:
-                    client = create_client_fn(self.vercel_token)
-                    if hasattr(client, 'delete') and callable(client.delete):
-                        await asyncio.to_thread(client.delete, document_url)
-                        return True
-                    logger.error(
-                        "Client object doesn't have a "
-                        "callable 'delete' method"
-                    )
-                    return False
-                except Exception as client_error:
-                    logger.error(
-                        "Error creating client for delete operation: %s",
-                        client_error
-                    )
-                    return False
-            return False
-        except Exception as err:
-            logger.error(
-                "Error deleting document from Vercel Blob: %s",
-                err
-            )
-            return False
+    async def _get_document_generic(self, document_url: str) -> bytes:
+        """Generic storage get_document not implemented."""
+        logger.info(
+            "Generic storage: get_document not implemented"
+        )
+        return None
 
+    async def _delete_document_generic(self, document_url: str) -> bool:
+        """Generic storage delete_document not implemented."""
+        logger.info(
+            "Generic storage: delete_document not implemented"
+        )
+        return False
     async def _get_document_generic(self, _document_url: str) -> bytes:
         """Generic storage get_document not implemented."""
         logger.info(
@@ -266,23 +335,35 @@ class StorageService:
         return None
 
     async def _delete_document_generic(self, document_url: str) -> bool:
-        logger.info("Generic storage: delete_document not implemented")
-        return False
-
-# Initialize storage service
-storage_service = StorageService()
-
-# --- Routes ---
-
-@documents_bp.route('/api/documents', methods=['GET'])
-async def get_documents():
-    """Get all documents for the current user."""
-    try:
         async with get_metadata_pool() as pool:
             async with pool.acquire() as conn:
                 # Assume auth middleware sets request.user_id or use header fallback.
-                user_id = getattr(request, 'user_id', request.headers.get('X-User-ID'))
+                user_id = getattr(
+                    request,
+                    'user_id',
+                    request.headers.get('X-User-ID')
+                )
                 if not user_id:
+                    return jsonify(
+                        {"error": "User ID is required"}
+                    ), 400
+                rows = await conn.fetch(
+                    """
+                    SELECT id, title, author, journal_publisher, publication_year,
+                           page_length, thesis, issue, summary, category, field,
+                           hashtags, influenced_by, file_path, file_type, created_at
+                    FROM user_documents
+                    WHERE user_id = $1 
+                    ORDER BY created_at DESC
+                    """,
+                    int(user_id)
+                )
+                return jsonify([dict(row) for row in rows])
+    except Exception as e:
+        logger.error(
+            "Error fetching documents: %s", e
+        )
+        return jsonify({"error": "Failed to fetch documents"}), 500
                     return jsonify({"error": "User ID is required"}), 400
                 rows = await conn.fetch("""""
                     SELECT id, title, author, journal_publisher, publication_year,
@@ -294,7 +375,10 @@ async def get_documents():
                 """, int(user_id))
                 return jsonify([dict(row) for row in rows])
     except Exception as e:
-        logger.error(f"Error fetching documents: {e}")
+            # This is the correct MIME type for docx files
+            content_type = (
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            )
         return jsonify({"error": "Failed to fetch documents"}), 500
 
 @documents_bp.route('/api/documents/content', methods=['GET'])
@@ -302,8 +386,10 @@ async def get_document_content():
     """Get document content from storage."""
     try:
         document_url = request.args.get('url')
-        if not document_url:
-            return jsonify({"error": "No document URL provided"}), 400
+        logger.error(
+            "Error retrieving document content: %s", e
+        )
+        return jsonify({"error": "Failed to retrieve document content"}), 500
 
         # Retrieve document regardless of backend (URL format is validated in the service)
         content = await storage_service.get_document(document_url)
@@ -342,8 +428,10 @@ async def create_document():
             return jsonify({'error': 'User ID required'}), 400
 
         async with get_metadata_pool() as pool:
-            async with pool.acquire() as conn:
-                row = await conn.fetchrow("""
+        logger.error(
+            "Error creating document: %s", e
+        )
+        return jsonify({'error': str(e)}), 500
                     INSERT INTO user_documents (
                         user_id, title, author, journal_publisher,
                         publication_year, page_length, thesis, issue,
@@ -391,8 +479,10 @@ async def update_document(doc_id):
                         author = $2,
                         journal_publisher = $3,
                         publication_year = $4,
-                        page_length = $5,
-                        thesis = $6,
+        logger.error(
+            "Error updating document %s: %s", doc_id, e
+        )
+        return jsonify({'error': str(e)}), 500
                         issue = $7,
                         summary = $8,
                         category = $9,
@@ -417,7 +507,7 @@ async def update_document(doc_id):
                     data.get('influenced_by'),
                     doc_id,
                     int(user_id)
-                )
+                """)
                 if not row:
                     return jsonify({'error': 'Document not found'}), 404
                 return jsonify(dict(row))
@@ -431,7 +521,12 @@ async def get_search_documents():
     try:
         query = request.args.get('q')
         if not query:
-            return jsonify({"error": "No search query provided"}), 400
+                        return jsonify({
+                            "results": [],
+                            "message": (
+                                "No similar documents found"
+                            )
+                        }), 200
 
         # Generate vector embedding for the query
         try:
@@ -452,7 +547,13 @@ async def get_search_documents():
                     return jsonify({"error": "User ID is required"}), 400
 
                 try:
-                    # Try querying with vector similarity (<=> is the cosine distance operator)
+                    logger.warning(
+                        "Vector search failed, "
+                        "falling back to text search: %s",
+        logger.error(
+            "Error searching documents: %s", e
+        )
+        return jsonify({"error": "Failed to search documents"}), 500
                     rows = await conn.fetch("""
                         SELECT document_id, 1 - (content_vector <=> $1) as similarity
                         FROM document_vectors 
@@ -483,9 +584,14 @@ async def get_search_documents():
                                 for row in rows:
                                     if row['document_id'] == doc_dict['id']:
                                         doc_dict['similarity'] = row['similarity']
-                                        break
-                                results.append(doc_dict)
-
+                        logger.warning(
+                            "Failed to delete document from storage: %s",
+                            document_url
+                        )
+        logger.error(
+            "Error deleting document: %s", e
+        )
+        return jsonify({"error": "Failed to delete document"}), 500
                             return jsonify({"results": results})
 
                 except Exception as vector_error:
@@ -535,55 +641,54 @@ async def delete_document(doc_id):
         return jsonify({"error": "Failed to delete document"}), 500
 
 @documents_bp.route('/api/documents/search', methods=['POST'])
-async def search_documents():
+                                    doc_dict['excerpt'] = extract_matching_excerpt(
+                                        doc_dict.get('extracted_text', ''),
+                                        query
+                                    )
     """Search documents by content or metadata."""
     try:
         data = await request.get_json()
         user_id = data.get('user_id')
         query = data.get('query', '').strip()
         field = data.get('field', 'all')  # options: 'all', 'content', 'metadata'
-        doc_dict['excerpt'] = extract_matching_excerpt(doc_dict.get('extracted_text', ''),query)
-    finally:
+
         if not user_id:
             return jsonify({'error': 'User ID required'}), 400
         if not query:
             return jsonify({'error': 'Search query is required'}), 400
+
         # Try vector search first
         try:
             # Generate embedding for the query
             response = await openai_client.embeddings.create(
                 model="text-embedding-3-small",
-                input=query
+                    where_clause += (
+                        " AND (title ILIKE $2 OR author ILIKE $2 OR "
+                    where_clause += (
+                        " AND (title ILIKE $2 OR author ILIKE $2 OR "
+                        "summary ILIKE $2 OR thesis ILIKE $2 OR "
+                        "hashtags ILIKE $2 OR extracted_text ILIKE $2)"
+                    )
+                        "hashtags ILIKE $2)"
+                    )
             )
             query_vector = response.data[0].embedding
-            
+
             # Search by vector similarity in vector database
             async with get_vector_pool() as pool:
                 async with pool.acquire() as conn:
                     rows = await conn.fetch("""
-                    where_clause += (
-                        " AND (title ILIKE $2 OR "
-                    where_clause += (
-                        " AND (title ILIKE $2 OR "
-                        "author ILIKE $2 OR "
-                        "summary ILIKE $2 OR "
-                        "thesis ILIKE $2 OR "
-                        "hashtags ILIKE $2 OR "
-                        "extracted_text ILIKE $2)"
-                    )
-                        "summary ILIKE $2 OR "
-                        "thesis ILIKE $2 OR "
-                        "hashtags ILIKE $2)"
-                    )
+                        SELECT document_id, 1 - (content_vector <=> $1) as similarity
                         FROM document_vectors 
                         WHERE 1 - (content_vector <=> $1) > 0.6
                         ORDER BY similarity DESC
                         LIMIT 20
                     """, query_vector)
-                    
                     if rows:
-                        # Get matching documents from metadata database
-                        document_ids = [row['document_id'] for row in rows]
+        logger.error(
+            "Error searching documents: %s", e
+        )
+        return jsonify({'error': str(e)}), 500
                         async with get_metadata_pool() as metadata_pool:
                             async with metadata_pool.acquire() as metadata_conn:
                                 # Get full document details
@@ -592,7 +697,7 @@ async def search_documents():
                                     FROM user_documents 
                                     WHERE id = ANY($1) AND user_id = $2
                                 """, document_ids, int(user_id))
-                                
+
                                 # Combine results with similarity scores and excerpts
                                 results = []
                                 for doc in doc_rows:
@@ -604,12 +709,12 @@ async def search_documents():
                                             doc_dict['similarity'] = row['similarity']
                                             break
                                     results.append(doc_dict)
-                                
+
                                 return jsonify({'results': results, 'search_type': 'vector'})
         except Exception as vector_error:
             logger.warning(f"Vector search failed, falling back to text search: {vector_error}")
             # Fall through to text search below
-        
+
         # Fallback to traditional text search
         async with get_metadata_pool() as pool:
             async with pool.acquire() as conn:
@@ -644,6 +749,8 @@ async def search_documents():
     except Exception as e:
         logger.error(f"Error searching documents: {e}")
         return jsonify({'error': str(e)}), 500
+    
+
 
 def extract_matching_excerpt(text: str, query: str, context_chars: int = 150) -> str:
     """Extract an excerpt around the query match."""

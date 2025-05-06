@@ -32,7 +32,7 @@ services:
       - key: AWS_REGION
         value: "us-west-2"
       - key: CORS_ORIGINS
-        value: "https://hocomnia.com,https://www.hocomnia.com,https://instantory.vercel.app,https://bartleby.vercel.app,http://localhost:3000,https://accounts.google.com,https://*.googleapis.com,https://*.googleusercontent.com"
+        value: "https://hocomnia.com,https://www.hocomnia.com,https://instantory.vercel.app,https://bartleby.vercel.app,http://localhost:3000,https://accounts.google.com,https://*.googleapis.com,https://*.googleusercontent.com,https://vercel.live,https://localhost:3000"
       - key: CORS_ENABLED
         value: "true"             
       - key: ALLOW_CREDENTIALS
@@ -48,7 +48,7 @@ services:
       - key: PUBLIC_BACKEND_URL
         value: "https://backend-bartleby-mn96.onrender.com"
       - key: GOOGLE_REDIRECT_URI
-        value: "https://backend-bartleby-mn96.onrender.com/api/auth/google/callback"
+        value: "https://hocomnia.com/auth-callback,https://instantory.vercel.app/auth-callback,https://backend-bartleby-mn96.onrender.com/api/auth/google/callback,https://localhost:3000/auth-callback"
       - key: FRONTEND_URL
         value: "https://hocomnia.com,https://www.hocomnia.com,https://instantory.vercel.app,https://bartleby.vercel.app,http://localhost:3000"
       - key: VERCEL_URL

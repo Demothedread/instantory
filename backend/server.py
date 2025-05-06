@@ -14,14 +14,42 @@ from dotenv import load_dotenv
 from quart import Quart, jsonify, Blueprint
 from openai import AsyncOpenAI
 from quart_cors import cors
+from quart_auth import QuartAuth
 from hypercorn.config import Config as HypercornConfig
 from hypercorn.asyncio import serve
 
-# Import routes
-from routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
-
 # Add the current directory to the Python path
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
+# Import routes - try different import strategies for different environments
+try:
+    # First try relative import (when imported as a package)
+    from .routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
+    try:
+        from .routes.auth_routes import setup_auth
+    except ImportError:
+        def setup_auth(app):
+            logger.warning("Auth setup function not available")
+            pass
+except ImportError:
+    try:
+        # Then try absolute import (when run directly)
+        from backend.routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
+        try:
+            from backend.routes.auth_routes import setup_auth
+        except ImportError:
+            def setup_auth(app):
+                logger.warning("Auth setup function not available")
+                pass
+    except ImportError:
+        # Finally try local import (when run from same directory)
+        from routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
+        try:
+            from routes.auth_routes import setup_auth
+        except ImportError:
+            def setup_auth(app):
+                logger.warning("Auth setup function not available")
+                pass
 
 # Configure basic logging
 logging.basicConfig(
@@ -180,7 +208,10 @@ app.config.update(default_config)
 
 # Apply default CORS settings
 cors_origins = ['*']  # Default to allow all origins
-app = apply_cors(app, cors_origins)
+    app = apply_cors(app, cors_origins)
+
+# Initialize Quart-Auth
+QuartAuth(app)
 
 async def init_services():
     """Initialize application services."""
@@ -206,6 +237,9 @@ async def init_services():
         else:
             logger.warning("Processor factory not initialized - OpenAI client unavailable")
             app.processor_factory = None
+        
+        # Setup authentication
+        setup_auth(app)
         
         logger.info("Application services initialized")
     except Exception as init_err:
