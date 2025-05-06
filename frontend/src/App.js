@@ -28,7 +28,7 @@ import { colors } from './styles/theme/colors';
 import { css } from '@emotion/react';
 // Services
 import dataApi from './services/api';
-import { layout } from './styles/layouts/constraints';
+import layout from './styles/layouts/constraints';
 // Styles
 import { neoDecorocoBase } from './styles/components/neo-decoroco/base';
 import { typography } from './styles/theme/typography';

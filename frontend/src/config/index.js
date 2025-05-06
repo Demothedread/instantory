@@ -2,12 +2,12 @@ import { authConfig, googleClientId, googleClientSecret } from './auth';
 
 // Environment variables with fallbacks
 const environment = process.env.NODE_ENV || 'production';
-const apiUrl = process.env.REACT_APP_BACKEND_URL || 'https://bartelby-backend.onrender.com';
+const apiUrl = process.env.REACT_APP_BACKEND_URL || 'https://bartelby-backend-mn96.onrender.com';
 
 // Environment-specific settings
 const environments = {
   development: {
-    apiUrl: process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000',
+    apiUrl: process.env.REACT_APP_BACKEND_URL || 'http://localhost:3000',
     debug: true
   },
   production: {

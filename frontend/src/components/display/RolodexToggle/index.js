@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import DocumentsTable from '../DocumentsTable';
 import ImageList from '../ImageList';
 import InventoryTable from '../InventoryTable';
-import { layout } from '../../../styles/layouts/constraints';
+import layout from '../../../styles/layouts/constraints';
 import styles from './styles';
 
 const RolodexToggle = ({ inventory, documents }) => {
