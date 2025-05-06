@@ -196,6 +196,12 @@ default_config = {
 # Initialize Quart app
 app = Quart(__name__)
 
+# Configure app with defaults first
+app.config.update(default_config)
+
+# Initialize Quart-Auth before applying CORS to ensure correct app instance
+QuartAuth(app)
+
 # Function to recreate the CORS app
 def apply_cors(app_instance, origins):
     """Apply CORS configuration to the app."""
@@ -203,15 +209,9 @@ def apply_cors(app_instance, origins):
         return cors(app_instance, allow_origin='*')
     return cors(app_instance, allow_origin=origins)
 
-# Configure app with defaults first
-app.config.update(default_config)
-
 # Apply default CORS settings
 cors_origins = ['*']  # Default to allow all origins
-    app = apply_cors(app, cors_origins)
-
-# Initialize Quart-Auth
-QuartAuth(app)
+app = apply_cors(app, cors_origins)
 
 async def init_services():
     """Initialize application services."""
