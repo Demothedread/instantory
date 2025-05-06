@@ -164,8 +164,8 @@ try:
 
     if os.getenv('NEON_DATABASE_URL'):
         logger.info("Vector database configuration found (NEON_DATABASE_URL)")
-except Exception as db_err:
-    logger.error(f"Error checking database settings: {db_err}")
+except (KeyError, ValueError) as db_err:
+    logger.error("Error checking database settings: %s", db_err)
 
 # Check for Google OAuth configuration
 if not os.getenv('GOOGLE_CLIENT_ID'):
@@ -174,22 +174,28 @@ else:
     logger.info("Google authentication configuration found")
 
 # Initialize OpenAI client with error handling
+OPENAI_CLIENT = None
 try:
     openai_api_key = os.getenv('OPENAI_API_KEY')
     if not openai_api_key:
-        logger.warning("OPENAI_API_KEY not found in environment variables - vector operations will be limited")
-        openai_client = None
+        logger.warning(
+            "OPENAI_API_KEY not found in environment variables - "
+            "vector operations will be limited"
+        )
     else:
-        openai_client = AsyncOpenAI(api_key=openai_api_key)
+        OPENAI_CLIENT = AsyncOpenAI(api_key=openai_api_key)
         logger.info("OpenAI client initialized successfully")
-except Exception as openai_err:
-    logger.error(f"Failed to initialize OpenAI client: {openai_err}")
-    openai_client = None
-
+except (ImportError, ValueError) as openai_err:
 # Default configuration
 default_config = {
     'TESTING': os.getenv('TESTING', 'false').lower() == 'true',
-    'MAX_CONTENT_LENGTH': int(os.getenv('MAX_CONTENT_LENGTH', str(20 * 1024 * 1024))),  # 20MB default
+    # 20MB default
+    'MAX_CONTENT_LENGTH': int(os.getenv(
+        'MAX_CONTENT_LENGTH', 
+        str(20 * 1024 * 1024)
+    )),
+    'PROJECT_ROOT': os.path.dirname(os.path.abspath(__file__)),
+}
     'PROJECT_ROOT': os.path.dirname(os.path.abspath(__file__)),
 }
 
@@ -203,12 +209,6 @@ app.config.update(default_config)
 QuartAuth(app)
 
 # Function to recreate the CORS app
-def apply_cors(app_instance, origins):
-    """Apply CORS configuration to the app."""
-    if len(origins) == 1 and origins[0] == '*':
-        return cors(app_instance, allow_origin='*')
-    return cors(app_instance, allow_origin=origins)
-
 # Apply default CORS settings
 cors_origins = ['*']  # Default to allow all origins
 app = apply_cors(app, cors_origins)
@@ -231,14 +231,20 @@ async def init_services():
             logger.warning("OAuth service not attached - fallback mode")
         
         # Create processor factory only if OpenAI client is available
-        if openai_client:
-            # app.processor_factory = create_processor_factory(app_config.db, openai_client)
+        if OPENAI_CLIENT:
+            # app.processor_factory = create_processor_factory(app_config.db, OPENAI_CLIENT)
             logger.info("Processor factory initialized with OpenAI client")
         else:
             logger.warning("Processor factory not initialized - OpenAI client unavailable")
             app.processor_factory = None
         
         # Setup authentication
+        setup_auth(app)
+        
+        logger.info("Application services initialized")
+    except (ImportError, RuntimeError) as init_err:
+        logger.error("Service initialization failed: %s", init_err)
+        logger.warning("Application will run with limited functionality")
         setup_auth(app)
         
         logger.info("Application services initialized")
@@ -268,12 +274,6 @@ async def health_check():
 # Task status route
 @app.route('/api/tasks/<task_id>', methods=['GET'])
 async def get_task_status(task_id):
-    """Get the status of a specific task."""
-    task = task_manager.get_task(task_id)
-    if not task:
-        return jsonify({'error': 'Task not found'}), 404
-    return jsonify(task)
-
 # Initialize application
 @app.before_serving
 async def startup():
@@ -283,8 +283,8 @@ async def startup():
         # Start task cleanup in a background task
         asyncio.create_task(setup_task_cleanup())
         logger.info("Application startup complete")
-    except Exception as startup_err:
-        logger.error(f"Startup encountered errors: {startup_err}")
+    except (RuntimeError, asyncio.TimeoutError) as startup_err:
+        logger.error("Startup encountered errors: %s", startup_err)
         logger.warning("Application may have limited functionality")
 
 @app.after_serving
@@ -293,13 +293,20 @@ async def shutdown():
     try:
         # await app_config.cleanup()
         logger.info("Application shutdown complete")
-    except Exception as shutdown_err:
-        logger.error(f"Shutdown error: {shutdown_err}")
+    except (RuntimeError, IOError) as shutdown_err:
+        logger.error("Shutdown error: %s", shutdown_err)
 
 # Configure Hypercorn
 hypercorn_config = HypercornConfig()
 # Use PORT environment variable (Render sets this automatically)
 port = int(os.getenv("PORT", "8000"))
+hypercorn_config.bind = [f"0.0.0.0:{port}"]
+# Log to stdout for Render
+hypercorn_config.accesslog = "-"
+
+if __name__ == "__main__":
+    logger.info("Starting server on port %s", port)
+    asyncio.run(serve(app, hypercorn_config))
 hypercorn_config.bind = [f"0.0.0.0:{port}"]
 hypercorn_config.accesslog = "-"  # Log to stdout for Render
 
