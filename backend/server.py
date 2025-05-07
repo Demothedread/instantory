@@ -11,6 +11,7 @@ from pathlib import Path
 
 # Third party imports
 from dotenv import load_dotenv
+load_dotenv()  # Load environment variables from .env file
 from quart import Quart, jsonify, Blueprint
 from openai import AsyncOpenAI
 from quart_cors import cors
@@ -24,9 +25,9 @@ sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 # Import routes - try different import strategies for different environments
 try:
     # First try relative import (when imported as a package)
-    from .routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
+    from routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
     try:
-        from .routes.auth_routes import setup_auth
+        from routes.auth_routes import setup_auth
     except ImportError:
         def setup_auth(app):
             logger.warning("Auth setup function not available")
@@ -34,9 +35,9 @@ try:
 except ImportError:
     try:
         # Then try absolute import (when run directly)
-        from backend.routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
+        from routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
         try:
-            from backend.routes.auth_routes import setup_auth
+            from routes.auth_routes import setup_auth
         except ImportError:
             def setup_auth(app):
                 logger.warning("Auth setup function not available")
@@ -172,7 +173,6 @@ if not os.getenv('GOOGLE_CLIENT_ID'):
     logger.warning("GOOGLE_CLIENT_ID not set - Google authentication will be unavailable")
 else:
     logger.info("Google authentication configuration found")
-
 # Initialize OpenAI client with error handling
 OPENAI_CLIENT = None
 try:
@@ -186,6 +186,8 @@ try:
         OPENAI_CLIENT = AsyncOpenAI(api_key=openai_api_key)
         logger.info("OpenAI client initialized successfully")
 except (ImportError, ValueError) as openai_err:
+    logger.error(f"Failed to initialize OpenAI client: {openai_err}")
+
 # Default configuration
 default_config = {
     'TESTING': os.getenv('TESTING', 'false').lower() == 'true',
@@ -194,8 +196,6 @@ default_config = {
         'MAX_CONTENT_LENGTH', 
         str(20 * 1024 * 1024)
     )),
-    'PROJECT_ROOT': os.path.dirname(os.path.abspath(__file__)),
-}
     'PROJECT_ROOT': os.path.dirname(os.path.abspath(__file__)),
 }
 
@@ -208,10 +208,18 @@ app.config.update(default_config)
 # Initialize Quart-Auth before applying CORS to ensure correct app instance
 QuartAuth(app)
 
-# Function to recreate the CORS app
-# Apply default CORS settings
-cors_origins = ['*']  # Default to allow all origins
-app = apply_cors(app, cors_origins)
+# Apply CORS settings from environment
+cors_origins = os.getenv('CORS_ORIGINS', '*').split(',')
+if os.getenv('CORS_ENABLED', 'true').lower() == 'true':
+    allow_credentials = os.getenv('ALLOW_CREDENTIALS', 'true').lower() == 'true'
+    app = cors(app, 
+               allow_origin=cors_origins,
+               allow_credentials=allow_credentials)
+    logger.info(f"CORS enabled with origins: {cors_origins}")
+else:
+    # Default to allow all origins if CORS is not explicitly configured
+    app = cors(app, allow_origin=['*'])
+    logger.info("CORS enabled with default settings (all origins)")
 
 async def init_services():
     """Initialize application services."""
@@ -245,12 +253,6 @@ async def init_services():
     except (ImportError, RuntimeError) as init_err:
         logger.error("Service initialization failed: %s", init_err)
         logger.warning("Application will run with limited functionality")
-        setup_auth(app)
-        
-        logger.info("Application services initialized")
-    except Exception as init_err:
-        logger.error(f"Service initialization failed: {init_err}")
-        logger.warning("Application will run with limited functionality")
 
 # Register blueprints (if available)
 if auth_bp:
@@ -271,9 +273,6 @@ async def health_check():
     """Simple health check endpoint for monitoring."""
     return jsonify({"status": "ok", "message": "Server is running"}), 200
 
-# Task status route
-@app.route('/api/tasks/<task_id>', methods=['GET'])
-async def get_task_status(task_id):
 # Initialize application
 @app.before_serving
 async def startup():
@@ -303,12 +302,6 @@ port = int(os.getenv("PORT", "8000"))
 hypercorn_config.bind = [f"0.0.0.0:{port}"]
 # Log to stdout for Render
 hypercorn_config.accesslog = "-"
-
-if __name__ == "__main__":
-    logger.info("Starting server on port %s", port)
-    asyncio.run(serve(app, hypercorn_config))
-hypercorn_config.bind = [f"0.0.0.0:{port}"]
-hypercorn_config.accesslog = "-"  # Log to stdout for Render
 
 if __name__ == "__main__":
     logger.info(f"Starting server on port {port}")

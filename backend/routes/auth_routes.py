@@ -462,9 +462,16 @@ async def google_login():
             "data": user_data
         })
         
-        # Set secure cookies - use SameSite=None for cross-site requests
-        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='None')
-        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='None')
+        # Determine secure cookie settings based on environment
+        is_production = os.getenv('NODE_ENV', 'development') == 'production'
+        
+        # Set secure cookies - use SameSite=None for cross-site requests in production
+        # In production, cookies must be Secure when SameSite=None
+        secure = True if is_production else False
+        same_site = 'None' if is_production else None
+        
+        response.set_cookie("access_token", access_token, httponly=True, secure=secure, samesite=same_site)
+        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=secure, samesite=same_site)
         
         return response
 
@@ -544,8 +551,13 @@ async def refresh():
             "access"
         )
 
+        # Determine secure cookie settings based on environment
+        is_production = os.getenv('NODE_ENV', 'development') == 'production'
+        secure = True if is_production else False
+        same_site = 'None' if is_production else None
+
         response = jsonify({"message": "Token refreshed", "user": dict(user)})
-        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='None')
+        response.set_cookie("access_token", access_token, httponly=True, secure=secure, samesite=same_site)
 
         return response
 
