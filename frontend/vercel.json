@@ -49,6 +49,7 @@
   ],
   "env": {
     "REACT_APP_BACKEND_URL": "https://backend-bartleby-mn96.onrender.com",
+    "REACT_APP_CORS_ORIGIN":"https://hocomnia.com,https://www.hocomnia.com,https://instantory.vercel.app,https://bartleby-backend.onrender.com,https://vercel.live,https://accounts.google.com,https://bartleby.vercel.app",
     "REACT_APP_GOOGLE_CLIENT_ID": "700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com",
     "REACT_APP_GOOGLE_REDIRECT_URI": "https://backend-bartleby-mn96.onrender.com/api/auth/google/callback",
     "REACT_APP_API_VERSION": "v1",
