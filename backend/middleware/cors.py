@@ -26,7 +26,8 @@ ALLOWED_ORIGINS: Set[str] = origins_from_env.union({
     'https://bartleby.vercel.app',
     'http://localhost:3000',
     'https://vercel.live',
-    'https://backend-bartleby-mn96.onrender.com',
+    'https://bartleby-backend-mn96.onrender.com',
+    'https://bartleby-backend.onrender.com',
     'https://accounts.google.com',
     'https://apis.google.com',
     'https://www.googleapis.com'
@@ -141,7 +142,6 @@ def setup_cors(app: Quart, enabled: bool = True) -> None:
             )
 
         # Get CORS headers based on the origin
-       
         cors_headers = get_cors_headers(origin)
 
         # Add/update headers in the existing response object
@@ -154,8 +154,10 @@ def setup_cors(app: Quart, enabled: bool = True) -> None:
 
 
 # Create an exportable instance for easy import and use
-default_cors_setup = lambda app: setup_cors(app)
-
+def default_cors_setup(app: Quart) -> None:
+    """Wrapper function to setup CORS with default settings."""
+    setup_cors(app)
+    logger.info("Default CORS setup applied.")
 # Export main CORS configuration components
 __all__ = [
     'ALLOWED_ORIGINS', 

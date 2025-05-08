@@ -12,6 +12,15 @@ class CORSConfig:
         cors_origin = os.getenv('CORS_ORIGIN', '')
         if cors_origin:
             return cors_origin.split(',')
+        else:
+            # If no CORS_ORIGIN is set, use default origins
+            return CORSConfig.get_default_origins()
+        return []
+
+    @staticmethod
+    def get_default_origins() -> List[str]:
+        """Get default origins for development."""
+        # Default origins for development
         return [
             'https://instantory.vercel.app',
             'https://hocomnia.com',
