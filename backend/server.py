@@ -22,36 +22,6 @@ from hypercorn.asyncio import serve
 # Add the current directory to the Python path
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
-# Import routes - try different import strategies for different environments
-try:
-    # First try relative import (when imported as a package)
-    from routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
-    try:
-        from routes.auth_routes import setup_auth
-    except ImportError:
-        def setup_auth(app):
-            logger.warning("Auth setup function not available")
-            pass
-except ImportError:
-    try:
-        # Then try absolute import (when run directly)
-        from routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
-        try:
-            from routes.auth_routes import setup_auth
-        except ImportError:
-            def setup_auth(app):
-                logger.warning("Auth setup function not available")
-                pass
-    except ImportError:
-        # Finally try local import (when run from same directory)
-        from routes import inventory_bp, documents_bp, files_bp, auth_bp, process_bp
-        try:
-            from routes.auth_routes import setup_auth
-        except ImportError:
-            def setup_auth(app):
-                logger.warning("Auth setup function not available")
-                pass
-
 # Configure basic logging
 logging.basicConfig(
     level=logging.INFO,
@@ -59,7 +29,40 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Default configuration
+default_config = {
+    'TESTING': os.getenv('TESTING', 'false').lower() == 'true',
+    'MAX_CONTENT_LENGTH': int(os.getenv('MAX_CONTENT_LENGTH', str(20 * 1024 * 1024))),  # 20MB default
+    'PROJECT_ROOT': os.path.dirname(os.path.abspath(__file__)),
+}
+
+# Initialize Quart app
+app = Quart(__name__)
+app.config.update(default_config)
+QuartAuth(app)  # Initialize Quart-Auth before CORS
+
+# Apply CORS settings
+cors_origins = os.getenv('CORS_ORIGINS', '*').split(',')
+allow_credentials = os.getenv('ALLOW_CREDENTIALS', 'true').lower() == 'true'
+cors_enabled = os.getenv('CORS_ENABLED', 'true').lower() == 'true'
+
+if cors_enabled:
+    app = cors(app, allow_origin=cors_origins, allow_credentials=allow_credentials)
+    logger.info(f"CORS enabled with origins: {cors_origins}")
+else:
+    app = cors(app, allow_origin=['*'])
+    logger.info("CORS enabled with default settings (all origins)")
+
 # Import modules with fallbacks
+def setup_auth(app):
+    """Setup authentication for the application."""
+    try:
+        from auth import configure_auth
+        configure_auth(app)
+        logger.info("Authentication configured")
+    except ImportError:
+        logger.warning("Auth module not available, authentication will be limited")
+
 # Task Manager
 try:
     from cleanup import task_manager, setup_task_cleanup
@@ -68,7 +71,6 @@ except ImportError:
     
     class TaskManagerStub:
         """Stub implementation of TaskManager for fallback."""
-        
         def get_task(self, task_id):
             """Return task status for given task_id."""
             return None
@@ -83,15 +85,6 @@ except ImportError:
         """Stub implementation of task cleanup setup."""
         pass
 
-# Middleware
-try:
-    from middleware import setup_middleware
-except ImportError:
-    logger.warning("Middleware module not available")
-    def setup_middleware(app_instance, settings_obj):
-        """Stub middleware setup function."""
-        pass
-
 # OAuth Service
 try:
     from services.oauth import create_oauth_service
@@ -101,136 +94,110 @@ except ImportError as e:
     logger.warning(f"OAuth service not available: {e}")
     oauth_service = None
 
-# Blueprint module mapping and import
-BLUEPRINT_MODULES = {
-    'auth': {'file': 'auth_routes', 'bp': 'auth_bp'},
-    'inventory': {'file': 'inventory', 'bp': 'inventory_bp'},
-    'documents': {'file': 'documents', 'bp': 'documents_bp'},
-    'files': {'file': 'files', 'bp': 'files_bp'}
-}
-
-# Import blueprints with fallback mechanism
-blueprints = {}
-for key, config in BLUEPRINT_MODULES.items():
-    module_name = config['file']
-    bp_name = config['bp']
-    blueprints[key] = None
+# Validate environment variables
+def validate_environment():
+    """Validate required environment variables and log warnings."""
+    # Storage validation
+    storage_backend = os.getenv('STORAGE_BACKEND', 'vercel').lower()
+    logger.info(f"Using storage backend: {storage_backend}")
     
-    # Try different import paths
-    import_paths = [
-        f'routes.{module_name}',  # Local import
-        f'{module_name}',         # Direct import
-        f'backend.routes.{module_name}'  # From project root
-    ]
-    
-    for import_path in import_paths:
-        try:
-            module = __import__(import_path, fromlist=[bp_name])
-            blueprints[key] = getattr(module, bp_name)
-            logger.info(f"Successfully imported {bp_name} from {import_path}")
-            break
-        except (ImportError, AttributeError) as import_err:
-            logger.warning(f"Failed to import {bp_name} from {import_path}: {import_err}")
-
-# Extract blueprints for use
-auth_bp = blueprints.get('auth')
-inventory_bp = blueprints.get('inventory')
-documents_bp = blueprints.get('documents')
-files_bp = blueprints.get('files')
-
-# Initialize storage and validate configuration
-STORAGE_BACKEND = os.getenv('STORAGE_BACKEND', 'vercel').lower()
-logger.info(f"Using storage backend: {STORAGE_BACKEND}")
-
-try:
-    # Validate storage configuration
-    if STORAGE_BACKEND == 'vercel' and not os.getenv('BLOB_READ_WRITE_TOKEN'):
+    if storage_backend == 'vercel' and not os.getenv('BLOB_READ_WRITE_TOKEN'):
         logger.warning("BLOB_READ_WRITE_TOKEN not found but Vercel storage backend is selected")
-
-    if STORAGE_BACKEND == 's3' and not all([
+    
+    if storage_backend == 's3' and not all([
         os.getenv('AWS_ACCESS_KEY_ID'),
         os.getenv('AWS_SECRET_ACCESS_KEY'),
         os.getenv('AWS_S3_EXPRESS_BUCKET')
     ]):
         logger.warning("AWS S3 configuration incomplete but S3 storage backend is selected")
-except Exception as storage_err:
-    logger.error(f"Error initializing storage settings: {storage_err}")
-
-# Verify database connections
-try:
+    
+    # Database validation
     if not os.getenv('DATABASE_URL'):
         logger.warning("DATABASE_URL not set - main database connection may fail")
     else:
         logger.info("Main database configuration found (DATABASE_URL)")
-
+    
     if os.getenv('NEON_DATABASE_URL'):
         logger.info("Vector database configuration found (NEON_DATABASE_URL)")
-except (KeyError, ValueError) as db_err:
-    logger.error("Error checking database settings: %s", db_err)
+    
+    # Auth validation
+    if not os.getenv('GOOGLE_CLIENT_ID'):
+        logger.warning("GOOGLE_CLIENT_ID not set - Google authentication will be unavailable")
+    else:
+        logger.info("Google authentication configuration found")
 
-# Check for Google OAuth configuration
-if not os.getenv('GOOGLE_CLIENT_ID'):
-    logger.warning("GOOGLE_CLIENT_ID not set - Google authentication will be unavailable")
-else:
-    logger.info("Google authentication configuration found")
-# Initialize OpenAI client with error handling
-OPENAI_CLIENT = None
-try:
+# Initialize OpenAI client
+def init_openai_client():
+    """Initialize the OpenAI client if API key is available."""
     openai_api_key = os.getenv('OPENAI_API_KEY')
     if not openai_api_key:
-        logger.warning(
-            "OPENAI_API_KEY not found in environment variables - "
-            "vector operations will be limited"
-        )
-    else:
-        OPENAI_CLIENT = AsyncOpenAI(api_key=openai_api_key)
+        logger.warning("OPENAI_API_KEY not found - vector operations will be limited")
+        return None
+    
+    try:
+        client = AsyncOpenAI(api_key=openai_api_key)
         logger.info("OpenAI client initialized successfully")
-except (ImportError, ValueError) as openai_err:
-    logger.error(f"Failed to initialize OpenAI client: {openai_err}")
+        return client
+    except (ImportError, ValueError) as err:
+        logger.error(f"Failed to initialize OpenAI client: {err}")
+        return None
 
-# Default configuration
-default_config = {
-    'TESTING': os.getenv('TESTING', 'false').lower() == 'true',
-    # 20MB default
-    'MAX_CONTENT_LENGTH': int(os.getenv(
-        'MAX_CONTENT_LENGTH', 
-        str(20 * 1024 * 1024)
-    )),
-    'PROJECT_ROOT': os.path.dirname(os.path.abspath(__file__)),
-}
+OPENAI_CLIENT = init_openai_client()
 
-# Initialize Quart app
-app = Quart(__name__)
+# Improved blueprint registration
+def register_blueprints():
+    """Register all available blueprints with improved import mechanism."""
+    blueprint_configs = {
+        'auth': {'file': 'auth_routes', 'bp': 'auth_bp', 'prefix': '/api/auth'},
+        'inventory': {'file': 'inventory', 'bp': 'inventory_bp', 'prefix': '/api/inventory'},
+        'documents': {'file': 'documents', 'bp': 'documents_bp', 'prefix': '/api/documents'},
+        'files': {'file': 'files', 'bp': 'files_bp', 'prefix': '/api/files'},
+        'process': {'file': 'process', 'bp': 'process_bp', 'prefix': '/api/process'}
+    }
+    
+    registered = 0
+    for name, config in blueprint_configs.items():
+        module_name = config['file']
+        bp_name = config['bp']
+        url_prefix = config['prefix']
+        
+        # Try different import paths with proper string concatenation
+        import_paths = [
+            f'routes.{module_name}',                # Local import
+            f'routes.{module_name}_routes',         # With routes suffix
+            f'{module_name}',                       # Direct import
+            f'backend.routes.{module_name}',        # From project root
+            f'backend.routes.{module_name}_routes'  # From project root with routes suffix
+        ]
+        
+        for import_path in import_paths:
+            try:
+                module = __import__(import_path, fromlist=[bp_name])
+                blueprint = getattr(module, bp_name)
+                app.register_blueprint(blueprint, url_prefix=url_prefix)
+                logger.info(f"✅ {name.capitalize()} blueprint registered from {import_path}")
+                registered += 1
+                break
+            except (ImportError, AttributeError):
+                continue
+        else:
+            logger.warning(f"❌ {name.capitalize()} blueprint not registered - import failed")
+    
+    if registered == 0:
+        logger.warning("No blueprints were registered - API functionality will be limited")
+    else:
+        logger.info(f"Successfully registered {registered} blueprints")
 
-# Configure app with defaults first
-app.config.update(default_config)
-
-# Initialize Quart-Auth before applying CORS to ensure correct app instance
-QuartAuth(app)
-
-# Apply CORS settings from environment
-cors_origins = os.getenv('CORS_ORIGINS', '*').split(',')
-if os.getenv('CORS_ENABLED', 'true').lower() == 'true':
-    allow_credentials = os.getenv('ALLOW_CREDENTIALS', 'true').lower() == 'true'
-    app = cors(app, 
-               allow_origin=cors_origins,
-               allow_credentials=allow_credentials)
-    logger.info(f"CORS enabled with origins: {cors_origins}")
-else:
-    # Default to allow all origins if CORS is not explicitly configured
-    app = cors(app, allow_origin=['*'])
-    logger.info("CORS enabled with default settings (all origins)")
+# Health check endpoint for Render
+@app.route('/health', methods=['GET'])
+async def health_check():
+    """Simple health check endpoint for monitoring."""
+    return jsonify({"status": "ok", "message": "Server is running"}), 200
 
 async def init_services():
     """Initialize application services."""
     try:
-        # This is where you would initialize app_config
-        # Most of this functionality is referenced but not fully defined in the original
-        # await app_config.initialize()
-        
         # Store components in app context
-        # app.db = app_config.db
-        # app.storage = app_config.storage
         app.oauth_service = oauth_service
         
         if oauth_service:
@@ -240,7 +207,8 @@ async def init_services():
         
         # Create processor factory only if OpenAI client is available
         if OPENAI_CLIENT:
-            # app.processor_factory = create_processor_factory(app_config.db, OPENAI_CLIENT)
+            # In a future implementation, create_processor_factory would be properly implemented
+            # app.processor_factory = create_processor_factory(app.db, OPENAI_CLIENT)
             logger.info("Processor factory initialized with OpenAI client")
         else:
             logger.warning("Processor factory not initialized - OpenAI client unavailable")
@@ -251,57 +219,41 @@ async def init_services():
         
         logger.info("Application services initialized")
     except (ImportError, RuntimeError) as init_err:
-        logger.error("Service initialization failed: %s", init_err)
+        logger.error(f"Service initialization failed: {init_err}")
         logger.warning("Application will run with limited functionality")
-
-# Register blueprints (if available)
-if auth_bp:
-    app.register_blueprint(auth_bp, url_prefix="/api/auth")
-if inventory_bp:
-    app.register_blueprint(inventory_bp, url_prefix="/api/inventory")
-if documents_bp:
-    app.register_blueprint(documents_bp, url_prefix="/api/documents")
-if files_bp:
-    app.register_blueprint(files_bp, url_prefix="/api/files")
-
-# Register the blueprint
-app.register_blueprint(process_bp)
-
-# Health check endpoint for Render
-@app.route('/health', methods=['GET'])
-async def health_check():
-    """Simple health check endpoint for monitoring."""
-    return jsonify({"status": "ok", "message": "Server is running"}), 200
 
 # Initialize application
 @app.before_serving
 async def startup():
     """Initialize application on startup."""
     try:
+        validate_environment()
         await init_services()
         # Start task cleanup in a background task
         asyncio.create_task(setup_task_cleanup())
         logger.info("Application startup complete")
     except (RuntimeError, asyncio.TimeoutError) as startup_err:
-        logger.error("Startup encountered errors: %s", startup_err)
+        logger.error(f"Startup encountered errors: {startup_err}")
         logger.warning("Application may have limited functionality")
 
 @app.after_serving
 async def shutdown():
     """Clean up resources on shutdown."""
     try:
+        # In a future implementation, app_config.cleanup would be properly implemented
         # await app_config.cleanup()
         logger.info("Application shutdown complete")
     except (RuntimeError, IOError) as shutdown_err:
-        logger.error("Shutdown error: %s", shutdown_err)
+        logger.error(f"Shutdown error: {shutdown_err}")
+
+# Register blueprints
+register_blueprints()
 
 # Configure Hypercorn
 hypercorn_config = HypercornConfig()
-# Use PORT environment variable (Render sets this automatically)
 port = int(os.getenv("PORT", "8000"))
 hypercorn_config.bind = [f"0.0.0.0:{port}"]
-# Log to stdout for Render
-hypercorn_config.accesslog = "-"
+hypercorn_config.accesslog = "-"  # Log to stdout for Render
 
 if __name__ == "__main__":
     logger.info(f"Starting server on port {port}")
