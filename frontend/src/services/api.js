@@ -7,7 +7,8 @@ const api = axios.create({
   headers: {
     ...config.api.headers,
     'X-Requested-With': 'XMLHttpRequest',
-    'Origin': window.location.origin
+    // The Origin header will be set automatically by the browser
+    // It's not necessary to set it manually, and browsers will ignore it if you do
   },
   timeout: config.api.timeout || 30000,
   withCredentials: true
@@ -35,7 +36,9 @@ export const authApi = {
 api.interceptors.request.use(
   config => {
     if (config.baseURL && config.url) {
-      console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+      if (config.isDevelopment) {
+        console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+      }
     }
     return config;
   },
@@ -63,10 +66,15 @@ export const dataApi = {
   processFiles: () => api.post('/api/files/process'),
 };
 
-// Error handling interceptor
+// Enhanced error handling interceptor
 api.interceptors.response.use(
   response => response,
   error => {
+    // Check for CORS errors
+    if (error.message && error.message.includes('Network Error')) {
+      console.error('Possible CORS error - check that the origin is allowed:', window.location.origin);
+    }
+    
     console.error('API Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }

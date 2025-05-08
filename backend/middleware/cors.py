@@ -1,7 +1,7 @@
 """CORS middleware configuration."""
 import os
 import logging
-from typing import Dict, Set
+from typing import Dict, Set, List, Optional
 from quart import Quart, request, Response
 
 # Initialize logger
@@ -18,7 +18,6 @@ origins_from_env = {
 # Define the set of allowed origins
 # Note: Wildcards like '*.google.com' are NOT directly supported when
 # 'Access-Control-Allow-Credentials' is 'true'. List specific origins.
-# We explicitly list accounts.google.com as required.
 ALLOWED_ORIGINS: Set[str] = origins_from_env.union({
     'https://hocomnia.com',
     'https://www.hocomnia.com',
@@ -52,16 +51,16 @@ ALLOWED_HEADERS: str = ','.join([
     'X-API-Key',
     'X-Auth-Token'
 ])
-MAX_AGE: str = '3600' # Cache preflight response for 1 hour
+MAX_AGE: str = '86400'  # Cache preflight response for 24 hours (updated to match vercel.json)
 
 # Default security headers
 SECURITY_HEADERS: Dict[str, str] = {
-    'Cross-Origin-Embedder-Policy': 'unsafe-none', # Consider 'require-corp' if possible; 'Embedder' is correct term in CORS spec
-    'Cross-Origin-Opener-Policy': 'unsafe-none',   # Consider 'same-origin' if possible
-    'Cross-Origin-Resource-Policy': 'cross-origin', # Allows cross-origin requests
+    'Cross-Origin-Embedder-Policy': 'unsafe-none',
+    'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',  # Updated to support Google Auth popups
+    'Cross-Origin-Resource-Policy': 'cross-origin',
 }
 
-def get_cors_headers(origin: str | None) -> Dict[str, str]:
+def get_cors_headers(origin: Optional[str]) -> Dict[str, str]:
     """
     Generates CORS headers based on the requesting origin.
 
@@ -79,19 +78,15 @@ def get_cors_headers(origin: str | None) -> Dict[str, str]:
     # Add security headers
     headers.update(SECURITY_HEADERS)
 
+    # Dynamic origin handling - if origin is in allowed list, echo it back
     if origin and origin in ALLOWED_ORIGINS:
         logger.debug("CORS: Allowed origin: %s", origin)
         headers['Access-Control-Allow-Origin'] = origin
-        # Allow credentials only for explicitly allowed origins
         headers['Access-Control-Allow-Credentials'] = 'true'
     elif origin:
-        # Log denied origins but don't add Allow-Origin header
         logger.warning("CORS: Origin not allowed: %s", origin)
-        # Do NOT add Access-Control-Allow-Origin
-        # Do NOT add Access-Control-Allow-Credentials
-
-    # If origin is None (e.g., same-origin request or server-side),
-    # no origin-specific headers are added, but common headers are still present.
+        # Don't add Access-Control-Allow-Origin for security reasons
+        # By not including this header for unauthorized origins, browsers will block the response
 
     return headers
 
@@ -111,8 +106,6 @@ def setup_cors(app: Quart, enabled: bool = True) -> None:
     logger.debug("Allowed Origins: %s", ALLOWED_ORIGINS)
 
     # 1) Unified preflight OPTIONS handler for all API routes
-    # This needs to be registered *before* blueprints that might define
-    # their own OPTIONS handlers for the same paths.
     @app.route('/api/', defaults={'path': ''}, methods=['OPTIONS'])
     @app.route('/api/<path:path>', methods=['OPTIONS'])
     async def handle_api_options(path: str):  # pylint: disable=unused-variable
@@ -145,7 +138,6 @@ def setup_cors(app: Quart, enabled: bool = True) -> None:
         cors_headers = get_cors_headers(origin)
 
         # Add/update headers in the existing response object
-        # Using extend preserves existing headers and adds/overwrites CORS ones
         response.headers.extend(cors_headers)
 
         return response
@@ -158,6 +150,7 @@ def default_cors_setup(app: Quart) -> None:
     """Wrapper function to setup CORS with default settings."""
     setup_cors(app)
     logger.info("Default CORS setup applied.")
+
 # Export main CORS configuration components
 __all__ = [
     'ALLOWED_ORIGINS', 
