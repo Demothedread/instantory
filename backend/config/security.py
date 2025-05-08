@@ -18,10 +18,9 @@ class CORSConfig:
             'https://www.hocomnia.com', 
             'https://bartleby.vercel.app',
             'https://accounts.google.com',
-            'https://*.google.com',
-            'https://*.googleapis.com',
-            'https://*.googleusercontent.com',
             'https://bartleby-backend.onrender.com',
+            'https://bartleby-backend-mn96.onrender.com',
+            'https://vercel.live',
             'http://localhost:3000'
         ]
     @staticmethod
