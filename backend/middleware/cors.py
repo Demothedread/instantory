@@ -1,164 +1,189 @@
-"""CORS middleware configuration."""
+"""CORS middleware for the backend application."""
+
 import os
-import logging
-from typing import Dict, Set, List, Optional
-from quart import Quart, request, Response
+from typing import List, Optional
+from quart import Quart, request
+from quart_cors import cors
 
-# Initialize logger
-logger = logging.getLogger(__name__)
 
-# --- CORS Configuration ---
-
-# Define allowed origins based on environment and defaults
-cors_origins_env = os.getenv('CORS_ORIGINS', '')
-origins_from_env = {
-    o.strip() for o in cors_origins_env.split(',') if o.strip()
-}
-
-# Define the set of allowed origins
-# Note: Wildcards like '*.google.com' are NOT directly supported when
-# 'Access-Control-Allow-Credentials' is 'true'. List specific origins.
-ALLOWED_ORIGINS: Set[str] = origins_from_env.union({
-    'https://hocomnia.com',
-    'https://www.hocomnia.com',
-    'https://instantory.vercel.app',
-    'https://bartleby.vercel.app',
-    'http://localhost:3000',
-    'https://vercel.live',
-    'https://bartleby-backend-mn96.onrender.com',
-    'https://bartleby-backend.onrender.com',
-    'https://accounts.google.com',
-    'https://apis.google.com',
-    'https://www.googleapis.com'
-})
-
-ALLOWED_METHODS: str = ','.join(['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'])
-ALLOWED_HEADERS: str = ','.join([
-    'Content-Type',
-    'Authorization',
-    'Accept',
-    'Origin',
-    'Referer',
-    'User-Agent',
-    'Accept-Encoding',
-    'X-CSRF-Token',
-    'google-oauth-token',
-    'google-client_id',
-    'g_csrf_token',
-    'X-Google-OAuth-Token',
-    'X-Google-Client-ID',
-    'Cache-Control',
-    'X-API-Key',
-    'X-Auth-Token'
-])
-MAX_AGE: str = '86400'  # Cache preflight response for 24 hours (updated to match vercel.json)
-
-# Default security headers
-SECURITY_HEADERS: Dict[str, str] = {
-    'Cross-Origin-Embedder-Policy': 'unsafe-none',
-    'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',  # Updated to support Google Auth popups
-    'Cross-Origin-Resource-Policy': 'cross-origin',
-}
-
-def get_cors_headers(origin: Optional[str]) -> Dict[str, str]:
+def is_origin_allowed(origin: str, allowed_origins: List[str]) -> bool:
     """
-    Generates CORS headers based on the requesting origin.
+    Check if the origin is allowed, supporting wildcard domains.
 
     Args:
-        origin: The value of the 'Origin' header from the request.
+        origin: The request origin to check
+        allowed_origins: List of allowed origins
 
     Returns:
-        A dictionary of CORS headers to add to the response.
+        True if origin is allowed, False otherwise
     """
-    headers = {
-        'Access-Control-Allow-Methods': ALLOWED_METHODS,
-        'Access-Control-Allow-Headers': ALLOWED_HEADERS,
-        'Access-Control-Max-Age': MAX_AGE,
-    }
-    # Add security headers
-    headers.update(SECURITY_HEADERS)
+    if not origin:
+        return False
 
-    # Dynamic origin handling - if origin is in allowed list, echo it back
-    if origin and origin in ALLOWED_ORIGINS:
-        logger.debug("CORS: Allowed origin: %s", origin)
-        headers['Access-Control-Allow-Origin'] = origin
-        headers['Access-Control-Allow-Credentials'] = 'true'
-    elif origin:
-        logger.warning("CORS: Origin not allowed: %s", origin)
-        # Don't add Access-Control-Allow-Origin for security reasons
-        # By not including this header for unauthorized origins, browsers will block the response
+    # Check for exact match first
+    if origin in allowed_origins:
+        return True
 
-    return headers
+    # Check for wildcard domains (e.g., https://*.vercel.app)
+    for allowed_origin in allowed_origins:
+        if allowed_origin.startswith("https://*."):
+            # Extract the domain part after the asterisk
+            domain_suffix = allowed_origin.replace("https://*.", "")
+            # Check if the origin ends with this domain suffix
+            if origin.startswith("https://") and origin.endswith(domain_suffix):
+                return True
 
-def setup_cors(app: Quart, enabled: bool = True) -> None:
+    return False
+
+
+def setup_cors(app: Quart) -> Quart:
     """
-    Configures CORS for the Quart application using a unified approach.
+    Configure CORS for the application using environment variables.
 
     Args:
-        app: The Quart application instance.
-        enabled: Whether to enable CORS handling. Defaults to True.
+        app: The Quart application instance
+
+    Returns:
+        The application with CORS configured
     """
-    if not enabled:
-        logger.info("CORS handling is disabled.")
-        return
+    # Get CORS settings from environment
+    cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+    cors_enabled = os.getenv("CORS_ENABLED", "true").lower() == "true"
+    allow_credentials = os.getenv("ALLOW_CREDENTIALS", "true").lower() == "true"
 
-    logger.info("Setting up CORS middleware.")
-    logger.debug("Allowed Origins: %s", ALLOWED_ORIGINS)
+    # Clean up any trailing/leading whitespace in origin strings
+    clean_origins = [origin.strip() for origin in cors_origins if origin.strip()]
 
-    # 1) Unified preflight OPTIONS handler for all API routes
-    @app.route('/api/', defaults={'path': ''}, methods=['OPTIONS'])
-    @app.route('/api/<path:path>', methods=['OPTIONS'])
-    async def handle_api_options(path: str):  # pylint: disable=unused-variable
-        """Handle preflight OPTIONS requests for all /api/* paths."""
-        origin = request.headers.get('Origin')
-        logger.debug(
-            "CORS: Handling OPTIONS request for path: /api/%s from origin: %s",
-            path, origin
-        )
-        # Create a simple 204 No Content response for preflight
-        response = Response(status=204)
-        # Get and add the appropriate CORS headers
-        cors_headers = get_cors_headers(origin)
-        response.headers.extend(cors_headers)
-        return response
+    # Add default frontend URLs if not present
+    default_origins = [
+        "https://bartleby.vercel.app",
+        "https://hocomnia.com",
+        "https://accounts.google.com",
+    ]
 
-    # 2) Add CORS headers to all responses after the request is processed
-    @app.after_request
-    async def add_cors_headers_to_response(response: Response) -> Response:  # pylint: disable=unused-variable
-        """Add CORS headers to every outgoing response."""
-        origin = request.headers.get('Origin')
-        # Log only if it's likely a cross-origin request (Origin header is present)
-        if origin:
-            logger.debug(
-                "CORS: Adding headers to response for request from origin: %s, path: %s",
-                origin, request.path
+    for origin in default_origins:
+        if origin not in clean_origins:
+            clean_origins.append(origin)
+
+    # Add support for wildcard domains if not present
+    wildcard_domains = ["https://*.vercel.app"]
+    for domain in wildcard_domains:
+        if domain not in clean_origins:
+            clean_origins.append(domain)
+
+    # Log CORS configuration
+    app.logger.info(f"Setting up CORS with origins: {clean_origins}")
+    app.logger.info(f"CORS enabled: {cors_enabled}")
+    app.logger.info(f"Allow credentials: {allow_credentials}")
+
+    # Apply CORS if enabled
+    if cors_enabled:
+        # When credentials are allowed, we must handle Origin dynamically
+        if allow_credentials:
+
+            @app.before_request
+            async def handle_preflight():
+                """Handle preflight CORS requests properly for authenticated requests"""
+                if request.method == "OPTIONS":
+                    origin = request.headers.get("Origin")
+
+                    # Only process if we have an origin header
+                    if origin and is_origin_allowed(origin, clean_origins):
+                        headers = {
+                            "Access-Control-Allow-Origin": origin,
+                            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+                            "Access-Control-Allow-Headers": ", ".join(
+                                [
+                                    "Content-Type",
+                                    "Authorization",
+                                    "Accept",
+                                    "Origin",
+                                    "X-Requested-With",
+                                    "Content-Length",
+                                    "Accept-Encoding",
+                                    "X-CSRF-Token",
+                                    "google-oauth-token",
+                                    "google-client-id",
+                                    "g-csrf-token",
+                                    "X-Google-OAuth-Token",
+                                    "X-Google-Client-ID",
+                                    "Accept-Language",
+                                    "Cache-Control",
+                                    "X-API-Key",
+                                    "X-Auth-Token",
+                                ]
+                            ),
+                            "Access-Control-Allow-Credentials": "true",
+                            "Access-Control-Max-Age": "3600",
+                            "Vary": "Origin",
+                        }
+                        return "", 204, headers
+
+            @app.after_request
+            async def add_cors_headers(response):
+                """Add CORS headers to all responses"""
+                origin = request.headers.get("Origin")
+
+                if origin and is_origin_allowed(origin, clean_origins):
+                    response.headers.set("Access-Control-Allow-Origin", origin)
+                    response.headers.set("Access-Control-Allow-Credentials", "true")
+                    response.headers.set("Vary", "Origin")
+
+                return response
+
+            # Apply basic CORS for non-credentialed requests
+            # This still helps with simple requests
+            return cors(
+                app,
+                allow_origin=clean_origins,
+                allow_credentials=allow_credentials,
+                allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+                allow_headers=[
+                    "Content-Type",
+                    "Authorization",
+                    "Accept",
+                    "Origin",
+                    "X-Requested-With",
+                    "Content-Length",
+                    "Accept-Encoding",
+                    "X-CSRF-Token",
+                    "google-oauth-token",
+                    "google-client-id",
+                    "g-csrf-token",
+                    "X-Google-OAuth-Token",
+                    "X-Google-Client-ID",
+                    "Accept-Language",
+                    "Cache-Control",
+                    "X-API-Key",
+                    "X-Auth-Token",
+                ],
+            )
+        else:
+            # For non-credentialed requests, standard CORS is fine
+            return cors(
+                app,
+                allow_origin=clean_origins,
+                allow_credentials=allow_credentials,
+                allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+                allow_headers=[
+                    "Content-Type",
+                    "Authorization",
+                    "Accept",
+                    "Origin",
+                    "X-Requested-With",
+                    "Content-Length",
+                    "Accept-Encoding",
+                    "X-CSRF-Token",
+                    "google-oauth-token",
+                    "google-client-id",
+                    "g-csrf-token",
+                    "X-Google-OAuth-Token",
+                    "X-Google-Client-ID",
+                    "Accept-Language",
+                    "Cache-Control",
+                    "X-API-Key",
+                    "X-Auth-Token",
+                ],
             )
 
-        # Get CORS headers based on the origin
-        cors_headers = get_cors_headers(origin)
-
-        # Add/update headers in the existing response object
-        response.headers.extend(cors_headers)
-
-        return response
-
-    logger.info("CORS middleware setup complete.")
-
-
-# Create an exportable instance for easy import and use
-def default_cors_setup(app: Quart) -> None:
-    """Wrapper function to setup CORS with default settings."""
-    setup_cors(app)
-    logger.info("Default CORS setup applied.")
-
-# Export main CORS configuration components
-__all__ = [
-    'ALLOWED_ORIGINS', 
-    'ALLOWED_METHODS', 
-    'ALLOWED_HEADERS',
-    'MAX_AGE',
-    'SECURITY_HEADERS',
-    'get_cors_headers',
-    'setup_cors',
-    'default_cors_setup'
-]
+    return app

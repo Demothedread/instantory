@@ -1,17 +1,19 @@
 import axios from 'axios';
 import config from '../config';
 
-// Create a centralized API instance with common configuration
+/**
+ * Central API configuration that handles authentication between 
+ * Vercel frontend and Render backend
+ */
 const api = axios.create({
-  baseURL: config.apiUrl || 'https://backend-bartleby-mn96.onrender.com',
+  baseURL: config.apiUrl,
   headers: {
-    ...config.api.headers,
-    'X-Requested-With': 'XMLHttpRequest',
-    // The Origin header will be set automatically by the browser
-    // It's not necessary to set it manually, and browsers will ignore it if you do
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'
   },
   timeout: config.api.timeout || 30000,
-  withCredentials: true
+  withCredentials: true // Essential for cross-origin cookies
 });
 
 // Authentication API endpoints
@@ -32,14 +34,23 @@ export const authApi = {
   updateUser: (userId, userData) => api.put(`${config.auth.endpoints.adminUsers}/${userId}`, userData),
 };
 
-// Add request interceptor for logging and debugging
+// Request interceptor for auth token and logging
 api.interceptors.request.use(
   config => {
-    if (config.baseURL && config.url) {
-      if (config.isDevelopment) {
-        console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
-      }
+    // Add auth token from localStorage as backup to cookies
+    const authToken = localStorage.getItem('auth_token');
+    if (authToken && !config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${authToken}`;
     }
+    
+    // Add origin header for CORS requests
+    config.headers.Origin = window.location.origin;
+    
+    // Development logging
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+    }
+    
     return config;
   },
   error => {
@@ -70,12 +81,28 @@ export const dataApi = {
 api.interceptors.response.use(
   response => response,
   error => {
-    // Check for CORS errors
-    if (error.message && error.message.includes('Network Error')) {
-      console.error('Possible CORS error - check that the origin is allowed:', window.location.origin);
+    // Authentication errors
+    if (error.response?.status === 401) {
+      // Could be handled with a central auth state manager to trigger re-login
+      console.warn('Authentication error: User session may have expired');
+      
+      // Emit custom event for auth error (can be handled by auth context)
+      const authErrorEvent = new CustomEvent('auth:error', { 
+        detail: { status: 401, message: 'Session expired' }
+      });
+      window.dispatchEvent(authErrorEvent);
     }
     
-    console.error('API Error:', error.response?.data || error.message);
+    // Handle CORS errors specially since they're common in cross-origin auth
+    if (error.message && error.message.includes('Network Error')) {
+      console.error('CORS error detected - verify CORS configuration on both frontend and backend');
+      console.error(`Frontend origin: ${window.location.origin}`);
+      console.error(`API URL: ${config.apiUrl}`);
+      
+      // Make the error message more user-friendly
+      error.userMessage = 'Unable to connect to the server. This may be due to CORS restrictions or network issues.';
+    }
+    
     return Promise.reject(error);
   }
 );

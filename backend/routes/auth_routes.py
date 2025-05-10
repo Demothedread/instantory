@@ -1,10 +1,11 @@
 """Authentication routes and utilities."""
+
 import os
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 import jwt
-import bcrypt 
+import bcrypt
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from functools import wraps
@@ -14,7 +15,14 @@ import urllib.parse
 import aiohttp
 import quart_auth
 from quart import redirect, current_app, Blueprint, request, jsonify
-from quart_auth import QuartAuth, AuthUser, login_user, logout_user, login_required, current_user
+from quart_auth import (
+    QuartAuth,
+    AuthUser,
+    login_user,
+    logout_user,
+    login_required,
+    current_user,
+)
 from ..config.security import GoogleOAuthConfig
 
 # Import with fallbacks to handle different execution contexts
@@ -23,65 +31,72 @@ try:
     from backend.config.logging import logger
 except ImportError:
     # Alternative import path for when running as a module
-    logger = logging.getLogger(__name__) 
-    
+    logger = logging.getLogger(__name__)
+
     async def get_db_pool():
         """Get database pool from app context if available."""
-        if hasattr(current_app, 'db') and hasattr(current_app.db, 'pool'):
+        if hasattr(current_app, "db") and hasattr(current_app.db, "pool"):
             return current_app.db.pool
         raise RuntimeError("Database connection not available")
 
+
 # Environment variables
-JWT_SECRET = os.getenv('JWT_SECRET')
-GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
-ADMIN_PASSWORD_OVERRIDE = os.getenv('ADMIN_PASSWORD_OVERRIDE')
+JWT_SECRET = os.getenv("JWT_SECRET")
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+ADMIN_PASSWORD_OVERRIDE = os.getenv("ADMIN_PASSWORD_OVERRIDE")
 ACCESS_TOKEN_EXPIRY = timedelta(minutes=30)
 REFRESH_TOKEN_EXPIRY = timedelta(days=7)
 JWT_ALGORITHM = "HS256"
 
 # Additional allowed Google client IDs (for multi-client setups)
-ADDITIONAL_GOOGLE_CLIENT_IDS = os.getenv('ADDITIONAL_GOOGLE_CLIENT_IDS', '').split(',')
-ALLOWED_GOOGLE_CLIENT_IDS = [GOOGLE_CLIENT_ID] + [id for id in ADDITIONAL_GOOGLE_CLIENT_IDS if id]
+ADDITIONAL_GOOGLE_CLIENT_IDS = os.getenv("ADDITIONAL_GOOGLE_CLIENT_IDS", "").split(",")
+ALLOWED_GOOGLE_CLIENT_IDS = [GOOGLE_CLIENT_ID] + [
+    id for id in ADDITIONAL_GOOGLE_CLIENT_IDS if id
+]
 
 # Backend URL
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://hocomnia.com')
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://hocomnia.com")
 
 if not JWT_SECRET:
     raise EnvironmentError("JWT_SECRET is not set")
 
 # Blueprint setup
-auth_bp = Blueprint('auth', __name__)
+auth_bp = Blueprint("auth", __name__)
 
 # --- Custom Auth User Class --- #
 
+
 class BartlebyAuthUser(AuthUser):
     """Extended AuthUser class with additional user data."""
-    
+
     def __init__(self, auth_id, user_data=None):
         super().__init__(auth_id)
         self.user_data = user_data or {}
-    
+
     @property
     def user_id(self):
         return self.auth_id
-    
+
     @property
     def is_admin(self):
-        return self.user_data.get('is_admin', False)
-    
+        return self.user_data.get("is_admin", False)
+
     @property
     def email(self):
-        return self.user_data.get('email', '')
-    
+        return self.user_data.get("email", "")
+
     @property
     def name(self):
-        return self.user_data.get('name', '')
+        return self.user_data.get("name", "")
+
 
 # --- Utility Functions --- #
+
 
 def setup_auth(app):
     """Setup QuartAuth on the application."""
     QuartAuth(app)
+
 
 async def create_token(payload: dict, token_type: str) -> str:
     """Create a signed JWT token with an expiration."""
@@ -114,39 +129,73 @@ def verify_password(password: str, hashed_password: str) -> bool:
 
 # --- Authentication Middleware --- #
 
+
 def require_auth():
     """Decorator to require authentication for routes."""
+
     def decorator(f):
         @wraps(f)
         async def decorated_function(*args, **kwargs):
             try:
                 # Get the access token from cookies or Authorization header
-                access_token = request.cookies.get('access_token')
+                access_token = request.cookies.get("access_token")
                 if not access_token:
-                    auth_header = request.headers.get('Authorization')
-                    if auth_header and auth_header.startswith('Bearer '):
-                        access_token = auth_header.split(' ')[1]
+                    auth_header = request.headers.get("Authorization")
+                    if auth_header and auth_header.startswith("Bearer "):
+                        access_token = auth_header.split(" ")[1]
                     else:
-                        return jsonify({"error": "Authentication required"}), 401
-                
+                        # Also check query parameters (for WebSocket/redirect flows)
+                        access_token = request.args.get("access_token")
+                        if not access_token:
+                            return (
+                                jsonify(
+                                    {
+                                        "error": "Authentication required",
+                                        "code": "auth_required",
+                                    }
+                                ),
+                                401,
+                            )
+
                 # Verify the token
                 payload = verify_token(access_token, "access")
-                
+
                 # Attach user info to request for use in route handlers
                 request.user_id = payload.get("id")
                 request.email = payload.get("email")
                 request.is_admin = payload.get("is_admin", False)
-                
+
                 return await f(*args, **kwargs)
-            except Exception as e:
-                logger.warning(f"Authentication middleware error: {e}")
-                return jsonify({"error": "Authentication failed"}), 401
+            except jwt.ExpiredSignatureError:
+                logger.info("Authentication failed: Token expired")
+                return jsonify({"error": "Token expired", "code": "token_expired"}), 401
+            except jwt.DecodeError:
+                logger.warning("Authentication failed: Token decode error")
+                return (
+                    jsonify({"error": "Invalid token format", "code": "decode_error"}),
+                    401,
+                )
+            except jwt.InvalidTokenError as e:
+                error_type = "invalid_token"
+                if "Invalid token type" in str(e):
+                    error_type = "invalid_token_type"
+                logger.info("Authentication failed: %s - %s", error_type, e)
+                return jsonify({"error": str(e), "code": error_type}), 401
+            except Exception as e:  # pylint: disable=broad-except
+                logger.warning("Authentication middleware error: %s", e)
+                return (
+                    jsonify({"error": "Authentication failed", "code": "auth_error"}),
+                    401,
+                )
+
         return decorated_function
+
     return decorator
 
 
 def require_admin():
     """Decorator to require admin privileges for routes."""
+
     def decorator(f):
         @wraps(f)
         async def decorated_function(*args, **kwargs):
@@ -155,20 +204,23 @@ def require_admin():
                 auth_result = await require_auth()(lambda: None)()
                 if isinstance(auth_result, tuple) and auth_result[1] != 200:
                     return auth_result
-                
+
                 # Check if user is admin
                 if not request.is_admin:
                     return jsonify({"error": "Admin privileges required"}), 403
-                
+
                 return await f(*args, **kwargs)
             except Exception as e:
                 logger.warning(f"Admin middleware error: {e}")
                 return jsonify({"error": "Admin privileges required"}), 403
+
         return decorated_function
+
     return decorator
 
 
 # --- Database Access Functions --- #
+
 
 async def get_user_by_email(email: str):
     """Retrieve a user by email from the database."""
@@ -176,7 +228,8 @@ async def get_user_by_email(email: str):
     async with pool.acquire() as conn:
         return await conn.fetchrow(
             "SELECT id, email, password_hash, auth_provider, is_verified, google_id, name, is_admin "
-            "FROM users WHERE email = $1", email
+            "FROM users WHERE email = $1",
+            email,
         )
 
 
@@ -186,12 +239,20 @@ async def get_user_by_google_id(google_id: str):
     async with pool.acquire() as conn:
         return await conn.fetchrow(
             "SELECT id, email, auth_provider, is_verified, google_id, name, is_admin "
-            "FROM users WHERE google_id = $1", google_id
+            "FROM users WHERE google_id = $1",
+            google_id,
         )
 
 
-async def create_user(email: str, name: str, password_hash: str = None, auth_provider: str = "email", 
-                    google_id: str = None, is_verified: bool = False, is_admin: bool = False):
+async def create_user(
+    email: str,
+    name: str,
+    password_hash: str = None,
+    auth_provider: str = "email",
+    google_id: str = None,
+    is_verified: bool = False,
+    is_admin: bool = False,
+):
     """Create a new user in the database."""
     pool = await get_db_pool()
     async with pool.acquire() as conn:
@@ -201,278 +262,278 @@ async def create_user(email: str, name: str, password_hash: str = None, auth_pro
             VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING id, email, name, auth_provider, is_verified, is_admin
             """,
-            email, name, password_hash, auth_provider, google_id, is_verified, is_admin
+            email,
+            name,
+            password_hash,
+            auth_provider,
+            google_id,
+            is_verified,
+            is_admin,
         )
 
 
-async def get_user_by_id(user_id: int):
-    """Retrieve a user by ID from the database."""
+async def upsert_user(
+    email: str,
+    name: str = None,
+    password_hash: str = None,
+    auth_provider: str = "email",
+    google_id: str = None,
+    is_verified: bool = False,
+):
+    """Create or update a user based on email or google_id."""
     pool = await get_db_pool()
     async with pool.acquire() as conn:
-        return await conn.fetchrow(
-            "SELECT id, email, name, auth_provider, is_verified, is_admin "
-            "FROM users WHERE id = $1", user_id
-        )
+        # Check if user exists
+        user = None
+        if google_id and auth_provider == "google":
+            user = await conn.fetchrow(
+                "SELECT id, email, name, auth_provider, is_verified, is_admin FROM users WHERE google_id = $1",
+                google_id,
+            )
 
+        if not user and email:
+            user = await conn.fetchrow(
+                "SELECT id, email, name, auth_provider, is_verified, is_admin FROM users WHERE email = $1",
+                email,
+            )
 
-async def create_user_storage(user_id: int):
-    """Create storage entries for a new user."""
-    # Determine storage backend from environment
-    storage_backend = os.getenv('STORAGE_BACKEND', 'generic').lower()
-    
-    # Generate unique path for user storage
-    import uuid
-    storage_path_base = f"user_{user_id}_{uuid.uuid4().hex[:8]}"
-    
-    if storage_backend == 'vercel':
-        storage_path = f"vercel/{storage_path_base}"
-    elif storage_backend == 's3':
-        storage_path = f"s3/{storage_path_base}"
-    else:
-        storage_path = f"local/{storage_path_base}"
-    
-    pool = await get_db_pool()
-    async with pool.acquire() as conn:
-        # Insert storage configuration
-        await conn.execute("""
-            INSERT INTO user_storage (user_id, storage_type, storage_path)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (user_id, storage_type) DO NOTHING
-        """, user_id, storage_backend, storage_path)
-        
-    return storage_path
-
-
-async def get_user_storage(user_id: int):
-    """Get storage information for a user."""
-    storage_backend = os.getenv('STORAGE_BACKEND', 'generic').lower()
-    
-    pool = await get_db_pool()
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow("""
-            SELECT storage_path 
-            FROM user_storage 
-            WHERE user_id = $1 AND storage_type = $2
-        """, user_id, storage_backend)
-        
-        if row:
-            return {
-                "storage_type": storage_backend,
-                "storage_path": row['storage_path']
-            }
-        return None
-
-
-async def log_user_login(user_id: int, auth_provider: str):
-    """Log a user login event."""
-    ip_address = request.remote_addr or request.headers.get('X-Forwarded-For', 'unknown').split(',')[0].strip()
-    user_agent = request.headers.get('User-Agent', '')
-    pool = await get_db_pool()
-    async with pool.acquire() as conn:
-        await conn.execute(
-            """
-            INSERT INTO user_logins (user_id, ip_address, auth_provider, user_agent)
-            VALUES ($1, $2, $3, $4)
-            """,
-            user_id, ip_address, auth_provider, user_agent
-        )
-    logger.info(f"Login event recorded for user {user_id} via {auth_provider}")
-
-
-async def get_user_data(user_id: int):
-    """Retrieve a user's inventory, documents, and storage information."""
-    pool = await get_db_pool()
-    async with pool.acquire() as conn:
-        inventory = await conn.fetch("SELECT * FROM user_inventory WHERE user_id = $1", user_id)
-        documents = await conn.fetch("SELECT * FROM user_documents WHERE user_id = $1", user_id)
-        
-        # Get storage info
-        storage_info = await get_user_storage(user_id)
-        if not storage_info:
-            # Create storage if it doesn't exist
-            storage_path = await create_user_storage(user_id)
-            storage_backend = os.getenv('STORAGE_BACKEND', 'generic').lower()
-            storage_info = {
-                "storage_type": storage_backend,
-                "storage_path": storage_path
-            }
-        
-        return {
-            "inventory": [dict(item) for item in inventory],
-            "documents": [dict(doc) for doc in documents],
-            "storage": storage_info
-        }
-
-
-async def upsert_user(email: str, name: str, google_id: str = None, auth_provider: str = "email", 
-                     is_verified: bool = False, is_admin: bool = False):
-    """Create a user if they don't exist, or update their info if they do."""
-    pool = await get_db_pool()
-    
-    # Check for existing user by google_id first (preferred) or email
-    user = None
-    if google_id:
-        user = await get_user_by_google_id(google_id)
-    
-    if not user:
-        user = await get_user_by_email(email)
-    
-    async with pool.acquire() as conn:
         if user:
-            # Update existing user
-            await conn.execute("""
-                UPDATE users 
-                SET name = $1, google_id = $2, auth_provider = $3, is_verified = $4
-                WHERE email = $5
-            """, name, google_id, auth_provider, is_verified, email)
-            
+            # User exists, update their information
+            await conn.execute(
+                """
+                UPDATE users SET 
+                    name = COALESCE($2, name),
+                    auth_provider = COALESCE($3, auth_provider),
+                    google_id = COALESCE($4, google_id),
+                    is_verified = COALESCE($5, is_verified),
+                    updated_at = NOW()
+                WHERE id = $1
+                """,
+                user["id"],
+                name,
+                auth_provider,
+                google_id,
+                is_verified,
+            )
+
             # Fetch updated user
-            user = await get_user_by_email(email)
+            return await conn.fetchrow(
+                "SELECT id, email, name, auth_provider, is_verified, is_admin FROM users WHERE id = $1",
+                user["id"],
+            )
+
         else:
             # Create new user
-            user = await create_user(
+            return await create_user(
                 email=email,
-                name=name,
+                name=name or email.split("@")[0],
+                password_hash=password_hash,
                 auth_provider=auth_provider,
                 google_id=google_id,
                 is_verified=is_verified,
-                is_admin=is_admin
             )
-            
-            # Ensure user has storage
-            await create_user_storage(user['id'])
-            
-        return dict(user)
 
 
-async def set_user_admin_status(email: str, is_admin: bool = True):
-    """Set a user's admin status by email."""
-    pool = await get_db_pool()
-    async with pool.acquire() as conn:
-        await conn.execute(
-            "UPDATE users SET is_admin = $1 WHERE email = $2",
-            is_admin, email
-        )
-        return await get_user_by_email(email)
-
-
-# --- Google Authentication --- #
-
-async def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
-    """Verify a Google OAuth2 token and validate the issuer."""
+async def log_user_login(user_id: int, login_method: str):
+    """Log user login activity."""
     try:
-        # Create a Google auth request object
-        google_request = google_requests.Request()
-
-        # Try to verify with all allowed client IDs
-        id_info = None
-        for client_id in ALLOWED_GOOGLE_CLIENT_IDS:
-            if not client_id:  # Skip empty strings
-                continue
-            try:
-                id_info = id_token.verify_oauth2_token(token, google_request, client_id.strip())
-                break  # Exit loop if successful
-            except ValueError:
-                continue
-                
-        if not id_info:
-            raise ValueError("Could not verify audience with any configured client ID")
-
-        # Verify issuer is Google
-        if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-            raise ValueError("Invalid token issuer")
-
-        # Verify the token is not expired
-        if datetime.now(tz=timezone.utc) > datetime.fromtimestamp(id_info['exp'], tz=timezone.utc):
-            raise ValueError("Token has expired")
-
-        # Check if the token is for a Google account
-        if 'sub' not in id_info:
-            raise ValueError("Token does not contain a Google account ID")
-
-        return id_info
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            # Check if the user_logins table exists
+            table_check = await conn.fetchrow(
+                """
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' AND table_name = 'user_logins'
+                )
+                """
+            )
 
     except Exception as e:
-        logger.warning(f"Google token verification failed: {e}")
+        # Non-critical error, just log it and continue
+        logger.warning(f"Failed to log user login: {e}")
+
+
+async def get_user_data(user_id: int):
+    """Get additional user data from the database."""
+    try:
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            # Get settings if they exist
+            user_settings = await conn.fetchrow(
+                "SELECT theme, language, notifications_enabled FROM user_settings WHERE user_id = $1",
+                user_id,
+            )
+
+            # Get last login time
+            last_login = await conn.fetchrow(
+                """
+                SELECT login_timestamp 
+                FROM user_logins 
+                WHERE user_id = $1 
+                ORDER BY login_timestamp DESC 
+                LIMIT 1 OFFSET 1
+                """,
+                user_id,
+            )
+
+            return {
+                "settings": (
+                    dict(user_settings)
+                    if user_settings
+                    else {
+                        "theme": "light",
+                        "language": "en",
+                        "notifications_enabled": True,
+                    }
+                ),
+                "last_login": (
+                    last_login["login_timestamp"].isoformat() if last_login else None
+                ),
+            }
+    except Exception as e:
+        logger.warning(f"Error fetching user data: {e}")
+        return {
+            "settings": {
+                "theme": "light",
+                "language": "en",
+                "notifications_enabled": True,
+            }
+        }
+
+
+# --- Google Token Verification --- #
+
+
+async def verify_google_token(token: str) -> Dict[str, Any]:
+    """Verify a Google OAuth token and return the payload if valid."""
+    try:
+        # First try with the primary client ID
+        for client_id in ALLOWED_GOOGLE_CLIENT_IDS:
+            if not client_id:
+                continue
+
+            try:
+                id_info = id_token.verify_oauth2_token(
+                    token, google_requests.Request(), client_id
+                )
+
+                # Token verification succeeded
+                if id_info["iss"] not in [
+                    "accounts.google.com",
+                    "https://accounts.google.com",
+                ]:
+                    logger.warning(f"Invalid issuer: {id_info['iss']}")
+                    raise ValueError("Invalid token issuer")
+
+                logger.info(
+                    f"Successfully verified Google token for: {id_info.get('email')}"
+                )
+                return id_info
+
+            except ValueError as e:
+                # This client ID didn't work, try the next one if available
+                logger.debug(f"Client ID {client_id} verification failed: {e}")
+                continue
+
+        # If we get here, no client ID worked
+        logger.warning("Google token verification failed with all client IDs")
+        return None
+
+    except Exception as e:
+        logger.exception(f"Google token verification error: {e}")
         return None
 
 
-# --- Authentication Routes --- #
+# --- Google Login Route --- #
 
-@auth_bp.route('/google', methods=['POST'])
+
+@auth_bp.route("/google", methods=["POST"])
 async def google_login():
     """Authenticate a user via Google OAuth credential."""
     try:
         data = await request.get_json()
-        credential = data.get('credential')
+        credential = data.get("credential")
 
         if not credential:
             return jsonify({"error": "Missing Google credential"}), 400
-            
+
         # Verify Google token
         id_info = await verify_google_token(credential)
         if not id_info:
             return jsonify({"error": "Invalid Google credential"}), 401
 
         # Extract user info
-        email = id_info.get('email')
-        name = id_info.get('name', email)
-        google_id = id_info.get('sub')
-        picture = id_info.get('picture')
-        
+        email = id_info.get("email")
+        name = id_info.get("name", email)
+        google_id = id_info.get("sub")
+        picture = id_info.get("picture")
+
         # Create or update user
         user = await upsert_user(
-            email=email, 
-            name=name, 
-            google_id=google_id, 
-            auth_provider="google", 
-            is_verified=True
+            email=email,
+            name=name,
+            google_id=google_id,
+            auth_provider="google",
+            is_verified=True,
         )
-        
+
         # Log login
-        await log_user_login(user['id'], 'google')
-        
-        # Create tokens for cookie-based auth (for backward compatibility)
+        await log_user_login(user["id"], "google")
+
+        # Create tokens
         access_token = await create_token(
-            {"id": user['id'], "email": user['email'], "is_admin": user.get('is_admin', False)}, 
-            "access"
+            {
+                "id": user["id"],
+                "email": user["email"],
+                "is_admin": user.get("is_admin", False),
+            },
+            "access",
         )
-        refresh_token = await create_token({"user_id": user['id']}, "refresh")
-        
+        refresh_token = await create_token({"user_id": user["id"]}, "refresh")
+
         # Get user data
-        user_data = await get_user_data(user['id'])
-        
+        user_data = await get_user_data(user["id"])
+
         # Add profile picture if available
         if picture:
-            user['picture_url'] = picture
-        
+            user["picture_url"] = picture
+
         # Login using Quart-Auth
-        auth_user = BartlebyAuthUser(int(user['id']), {
-            'email': user['email'],
-            'name': user.get('name'),
-            'is_admin': user.get('is_admin', False),
-            'picture_url': picture
-        })
+        auth_user = BartlebyAuthUser(
+            int(user["id"]),
+            {
+                "email": user["email"],
+                "name": user.get("name"),
+                "is_admin": user.get("is_admin", False),
+                "picture_url": picture,
+            },
+        )
         login_user(auth_user)
-        
-        # Create response
-        response = jsonify({
-            "authenticated": True,
-            "user": user,
-            "data": user_data
-        })
-        
-        # Determine secure cookie settings based on environment
-        is_production = os.getenv('NODE_ENV', 'development') == 'production'
-        
-        # Set secure cookies - use SameSite=None for cross-site requests in production
-        # In production, cookies must be Secure when SameSite=None
-        secure = True if is_production else False
-        same_site = 'None' if is_production else None
-        
-        response.set_cookie("access_token", access_token, httponly=True, secure=secure, samesite=same_site)
-        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=secure, samesite=same_site)
-        
+
+        # Optimize cookie settings for cross-origin usage
+        # Always secure=True for cross-origin cookies - required by browsers
+        # SameSite=None allows cross-origin use while being secure
+        response = jsonify({"authenticated": True, "user": user, "data": user_data})
+
+        # Set cookies with cross-origin compatible settings
+        response.set_cookie(
+            "access_token",
+            access_token,
+            httponly=True,
+            secure=True,  # Must be secure for cross-origin
+            samesite="None",  # Allows cross-origin
+            max_age=ACCESS_TOKEN_EXPIRY.total_seconds(),
+        )
+        response.set_cookie(
+            "refresh_token",
+            refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="None",
+            max_age=REFRESH_TOKEN_EXPIRY.total_seconds(),
+        )
+
         return response
 
     except Exception as e:
@@ -480,159 +541,207 @@ async def google_login():
         return jsonify({"error": "Authentication failed", "details": str(e)}), 500
 
 
-@auth_bp.route('/session', methods=['GET'])
-async def check_session():
-    """Check if the user is authenticated and retrieve their data."""
+@auth_bp.route("/google/callback", methods=["GET"])
+async def google_callback():
+    """Handle Google OAuth callback."""
     try:
-        # First try to use Quart-Auth
-        if current_user and not current_user.is_anonymous:
-            user_id = current_user.user_id
-            user = await get_user_by_id(user_id)
-            
-            if user:
-                return jsonify({
-                    "authenticated": True,
-                    "user": dict(user),
-                    "is_verified": user.get("is_verified", False),
-                    "is_admin": user.get("is_admin", False),
-                    "data": await get_user_data(user_id)
-                })
-        
-        # Fall back to legacy JWT-based authentication
-        access_token = request.cookies.get('access_token')
-        if not access_token:
-            return jsonify({"authenticated": False}), 401
+        # Get the code parameter
+        code = request.args.get("code")
+        state = request.args.get("state", "")
 
-        payload = verify_token(access_token, "access")
-        user_id = payload.get('id')
+        if not code:
+            error = request.args.get("error", "Invalid or missing code")
+            logger.warning(f"Google callback error: {error}")
+            return redirect(f"{FRONTEND_URL}/login?error={urllib.parse.quote(error)}")
 
-        user = await get_user_by_id(user_id)
-        if user:
-            # Also login with Quart-Auth for future requests
-            auth_user = BartlebyAuthUser(int(user['id']), {
-                'email': user['email'],
-                'name': user.get('name'),
-                'is_admin': user.get('is_admin', False)
-            })
-            login_user(auth_user)
-            
-            return jsonify({
-                "authenticated": True,
-                "user": dict(user),
-                "is_verified": user.get("is_verified", False),
-                "is_admin": user.get("is_admin", False),
-                "data": await get_user_data(user_id)
-            })
+        # Exchange the code for tokens
+        # Use static methods to properly access configuration values
+        client_id = GoogleOAuthConfig.get_client_id()
+        client_secret = GoogleOAuthConfig.get_client_secret()
+        redirect_uri = GoogleOAuthConfig.get_redirect_uri()
 
-        return jsonify({"authenticated": False}), 404
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "code": code,
+                    "redirect_uri": redirect_uri,
+                    "grant_type": "authorization_code",
+                },
+            ) as response:
+                token_data = await response.json()
 
-    except Exception as e:
-        logger.warning(f"Session check failed: {e}")
-        return jsonify({"authenticated": False}), 401
+        if "error" in token_data:
+            logger.warning(f"Token exchange error: {token_data['error']}")
+            return redirect(
+                f"{FRONTEND_URL}/login?error={urllib.parse.quote(token_data['error'])}"
+            )
 
+        id_token_jwt = token_data.get("id_token")
 
-@auth_bp.route('/refresh', methods=['POST'])
-async def refresh():
-    """Refresh the access token using the refresh token."""
-    try:
-        refresh_token = request.cookies.get('refresh_token')
-        if not refresh_token:
-            return jsonify({"error": "Missing refresh token"}), 401
+        # Verify the token
+        id_info = await verify_google_token(id_token_jwt)
+        if not id_info:
+            return redirect(f"{FRONTEND_URL}/login?error=invalid_token")
 
-        payload = verify_token(refresh_token, "refresh")
-        user_id = payload.get('user_id')
+        # Extract user info
+        email = id_info.get("email")
+        name = id_info.get("name", email)
+        google_id = id_info.get("sub")
+        picture = id_info.get("picture")
 
-        user = await get_user_by_id(user_id)
-        if not user:
-            return jsonify({"error": "User not found"}), 404
-
-        access_token = await create_token(
-            {"id": user['id'], "email": user['email'], "is_admin": user.get('is_admin', False)}, 
-            "access"
+        # Create or update user
+        user = await upsert_user(
+            email=email,
+            name=name,
+            google_id=google_id,
+            auth_provider="google",
+            is_verified=True,
         )
 
-        # Determine secure cookie settings based on environment
-        is_production = os.getenv('NODE_ENV', 'development') == 'production'
-        secure = True if is_production else False
-        same_site = 'None' if is_production else None
+        # Create tokens with appropriate expiry
+        access_token = await create_token(
+            {
+                "id": user["id"],
+                "email": user["email"],
+                "is_admin": user.get("is_admin", False),
+            },
+            "access",
+        )
+        refresh_token = await create_token({"user_id": user["id"]}, "refresh")
 
-        response = jsonify({"message": "Token refreshed", "user": dict(user)})
-        response.set_cookie("access_token", access_token, httponly=True, secure=secure, samesite=same_site)
+        # Redirect to frontend with tokens
+        # Use state if provided (for redirecting to a specific page after login)
+        redirect_path = "/dashboard"
+        if state and state.startswith("/"):
+            redirect_path = state
+
+        # Encode tokens for URL
+        encoded_access = urllib.parse.quote(access_token)
+        encoded_refresh = urllib.parse.quote(refresh_token)
+
+        # Redirect with tokens in URL parameters (they will be extracted by frontend and stored as cookies)
+        return redirect(
+            f"{FRONTEND_URL}{redirect_path}?access_token={encoded_access}&refresh_token={encoded_refresh}&auth_success=true"
+        )
+
+    except Exception as e:
+        logger.exception(f"Google callback error: {e}")
+        return redirect(f"{FRONTEND_URL}/login?error={urllib.parse.quote(str(e))}")
+
+
+@auth_bp.route("/refresh", methods=["POST"])
+async def refresh_token_route():
+    """Refresh an expired access token using a valid refresh token."""
+    try:
+        # Check for refresh token in cookies or request body
+        refresh_token = request.cookies.get("refresh_token")
+        if not refresh_token:
+            data = await request.get_json(silent=True)
+            if data:
+                refresh_token = data.get("refresh_token")
+
+        if not refresh_token:
+            return (
+                jsonify(
+                    {"error": "Refresh token required", "code": "refresh_required"}
+                ),
+                400,
+            )
+
+        # Verify refresh token
+        payload = verify_token(refresh_token, "refresh")
+        user_id = payload.get("user_id")
+
+        if not user_id:
+            return (
+                jsonify({"error": "Invalid refresh token", "code": "invalid_token"}),
+                401,
+            )
+
+        # Get user data
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            user = await conn.fetchrow(
+                "SELECT id, email, is_admin FROM users WHERE id = $1", user_id
+            )
+
+        if not user:
+            return jsonify({"error": "User not found", "code": "user_not_found"}), 401
+
+        # Create new access token
+        access_token = await create_token(
+            {"id": user["id"], "email": user["email"], "is_admin": user["is_admin"]},
+            "access",
+        )
+
+        # Optionally create new refresh token (token rotation)
+        new_refresh_token = await create_token({"user_id": user["id"]}, "refresh")
+
+        # Return response with new tokens
+        response = jsonify({"authenticated": True, "token_refreshed": True})
+
+        # Use consistent secure cookie settings across all auth-related endpoints
+        response.set_cookie(
+            "access_token",
+            access_token,
+            httponly=True,
+            secure=True,  # Always secure for cross-origin
+            samesite="None",  # Required for cross-origin
+            max_age=ACCESS_TOKEN_EXPIRY.total_seconds(),
+        )
+        response.set_cookie(
+            "refresh_token",
+            new_refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="None",
+            max_age=REFRESH_TOKEN_EXPIRY.total_seconds(),
+        )
 
         return response
-
+    except jwt.ExpiredSignatureError:
+        return jsonify({"error": "Refresh token expired", "code": "token_expired"}), 401
+    except jwt.InvalidTokenError as e:
+        return jsonify({"error": str(e), "code": "invalid_token"}), 401
     except Exception as e:
         logger.exception(f"Token refresh failed: {e}")
-        return jsonify({"error": "Token refresh failed"}), 500
+        return jsonify({"error": "Authentication failed", "code": "auth_error"}), 500
 
 
-@auth_bp.route('/logout', methods=['POST'])
+@auth_bp.route("/logout", methods=["POST"])
 async def logout():
-    """Log out the current user by clearing auth cookies."""
-    # Logout using Quart-Auth
-    logout_user()
-    
-    # Also clear the legacy JWT cookies
-    response = jsonify({"message": "Logout successful"})
-    response.delete_cookie("access_token")
-    response.delete_cookie("refresh_token")
-    return response
-
-
-@auth_bp.route('/admin/login', methods=['POST'])
-async def admin_login():
-    """Admin login with override password."""
+    """Log out the user by invalidating tokens."""
     try:
-        data = await request.get_json()
-        email, admin_password = data.get('email'), data.get('admin_password')
+        # Logout using Quart-Auth
+        logout_user()
 
-        if not all([email, admin_password]):
-            return jsonify({"error": "Email and admin password are required"}), 400
+        # Create a response that clears auth cookies
+        response = jsonify({"success": True, "message": "Logged out successfully"})
 
-        # Verify admin password override
-        if admin_password != ADMIN_PASSWORD_OVERRIDE:
-            return jsonify({"error": "Invalid admin credentials"}), 401
+        # Clear cookies with cross-origin compatible settings
+        response.set_cookie(
+            "access_token",
+            "",
+            httponly=True,
+            secure=True,
+            samesite="None",
+            expires=0,
+            max_age=0,
+        )
+        response.set_cookie(
+            "refresh_token",
+            "",
+            httponly=True,
+            secure=True,
+            samesite="None",
+            expires=0,
+            max_age=0,
+        )
 
-        # Get user or create if doesn't exist
-        user = await get_user_by_email(email)
-        
-        if user:
-            # Upgrade user to admin if needed
-            if not user.get('is_admin'):
-                user = await set_user_admin_status(email, True)
-        else:
-            # Create new admin user
-            password_hash = hash_password(secrets.token_urlsafe(12))  # Random password since login is by admin override
-            user = await create_user(
-                email=email,
-                name=email.split('@')[0],  # Just use email prefix as name
-                password_hash=password_hash,
-                auth_provider="admin_override",
-                is_verified=True,
-                is_admin=True
-            )
-            await create_user_storage(user['id'])
-        
-        # Log login
-        await log_user_login(user['id'], 'admin_override')
-        
-        # Create tokens with admin flag
-        access_token = await create_token({"id": user['id'], "email": user['email'], "is_admin": True}, "access")
-        refresh_token = await create_token({"user_id": user['id']}, "refresh")
-        
-        # Get user data
-        user_data = await get_user_data(user['id'])
-        
-        response = jsonify({
-            "authenticated": True,
-            "user": dict(user),
-            "data": user_data
-        })
-        response.set_cookie("access_token", access_token, httponly=True, secure=True, samesite='None')
-        response.set_cookie("refresh_token", refresh_token, httponly=True, secure=True, samesite='None')
-        
         return response
-
     except Exception as e:
-        logger.exception(f"Admin login failed: {e}")
-        return jsonify({"error": "Authentication failed", "details": str(e)}), 500
+        logger.exception(f"Logout failed: {e}")
+        return jsonify({"error": "Logout failed", "details": str(e)}), 500
