@@ -1,19 +1,24 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap');
-/* @font-face rules will be used instead of the invalid import */
+
+/* Font definitions with fallbacks for improved performance and reliability */
 @font-face {
   font-family: 'Metropolis';
   src: url('./assets/metropolis/Metropolis-Regular.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
+  font-display: swap; /* Improve font loading performance */
 }
 @font-face {
   font-family: 'Metropolis';
   src: url('./assets/metropolis/Metropolis-Bold.otf') format('opentype');
   font-weight: bold;
   font-style: normal;
+  font-display: swap;
 }
 
+/* CSS variables for Neo-deco-rococo theme */
 :root {
+  /* Core color palette */
   --emerald: #2fa37a;
   --burgundy: #872635;
   --gold: #d6a348;
@@ -24,8 +29,32 @@
   --deep-green: #275d4e;
   --pale-gold: #ecc56a;
   --soft-teal: #57b49e;
+  
+  /* Background colors */
   --dark-bg: #1a1a1a;
   --darker-bg: #0f0f0f;
+  
+  /* React-specific variable naming */
+  --primary-color: var(--emerald);
+  --secondary-color: var(--gold);
+  --accent-color: var(--teal);
+  --text-color: var(--silver);
+  --background-color: var(--dark-bg);
+  
+  /* Spacing variables for consistent layout */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  
+  /* Border radius */
+  --border-radius-sm: 2px;
+  --border-radius-md: 4px;
+  --border-radius-lg: 8px;
+  
+  /* Transitions */
+  --transition-speed: 0.3s;
 }
 
 * {
@@ -34,6 +63,7 @@
   box-sizing: border-box;
 }
 
+/* Base styling optimized for React */
 body {
   margin: 0;
   font-family: 'Playfair Display', serif;
@@ -45,6 +75,7 @@ body {
   overflow-x: hidden;
 }
 
+/* Decorative background pattern - part of Neo-deco-rococo design */
 body::before {
   content: '';
   position: fixed;
@@ -63,6 +94,29 @@ body::before {
   z-index: -1;
 }
 
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Cinzel Decorative', 'Playfair Display', serif;
+  color: var(--gold);
+  margin-bottom: var(--spacing-md);
+  font-weight: 700;
+}
+
+p {
+  margin-bottom: var(--spacing-md);
+}
+
+a {
+  color: var(--teal);
+  text-decoration: none;
+  transition: color var(--transition-speed) ease;
+}
+
+a:hover {
+  color: var(--light-aqua);
+}
+
+/* Code blocks */
 code {
   font-family: 'Degular Mono', monospace;
   background: rgba(214, 163, 72, 0.1);
@@ -71,6 +125,7 @@ code {
   color: var(--gold);
 }
 
+/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -94,7 +149,8 @@ code {
   color: var(--gold);
 }
 
-input, select, textarea {
+/* Form elements */
+input, select, textarea, button {
   font-family: 'Degular Mono', monospace;
   background: var(--dark-bg);
   border: 1px solid var(--gold);
@@ -110,6 +166,21 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 5px rgba(47, 163, 122, 0.3);
 }
 
+button {
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--deep-green), var(--emerald));
+  color: var(--pale-gold);
+  border: none;
+  padding: 10px 20px;
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  background: linear-gradient(135deg, var(--emerald), var(--deep-green));
+  box-shadow: 0 0 10px rgba(47, 163, 122, 0.5);
+}
+
+/* Table styling */
 table {
   border-collapse: separate;
   border-spacing: 0;
@@ -138,6 +209,14 @@ tr:hover {
   background: rgba(47, 163, 122, 0.05);
 }
 
+/* React-specific class for root element */
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Responsive design */
 @media (max-width: 768px) {
   body {
     font-size: 14px;
@@ -149,5 +228,13 @@ tr:hover {
 
   th, td {
     padding: 8px 10px;
+  }
+  
+  h1 {
+    font-size: 1.8rem;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
   }
 }

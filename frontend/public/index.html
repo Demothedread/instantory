@@ -7,7 +7,6 @@
   <meta name="description" content="Bartleby - At Your Service, An AI-Powered File Processor" />
   
   <!-- Enhanced CORS and Security Policy Headers for Google Authentication -->
-  <!-- Removed invalid Cross-Origin-Embedder-Policy meta tag -->
   <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups">
   <meta http-equiv="Cross-Origin-Resource-Policy" content="cross-origin">
   
@@ -15,24 +14,32 @@
   <meta http-equiv="Access-Control-Allow-Credentials" content="true">
   <meta http-equiv="Access-Control-Allow-Methods" content="GET, POST, PUT, DELETE, OPTIONS, PATCH">
   
-  <!-- Prefetch Google authentication domains for faster loading -->
+  <!-- Prefetch domains for faster loading -->
   <link rel="dns-prefetch" href="https://accounts.google.com">
   <link rel="dns-prefetch" href="https://apis.google.com">
+  <link rel="dns-prefetch" href="https://bartleby-backend-mn96.onrender.com">
+  <link rel="dns-prefetch" href="https://hocomnia.com">
   
-  <!-- For all external scripts, add: crossorigin="anonymous" -->
+  <!-- Font preloading for improved performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- Fonts for Neo-deco-rococo design language -->
   <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Josefin+Sans:wght@400;600&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Poiret+One&family=Rozha+One&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet" />
+  
   <title>Bartleby - AI-Powered Document & Image Processing</title>
   <meta name="description" content="Bartleby - The unremarkably efficient assistant that dutifully catalogs, analyzes, and organizes your documents and images with the lifeless precision of AI.">
   <meta property="og:title" content="Bartleby - At Your Service" />
-  <!-- Removed duplicate and invalid og:title with unknown word "DocuWizard" -->
   <meta property="og:description" content="AI-powered document and image extract to catalogue or vector builder.">
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://hocomnia.com">
+
+  <!-- Google Sign-In script -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
   <div id="root"></div>
-  <!-- Google Sign-In script for authentication -->
-  
+  <!-- React app will be mounted here -->
 </body>
 </html>

@@ -42,7 +42,11 @@
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, Accept, Origin, X-Requested-With, Content-Length, Accept-Encoding, Accept-Language, X-CSRF-Token, google-oauth-token, google-client-id, g-csrf-token, X-Google-OAuth-Token, X-Google-Client-ID"
+          "value": "Content-Type, Authorization, Accept, Origin, X-Requested-With, Content-Length, Accept-Encoding, Accept-Language, X-CSRF-Token, google-oauth-token, google-client-id, g-csrf-token, X-Google-OAuth-Token, X-Google-Client-ID, Cache-Control, X-API-Key, X-Auth-Token"
+        },
+        {
+          "key": "Vary",
+          "value": "Origin"
         }
       ]
     }

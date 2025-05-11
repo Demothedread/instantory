@@ -2,7 +2,7 @@ import { authConfig, googleClientId, googleClientSecret } from './auth';
 
 // Environment variables with fallbacks
 const environment = process.env.NODE_ENV || 'production';
-const apiUrl = process.env.REACT_APP_BACKEND_URL || 'https://bartelby-backend-mn96.onrender.com';
+const apiUrl = process.env.REACT_APP_BACKEND_URL || 'https://bartleby-backend-mn96.onrender.com';
 
 // Environment-specific settings
 const environments = {
@@ -49,8 +49,22 @@ const config = {
     // Common fetch options when not using axios
     fetchOptions: {
       credentials: 'include', // Always include credentials for fetch API
-      mode: 'cors' // Explicitly state we're using CORS
+      mode: 'cors', // Explicitly state we're using CORS
+      cache: 'no-cache' // Avoid caching issues with auth tokens
     }
+  },
+  
+  // Domain configuration
+  domains: {
+    main: 'hocomnia.com',
+    backendUrl: apiUrl,
+    allowedOrigins: [
+      'https://hocomnia.com',
+      'https://www.hocomnia.com',
+      'https://bartleby.vercel.app',
+      'https://bartleby-backend-mn96.onrender.com',
+      'http://localhost:3000'
+    ]
   },
   
   // Google Sign-In configuration
@@ -59,8 +73,8 @@ const config = {
     clientId: googleClientId,
     cookiePolicy: 'single_host_origin',
     fetchBasicProfile: true,
-    uxMode: 'popup', // Use popup for better cross-origin handling
-    accessType: 'online'
+    uxMode: 'redirect', // Changed to redirect for consistent cross-origin behavior
+    accessType: 'offline'
   },
   
   // Storage configuration

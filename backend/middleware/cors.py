@@ -32,6 +32,10 @@ def is_origin_allowed(origin: str, allowed_origins: List[str]) -> bool:
             # Check if the origin ends with this domain suffix
             if origin.startswith("https://") and origin.endswith(domain_suffix):
                 return True
+            
+    # Special case for hocomnia.com with subdomains
+    if origin.endswith("hocomnia.com") and origin.startswith("https://"):
+        return True
 
     return False
 
@@ -58,6 +62,7 @@ def setup_cors(app: Quart) -> Quart:
     default_origins = [
         "https://bartleby.vercel.app",
         "https://hocomnia.com",
+        "https://www.hocomnia.com",
         "https://accounts.google.com",
     ]
 
@@ -66,7 +71,7 @@ def setup_cors(app: Quart) -> Quart:
             clean_origins.append(origin)
 
     # Add support for wildcard domains if not present
-    wildcard_domains = ["https://*.vercel.app"]
+    wildcard_domains = ["https://*.vercel.app", "https://*.hocomnia.com"]
     for domain in wildcard_domains:
         if domain not in clean_origins:
             clean_origins.append(domain)

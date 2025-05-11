@@ -13,26 +13,28 @@ class CORSConfig:
         """Get allowed origins from environment or default to development origins."""
         cors_origin = os.getenv("CORS_ORIGIN", "")
         if cors_origin:
-            return cors_origin.split(",")
+            # Clean and normalize origins
+            origins = [origin.strip() for origin in cors_origin.split(",") if origin.strip()]
+            return origins if origins else CORSConfig.get_default_origins()
         else:
             # If no CORS_ORIGIN is set, use default origins
             return CORSConfig.get_default_origins()
-        return []
 
     @staticmethod
     def get_default_origins() -> List[str]:
         """Get default origins for development."""
-        # Default origins for development
+        # Default origins for development, including hocomnia.com with and without www
         return [
-            "https://instantory.vercel.app",
             "https://hocomnia.com",
-            "https://www.hocomnia.com",
+            "https://www.hocomnia.com", 
+            "https://instantory.vercel.app",
             "https://bartleby.vercel.app",
             "https://accounts.google.com",
             "https://bartleby-backend.onrender.com",
             "https://bartleby-backend-mn96.onrender.com",
             "https://vercel.live",
             "http://localhost:3000",
+            "https://localhost:3000"
         ]
 
     @staticmethod
