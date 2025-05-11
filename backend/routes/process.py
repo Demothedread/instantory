@@ -5,10 +5,11 @@ import asyncio
 import uuid
 from datetime import datetime
 from quart import Blueprint, request, jsonify
-from backend.config.database import get_metadata_pool
-from backend.services.processor import create_processor_factory, BatchProcessor
-from backend.services.storage.manager import storage_manager
 from openai import AsyncOpenAI
+from backend.config.database import get_metadata_pool
+from backend.services.processor import create_processor_factory
+from backend.services.storage.manager import storage_manager
+
 
 logger = logging.getLogger(__name__)
 process_bp = Blueprint('process', __name__)
@@ -46,7 +47,6 @@ async def process_files():
         batch_processor = processor_factory.create_batch_processor(instruction)
         
         # Process files
-        results = []
         task_id = f"process-{datetime.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4()}"
         
         # Track files for processing

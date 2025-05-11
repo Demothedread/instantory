@@ -3,23 +3,13 @@ import './Pages.css';
 
 const Kaboodles = () => {
   const [activeTab, setActiveTab] = useState('collections');
-
+  
+  // Demo collections for UI display
   const demoCollections = [
-    {
-      name: "Vintage Books",
-      count: 42,
-      lastUpdated: "2024-01-15"
-    },
-    {
-      name: "Art Prints",
-      count: 23,
-      lastUpdated: "2024-01-14"
-    },
-    {
-      name: "Documents",
-      count: 156,
-      lastUpdated: "2024-01-13"
-    }
+    { name: 'Kitchen Items', count: 24, lastUpdated: '2025-04-28' },
+    { name: 'Art Supplies', count: 18, lastUpdated: '2025-04-30' },
+    { name: 'Electronics', count: 12, lastUpdated: '2025-05-05' },
+    { name: 'Travel Gear', count: 9, lastUpdated: '2025-05-08' }
   ];
 
   return (

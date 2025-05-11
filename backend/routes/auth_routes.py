@@ -19,9 +19,7 @@ from quart_auth import (
     QuartAuth,
     AuthUser,
     login_user,
-    logout_user,
-    login_required,
-    current_user,
+    logout_user
 )
 from ..config.security import GoogleOAuthConfig
 
@@ -558,7 +556,8 @@ async def google_callback():
         # Use static methods to properly access configuration values
         client_id = GoogleOAuthConfig.get_client_id()
         client_secret = GoogleOAuthConfig.get_client_secret()
-        redirect_uri = GoogleOAuthConfig.get_redirect_uri()
+        frontend_origin = request.headers.get("Origin", FRONTEND_URL.split(",")[0])
+        redirect_uri = f"{frontend_origin}/auth-callback"
 
         async with aiohttp.ClientSession() as session:
             async with session.post(
