@@ -72,7 +72,7 @@ class BartlebyAuthUser(AuthUser):
         self.user_data = user_data or {}
 
     @property
-    def user_id(self):
+    (self):
         return self.auth_id
 
     @property
