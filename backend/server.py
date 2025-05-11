@@ -14,7 +14,6 @@ from dotenv import load_dotenv
 load_dotenv()  # Load environment variables from .env file
 from quart import Quart, jsonify, Blueprint
 from openai import AsyncOpenAI
-from quart_cors import cors
 from quart_auth import QuartAuth
 from hypercorn.config import Config as HypercornConfig
 from hypercorn.asyncio import serve
@@ -41,17 +40,41 @@ app = Quart(__name__)
 app.config.update(default_config)
 QuartAuth(app)  # Initialize Quart-Auth before CORS
 
-# Apply CORS settings
-cors_origins = os.getenv('CORS_ORIGINS', '*').split(',')
-allow_credentials = os.getenv('ALLOW_CREDENTIALS', 'true').lower() == 'true'
-cors_enabled = os.getenv('CORS_ENABLED', 'true').lower() == 'true'
+# Apply CORS settings using custom middleware
+try:
+    from middleware.cors import setup_cors
+    app = setup_cors(app)
+    logger.info("Custom CORS middleware initialized")
+except ImportError:
+    # Fallback to basic CORS if custom middleware isn't available
+    from quart_cors import cors
+    cors_origins = os.getenv('CORS_ORIGINS', '*').split(',')
+    allow_credentials = os.getenv('ALLOW_CREDENTIALS', 'true').lower() == 'true'
+    cors_enabled = os.getenv('CORS_ENABLED', 'true').lower() == 'true'
 
-if cors_enabled:
-    app = cors(app, allow_origin=cors_origins, allow_credentials=allow_credentials)
-    logger.info(f"CORS enabled with origins: {cors_origins}")
-else:
-    app = cors(app, allow_origin=['*'])
-    logger.info("CORS enabled with default settings (all origins)")
+    if cors_enabled:
+        app = cors(app, allow_origin=cors_origins, allow_credentials=allow_credentials)
+        logger.info(f"Fallback CORS enabled with origins: {cors_origins}")
+    else:
+        app = cors(app, allow_origin=['*'])
+        logger.info("Fallback CORS enabled with default settings (all origins)")
+
+# Apply security middleware
+try:
+    from middleware.security import setup_security
+    rate_limit = int(os.getenv("RATE_LIMIT", "100"))  # Requests per minute
+    rate_window = int(os.getenv("RATE_WINDOW", "60"))  # In seconds
+    max_body_size = int(os.getenv("MAX_BODY_SIZE", str(16 * 1024 * 1024)))  # 16MB default
+    
+    app = setup_security(
+        app, 
+        rate_limit=rate_limit,
+        rate_window=rate_window,
+        max_body_size=max_body_size
+    )
+    logger.info(f"Security middleware initialized (rate limit: {rate_limit} req/min)")
+except ImportError:
+    logger.warning("Security middleware not available - using default security settings")
 
 # Import modules with fallbacks
 def setup_auth(app):
