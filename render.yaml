@@ -31,8 +31,6 @@ services:
         sync: false
       - key: AWS_REGION
         value: "us-west-2"
-      - key: CORS_ORIGINS
-        value: "https://hocomnia.com,https://www.hocomnia.com,https://*.hocomnia.com,https://instantory.vercel.app,https://bartleby.vercel.app,http://localhost:3000,https://localhost:3000,https://accounts.google.com,https://vercel.live,https://bartleby-backend-mn96.onrender.com,https://apis.google.com,https://www.googleapis.com"
       - key: CORS_ENABLED
         value: "true"             
       - key: ALLOW_CREDENTIALS
@@ -54,7 +52,7 @@ services:
       - key: VERCEL_URL
         value: "https://bartleby.vercel.app"
       - key: CORS_ORIGIN
-        value: "https://hocomnia.com,https://www.hocomnia.com,https://bartleby.vercel.app"
+        sync: false
       - key: DATA_DIR
         value: "./data"
       - key: UPLOADS_DIR
