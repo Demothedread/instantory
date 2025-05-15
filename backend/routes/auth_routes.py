@@ -19,7 +19,35 @@ from quart_auth import (
     login_user,
     logout_user
 )
-from ..config.security import GoogleOAuthConfig
+
+# Try to import the GoogleOAuthConfig from two possible locations
+try:
+    from ..config.security import GoogleOAuthConfig
+    logger = logging.getLogger(__name__)
+    logger.info("Imported GoogleOAuthConfig from security module")
+except ImportError:
+    try:
+        from ..config.oauth import GoogleOAuthConfig
+        logger = logging.getLogger(__name__)
+        logger.info("Imported GoogleOAuthConfig from oauth module")
+    except ImportError:
+        # If both imports fail, we'll create a minimal implementation
+        logger = logging.getLogger(__name__)
+        logger.warning("Failed to import GoogleOAuthConfig, using minimal implementation")
+        
+        class GoogleOAuthConfig:
+            @staticmethod
+            def get_client_id():
+                return os.getenv("GOOGLE_CLIENT_ID", "")
+                
+            @staticmethod
+            def get_client_secret():
+                return os.getenv("GOOGLE_CLIENT_SECRET", "")
+                
+            @staticmethod
+            def get_redirect_uri():
+                backend_url = os.getenv("PUBLIC_BACKEND_URL", "https://bartleby-backend-mn96.onrender.com")
+                return f"{backend_url}/api/auth/google/callback"
 
 # Import with fallbacks to handle different execution contexts
 try:

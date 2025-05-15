@@ -16,18 +16,25 @@ const AuthCallback = () => {
     const handleCallback = async () => {
       setIsProcessing(true);
       try {
+        console.log("Auth callback processing with search params:", location.search);
+        
         // Parse query parameters
         const params = new URLSearchParams(location.search);
         const accessToken = params.get('access_token');
         const refreshToken = params.get('refresh_token');
         const authSuccess = params.get('auth_success');
         const errorParam = params.get('error');
+        const errorDetails = params.get('details');
         const redirectPath = params.get('redirect') || '/dashboard';
         
         // Handle error first
         if (errorParam) {
-          console.error(`Authentication error: ${errorParam}`);
-          setError(`Login failed: ${errorParam}`);
+          const errorMessage = errorDetails 
+            ? `${errorParam}: ${errorDetails}` 
+            : errorParam;
+          
+          console.error(`Authentication error: ${errorMessage}`);
+          setError(`Login failed: ${errorMessage}`);
           navigate('/login', { replace: true });
           return;
         }
@@ -44,6 +51,7 @@ const AuthCallback = () => {
             // Redirect to dashboard or the intended destination
             navigate(redirectPath, { replace: true });
           } else {
+            console.error("Session verification failed even with tokens");
             navigate('/login?error=session_verification_failed', { replace: true });
           }
           return;
@@ -55,6 +63,7 @@ const AuthCallback = () => {
           if (sessionValid) {
             navigate(redirectPath, { replace: true });
           } else {
+            console.error("Session invalid despite auth_success=true flag");
             navigate('/login?error=session_invalid', { replace: true });
           }
           return;
