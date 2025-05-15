@@ -37,6 +37,9 @@ def is_origin_allowed(origin: str, allowed_origins: List[str]) -> bool:
     if origin.endswith("hocomnia.com") and origin.startswith("https://"):
         return True
 
+    if origin.startswith("https://hocomnia.com"):
+        return True
+
     return False
 
 

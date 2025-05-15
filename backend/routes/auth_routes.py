@@ -2,15 +2,13 @@
 
 import os
 import logging
-import secrets
 from datetime import datetime, timedelta, timezone
 import jwt
 import bcrypt
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from functools import wraps
-from typing import Dict, Any, Optional
-import json
+from typing import Dict, Any
 import urllib.parse
 import aiohttp
 import quart_auth
@@ -72,7 +70,7 @@ class BartlebyAuthUser(AuthUser):
         self.user_data = user_data or {}
 
     @property
-    (self):
+    def auth_id(self):  
         return self.auth_id
 
     @property
@@ -425,7 +423,7 @@ async def verify_google_token(token: str) -> Dict[str, Any]:
                     raise ValueError("Invalid token issuer")
 
                 logger.info(
-                    f"Successfully verified Google token for: {id_info.get('email')}"
+                    "Successfully verified Google token for: %s", id_info.get('email')
                 )
                 return id_info
 
