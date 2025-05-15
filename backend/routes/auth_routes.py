@@ -742,3 +742,224 @@ async def logout():
     except Exception as e:
         logger.exception(f"Logout failed: {e}")
         return jsonify({"error": "Logout failed", "details": str(e)}), 500
+
+
+@auth_bp.route("/register", methods=["POST"])
+async def register():
+    """Register a new user with email and password."""
+    try:
+        data = await request.get_json()
+        email = data.get("email")
+        password = data.get("password")
+        name = data.get("name", email.split("@")[0] if email else "")
+
+        if not email or not password:
+            return jsonify({"error": "Email and password are required"}), 400
+
+        # Check if user already exists
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            existing_user = await conn.fetchrow(
+                "SELECT id FROM users WHERE email = $1", email
+            )
+
+            if existing_user:
+                return jsonify({"error": "User already exists"}), 409
+
+            # Hash password
+            password_hash = hash_password(password)
+
+            # Create user
+            user = await create_user(
+                email=email,
+                name=name,
+                password_hash=password_hash,
+                auth_provider="email",
+                is_verified=False,  # Requires email verification in a full implementation
+            )
+
+            # Log login
+            await log_user_login(user["id"], "register")
+
+            # Create tokens
+            access_token = await create_token(
+                {
+                    "id": user["id"],
+                    "email": user["email"],
+                    "is_admin": user.get("is_admin", False),
+                },
+                "access",
+            )
+            refresh_token = await create_token({"user_id": user["id"]}, "refresh")
+
+            # Get user data
+            user_data = await get_user_data(user["id"])
+
+            # Login using Quart-Auth
+            auth_user = BartlebyAuthUser(
+                int(user["id"]),
+                {
+                    "email": user["email"],
+                    "name": user.get("name"),
+                    "is_admin": user.get("is_admin", False),
+                },
+            )
+            login_user(auth_user)
+
+            # Return response with user data and tokens
+            response = jsonify({"authenticated": True, "user": user, "data": user_data})
+
+            # Use consistent secure cookie settings across all auth endpoints
+            response.set_cookie(
+                "access_token",
+                access_token,
+                httponly=True,
+                secure=True,  # Always secure for cross-origin
+                samesite="None",  # Required for cross-origin
+                max_age=ACCESS_TOKEN_EXPIRY.total_seconds(),
+            )
+            response.set_cookie(
+                "refresh_token",
+                refresh_token,
+                httponly=True,
+                secure=True,
+                samesite="None",
+                max_age=REFRESH_TOKEN_EXPIRY.total_seconds(),
+            )
+
+            return response
+
+    except Exception as e:
+        logger.exception(f"Registration failed: {e}")
+        return jsonify({"error": "Registration failed", "details": str(e)}), 500
+
+
+@auth_bp.route("/login", methods=["POST"])
+async def login():
+    """Log in with email and password."""
+    try:
+        data = await request.get_json()
+        email = data.get("email")
+        password = data.get("password")
+
+        if not email or not password:
+            return jsonify({"error": "Email and password are required"}), 400
+
+        # Get user
+        user = await get_user_by_email(email)
+        if not user:
+            return jsonify({"error": "Invalid email or password"}), 401
+
+        # Check password
+        if not user["password_hash"] or not verify_password(password, user["password_hash"]):
+            return jsonify({"error": "Invalid email or password"}), 401
+
+        # Log login
+        await log_user_login(user["id"], "email")
+
+        # Create tokens
+        access_token = await create_token(
+            {
+                "id": user["id"],
+                "email": user["email"],
+                "is_admin": user.get("is_admin", False),
+            },
+            "access",
+        )
+        refresh_token = await create_token({"user_id": user["id"]}, "refresh")
+
+        # Get user data
+        user_data = await get_user_data(user["id"])
+
+        # Login using Quart-Auth
+        auth_user = BartlebyAuthUser(
+            int(user["id"]),
+            {
+                "email": user["email"],
+                "name": user.get("name"),
+                "is_admin": user.get("is_admin", False),
+            },
+        )
+        login_user(auth_user)
+
+        # Return response with user data and tokens
+        response = jsonify({"authenticated": True, "user": user, "data": user_data})
+
+        # Use consistent secure cookie settings across all auth endpoints
+        response.set_cookie(
+            "access_token",
+            access_token,
+            httponly=True,
+            secure=True,
+            samesite="None",
+            max_age=ACCESS_TOKEN_EXPIRY.total_seconds(),
+        )
+        response.set_cookie(
+            "refresh_token",
+            refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="None",
+            max_age=REFRESH_TOKEN_EXPIRY.total_seconds(),
+        )
+
+        return response
+
+    except Exception as e:
+        logger.exception(f"Login failed: {e}")
+        return jsonify({"error": "Authentication failed", "details": str(e)}), 500
+
+
+@auth_bp.route("/session", methods=["GET"])
+async def check_session():
+    """Check if the user has a valid session."""
+    try:
+        # Get the access token from cookies or Authorization header
+        access_token = request.cookies.get("access_token")
+        if not access_token:
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                access_token = auth_header.split(" ")[1]
+
+        if not access_token:
+            return jsonify({"authenticated": False, "error": "No access token"}), 401
+
+        # Verify token
+        try:
+            payload = verify_token(access_token, "access")
+        except jwt.ExpiredSignatureError:
+            return jsonify({"authenticated": False, "error": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"authenticated": False, "error": "Invalid token"}), 401
+
+        user_id = payload.get("id")
+        if not user_id:
+            return jsonify({"authenticated": False, "error": "Invalid token payload"}), 401
+
+        # Get user
+        pool = await get_db_pool()
+        async with pool.acquire() as conn:
+            user = await conn.fetchrow(
+                """
+                SELECT id, email, name, auth_provider, is_verified, is_admin 
+                FROM users WHERE id = $1
+                """, 
+                user_id
+            )
+
+        if not user:
+            return jsonify({"authenticated": False, "error": "User not found"}), 401
+            
+        # Get user data
+        user_data = await get_user_data(user["id"])
+
+        # Return user info
+        return jsonify({
+            "authenticated": True,
+            "user": dict(user),
+            "data": user_data
+        })
+
+    except Exception as e:
+        logger.exception(f"Session check failed: {e}")
+        return jsonify({"authenticated": False, "error": str(e)}), 500

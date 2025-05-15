@@ -25,7 +25,7 @@ export const authApi = {
   refreshToken: () => api.post(config.auth.endpoints.refresh),
   checkSession: () => api.get(config.auth.endpoints.session),
   
-  // User registration
+  // User registration - ensure this correctly matches backend endpoint
   register: (userData) => api.post(config.auth.endpoints.register, userData),
   
   // Admin authentication
@@ -77,7 +77,7 @@ export const dataApi = {
   processFiles: () => api.post('/api/files/process'),
 };
 
-// Enhanced error handling interceptor
+// Enhanced error handling interceptor - improve debugging of authentication errors
 api.interceptors.response.use(
   response => response,
   error => {
@@ -98,6 +98,7 @@ api.interceptors.response.use(
       console.error('CORS error detected - verify CORS configuration on both frontend and backend');
       console.error(`Frontend origin: ${window.location.origin}`);
       console.error(`API URL: ${config.apiUrl}`);
+      console.error('Request details:', error.config);
       
       // Make the error message more user-friendly
       error.userMessage = 'Unable to connect to the server. This may be due to CORS restrictions or network issues.';

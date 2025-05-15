@@ -1,6 +1,5 @@
 services:
   # Main backend web service (free tier)
-1
   - type: web
     name: bartleby-backend
     runtime: python
@@ -55,7 +54,7 @@ services:
       - key: VERCEL_URL
         value: "https://bartleby.vercel.app"
       - key: CORS_ORIGINS
-        value: "https://hocomnia.com,https://bartleby.vercel.app,https://www.hocomnia.com"
+        value: "https://hocomnia.com,https://www.hocomnia.com,https://bartleby.vercel.app,http://localhost:3000"
       - key: DATA_DIR
         value: "./data"
       - key: UPLOADS_DIR

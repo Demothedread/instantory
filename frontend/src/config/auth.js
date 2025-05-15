@@ -41,17 +41,17 @@ const authConfig = {
     maxAge: 24 * 60 * 60 // 1 day in seconds
   },
   
-  // API endpoints - centralized for consistency
+  // API endpoints - updated to match backend implementation
   endpoints: {
-    // User authentication
+    // User authentication - ensure these match the backend routes in auth_routes.py
     login: '/api/auth/login',
-    register: '/api/auth/register',
+    register: '/api/auth/register', 
     googleLogin: '/api/auth/google',
     logout: '/api/auth/logout',
     refresh: '/api/auth/refresh',
     session: '/api/auth/session',
     
-    // Admin endpoints
+    // Admin endpoints - ensure these match the backend routes
     adminLogin: '/api/auth/admin/login',
     adminUsers: '/api/auth/admin/users'
   }
