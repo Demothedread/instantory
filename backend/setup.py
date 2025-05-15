@@ -5,7 +5,7 @@ It configures CORS, registers blueprints, and defines package metadata
 for installation using setuptools.
 """
 import os
-4from setuptools import setup, find_packages
+4  from setuptools import setup, find_packages
 from quart import Quart
 
 # Create the app object first without CORS
