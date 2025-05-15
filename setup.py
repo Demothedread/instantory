@@ -14,7 +14,7 @@ setup(
         "httpx>=0.25.2",
         
         # Database
-        "asyncpg>=0.30.0",  # Updated to match requirements.txt
+        "asyncpg>=0.29.0",  # Updated to match requirements.txt
         "async_timeout>=4.0.3",
         
         # Document processing
@@ -24,7 +24,7 @@ setup(
         # Web framework - ensure auth dependencies are included
         "quart>=0.19.0",
         "quart-cors>=0.7.0",
-        "quart-auth>=0.11.0",  # Added missing quart-auth package
+        "quart-auth>=0.9.0",  # Added missing quart-auth package
         "hypercorn>=0.15.0",
         
         # Auth dependencies
@@ -32,9 +32,15 @@ setup(
         "pyjwt>=2.5.0",         # Added JWT for token handling
         "bcrypt>=4.0.0",        # Added for password hashing
         
-        # Type checking
+        # Type checking - fixed version conflict
         "typing-extensions>=4.9.0",
-        "pydantic>=2.5.3",
+        "pydantic==2.5.2",
+        "pydantic-core==2.14.5",
+        
+        # ASGI servers for deployment
+        "gunicorn>=21.2.0",
+        "uvicorn>=0.23.0",
+        "python-multipart>=0.0.6",
         
         # Additional required packages
         "aiosignal>=1.3.1",
@@ -51,13 +57,12 @@ setup(
         "idna>=3.6",
         "multidict>=6.0.4",
         "priority>=2.0.0",
-        "pydantic_core>=2.14.6",
         "sniffio>=1.3.0",
         "tqdm>=4.66.1",
         "wsproto>=1.2.0",
         "yarl>=1.9.4",
-        "protobuf==5.26.1",  # Added from requirements.txt
-        "packaging==23.2"    # Added from requirements.txt
+        "protobuf==5.26.1",
+        "packaging==23.2"
     ],
     python_requires=">=3.8",
     author="default_user",

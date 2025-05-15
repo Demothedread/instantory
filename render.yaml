@@ -70,7 +70,7 @@ services:
       - key: ADMIN_PASSWORD
         sync: false
       - key: QUART_APP
-        value: "backend.server:app"
+        value: "backend.server:app" 
       - key: PYTHONPATH
         value: "."
 

@@ -38,13 +38,18 @@ if cors_enabled:
     )
 
 # Import and register blueprints
-from backend.routes.auth_routes import auth_bp, setup_auth
-
-# Set up authentication
-setup_auth(app)
-
-# Register blueprints
-app.register_blueprint(auth_bp, url_prefix='/api/auth')
+try:
+    from backend.routes.auth_routes import auth_bp, setup_auth
+    
+    # Set up authentication
+    setup_auth(app)
+    
+    # Register blueprints
+    app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    logger.info("Authentication routes registered successfully")
+except ImportError as e:
+    logger.error(f"Failed to import auth routes: {e}")
+    logger.error("Authentication will not be available")
 
 # Root route for health check
 @app.route('/')
@@ -65,7 +70,13 @@ async def server_error(error):
     logger.error(f"Internal server error: {error}")
     return {"error": "Internal Server Error", "message": "An unexpected error occurred"}, 500
 
+# Main function to run the app - used by entry_point in setup.py
+def main():
+    """Run the application."""
+    port = int(os.getenv('PORT', 8000))
+    debug = os.getenv('DEBUG', 'false').lower() == 'true'
+    app.run(host='0.0.0.0', port=port, debug=debug)
+
 # Start the server when run directly
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 8000))
-    app.run(host='0.0.0.0', port=port, debug=os.getenv('DEBUG', 'false').lower() == 'true')
+    main()
