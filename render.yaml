@@ -4,8 +4,8 @@ services:
     name: bartleby-backend
     runtime: python
     plan: free
-    buildCommand: pip install hypercorn && pip install -r requirements.txt && pip install -e .
-    startCommand: hypercorn asgi:application -b 0.0.0.0:$PORT
+    buildCommand: pip install -r requirements.txt && pip install -e .
+    startCommand: python -m hypercorn backend.server:app -b 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0

@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 # Create the app object
 app = Quart(__name__)
+                                                                                                                                                                             
+# Add Flask compatibility configuration to handle PROVIDE_AUTOMATIC_OPTIONS
+app.config['PROVIDE_AUTOMATIC_OPTIONS'] = True 
 
 # Load configuration from environment
 app.config.update({

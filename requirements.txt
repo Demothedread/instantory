@@ -36,7 +36,11 @@ pydantic-core==2.14.5
 # ASGI servers for deployment
 gunicorn==21.2.0
 uvicorn==0.24.0
+hypercorn==0.15.0
 python-multipart==0.0.6
+
+# Explicitly exclude Flask to prevent conflicts
+Flask==0.0.0 ; python_version > "3.0"
 
 # Testing
 pytest>=7.0.0
