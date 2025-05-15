@@ -4,7 +4,7 @@ services:
     name: bartleby-backend
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt && pip install -e .
+    buildCommand: pip install gunicorn uvicorn && pip install -r requirements.txt && pip install -e .
     startCommand: gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT backend.server:app
     envVars:
       - key: PYTHON_VERSION
@@ -25,7 +25,7 @@ services:
         sync: false
       - key: AWS_ACCESS_KEY_ID
         sync: false
-      - key: AWS_SECRET_ACCESS_KEYe
+      - key: AWS_SECRET_ACCESS_KEY
         sync: false
       - key: AWS_S3_EXPRESS_BUCKET
         sync: false

@@ -5,7 +5,7 @@ It configures CORS, registers blueprints, and defines package metadata
 for installation using setuptools.
 """
 import os
-4  from setuptools import setup, find_packages
+from setuptools import setup, find_packages
 from quart import Quart
 
 # Create the app object first without CORS
@@ -40,17 +40,20 @@ setup(
     version="0.1.0",
     packages=find_packages(),  # Use find_packages instead of custom function
     install_requires=[
-        "quart",
-        "quart-cors",
-        "quart-auth",
-        "asyncpg",
-        "openai",
-        "python-dotenv",
-        "pydantic",
-        "bcrypt",
-        "pyjwt",
-        "google-auth",
-        "aiohttp",
+        "quart>=0.18.0",
+        "quart-cors>=0.6.0",
+        "quart-auth>=0.8.0",
+        "asyncpg>=0.28.0",
+        "openai>=1.0.0",
+        "python-dotenv>=1.0.0",
+        "pydantic>=2.0.0",
+        "bcrypt>=4.0.1",
+        "pyjwt>=2.8.0",
+        "google-auth>=2.23.0",
+        "aiohttp>=3.8.5",
+        "gunicorn>=21.2.0",
+        "uvicorn>=0.23.0",
+        "python-multipart>=0.0.6",
     ],
     python_requires=">=3.8",
 )
