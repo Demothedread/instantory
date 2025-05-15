@@ -12,7 +12,7 @@ from quart import Quart
 app = Quart(__name__)
 
 # Get CORS settings from environment
-cors_origins = os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(',')
+cors_origins = os.getenv('CORS_ORIGINS   ', 'http://localhost:3000').split(',')
 cors_enabled = os.getenv('CORS_ENABLED', 'true').lower() == 'true'
 allow_credentials = os.getenv('ALLOW_CREDENTIALS', 'true').lower() == 'true'
 

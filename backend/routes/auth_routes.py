@@ -423,7 +423,7 @@ async def verify_google_token(token: str) -> Dict[str, Any]:
                     raise ValueError("Invalid token issuer")
 
                 logger.info(
-                    "Successfully verified Google token for: %s", id_info.get('email')
+                    "Successfully verified Google token for: %s", id_info.get('email')   
                 )
                 return id_info
 
@@ -555,7 +555,7 @@ async def google_callback():
         client_id = GoogleOAuthConfig.get_client_id()
         client_secret = GoogleOAuthConfig.get_client_secret()
         frontend_origin = request.headers.get("Origin", FRONTEND_URL.split(",")[0])
-        redirect_uri = f"{frontend_origin}/auth-callback"
+        redirect_uri = f"{frontend_origin}/auth/google/callback"
 
         async with aiohttp.ClientSession() as session:
             async with session.post(

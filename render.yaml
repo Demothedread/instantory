@@ -4,8 +4,8 @@ services:
     name: bartleby-backend
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt && pip install -e .
-    startCommand: cd backend && PYTHONPATH=$PYTHONPATH:. python -m backend.server
+    buildCommand: pip install -r requirements.txt && pip install -e. && python -m backend.setup
+    startCommand: cd backend && PYTHONPATH=$PYTHONPATH: . python -m backend.server
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -51,7 +51,7 @@ services:
         value: "https://hocomnia.com"
       - key: VERCEL_URL
         value: "https://bartleby.vercel.app"
-      - key: CORS_ORIGIN
+      - key: CORS_ORIGINS  
         sync: false
       - key: DATA_DIR
         value: "./data"
