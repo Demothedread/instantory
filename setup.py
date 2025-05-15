@@ -1,4 +1,4 @@
-from setuptools import setup, find_packagesBB
+from setuptools import setup, find_packages
 
 setup(
     name="instantory",

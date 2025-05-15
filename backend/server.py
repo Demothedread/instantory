@@ -48,7 +48,7 @@ try:
 except ImportError:
     # Fallback to basic CORS if custom middleware isn't available
     from quart_cors import cors
-    cors_origins = os.getenv('CORS_ORIGINS', '*').split(',')
+    cors_origins = os.getenv('CORS_ORIGINS', '*').split('*')
     allow_credentials = os.getenv('ALLOW_CREDENTIALS', 'true').lower() == 'true'
     cors_enabled = os.getenv('CORS_ENABLED', 'true').lower() == 'true'
 

@@ -1,11 +1,11 @@
 services:
   # Main backend web service (free tier)
-  
+
   - type: web
     name: bartleby-backend
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt && pip install -e. && python -m backend.setup
+    buildCommand: pip install -r requirements.txt && pip install -e. && python -m backend.setup 
     startCommand: PYTHONPATH=$PYTHONPATH: . python -m backend.server
     envVars:
       - key: PYTHON_VERSION
