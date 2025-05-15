@@ -4,8 +4,8 @@ services:
     name: bartleby-backend
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt && pip install -e .
-    startCommand: python -m hypercorn backend.server:app -b 0.0.0.0:$PORT
+    buildCommand: pip install -r requirements.txt && pip install -e . && python -m setup.py
+    startCommand: PYTHONPATH=. python -m hypercorn backend.server:app -b 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -73,6 +73,8 @@ services:
         value: "backend.server:app" 
       - key: PYTHONPATH
         value: "."
+      - key: PORT
+        value: "10000" # Render uses this port to connect to your service
 
 # Free Postgres database
 databases:

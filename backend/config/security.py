@@ -91,7 +91,8 @@ class CORSConfig:
             return False
 
         # Get the allowed origins
-        allowed_origins = CORSConfig.get_origins()
+        allowed_origins = os.getenv((("ALLOWED_ORIGINS")  or "").split(","))
+        allowed_origins.extend(CORSConfig.get_origins())    
 
         # Check for exact match first
         if origin in allowed_origins:

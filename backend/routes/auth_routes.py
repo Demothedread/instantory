@@ -372,6 +372,16 @@ async def log_user_login(user_id: int, login_method: str):
                 )
                 """
             )
+            
+            # If table exists, log the login with the login_method
+            if table_check and table_check[0]:
+                await conn.execute(
+                    """
+                    INSERT INTO user_logins (user_id, login_timestamp, login_method) 
+                    VALUES ($1, NOW(), $2)
+                    """,
+                    user_id, login_method
+                )
 
     except Exception as e:
         # Non-critical error, just log it and continue
