@@ -5,28 +5,41 @@ setup(
     version="0.1.0",
     packages=find_packages(),
     install_requires=[
+        # Core dependencies
         "python-dotenv>=1.0.0",
         "Pillow>=10.1.0",
         "openai>=1.6.0",
         "tenacity>=8.0.1",
         "aiohttp>=3.9.1",
         "httpx>=0.25.2",
-        "asyncpg>=0.29.0",
+        
+        # Database
+        "asyncpg>=0.30.0",  # Updated to match requirements.txt
+        "async_timeout>=4.0.3",
+        
+        # Document processing
         "PyPDF2>=3.0.1",
         "python-docx>=0.8.11",
+        
+        # Web framework - ensure auth dependencies are included
         "quart>=0.19.0",
         "quart-cors>=0.7.0",
+        "quart-auth>=0.11.0",  # Added missing quart-auth package
         "hypercorn>=0.15.0",
+        
+        # Auth dependencies
+        "google-auth>=2.22.0",  # Added explicit Google auth package
+        "pyjwt>=2.5.0",         # Added JWT for token handling
+        "bcrypt>=4.0.0",        # Added for password hashing
+        
+        # Type checking
         "typing-extensions>=4.9.0",
         "pydantic>=2.5.3",
-        "pytest>=7.0.0",
-        "pytest-asyncio>=0.21.0",
-        "pylint>=2.17.0",
-        "black>=23.0.0",
+        
+        # Additional required packages
         "aiosignal>=1.3.1",
         "annotated-types>=0.6.0",
         "anyio>=4.2.0",
-        "async-timeout>=4.0.3",
         "attrs>=23.1.0",
         "blinker>=1.7.0",
         "certifi>=2023.11.17",
@@ -42,13 +55,15 @@ setup(
         "sniffio>=1.3.0",
         "tqdm>=4.66.1",
         "wsproto>=1.2.0",
-        "yarl>=1.9.4"
+        "yarl>=1.9.4",
+        "protobuf==5.26.1",  # Added from requirements.txt
+        "packaging==23.2"    # Added from requirements.txt
     ],
     python_requires=">=3.8",
     author="default_user",
     author_email="",
     description="A web-based application for document and inventory management using AI",
-    long_description=open("README.md").read() if open("README.md") else "",
+    long_description=open("README.md").read() if open("README.md", "r", encoding="utf-8") else "",
     long_description_content_type="text/markdown",
     url="https://github.com/squidwizard/instantory",
     classifiers=[
@@ -64,7 +79,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "instantory=backend.server:app.run",
+            "instantory=backend.server:main",  # Changed to use a main function for proper initialization
         ],
     },
 )

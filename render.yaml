@@ -1,12 +1,12 @@
 services:
   # Main backend web service (free tier)
-
+1
   - type: web
     name: bartleby-backend
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt && pip install -e. && python -m backend.setup 
-    startCommand: PYTHONPATH=$PYTHONPATH: . python -m backend.server
+    buildCommand: pip install -r requirements.txt && pip install -e .
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT backend.server:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -26,7 +26,7 @@ services:
         sync: false
       - key: AWS_ACCESS_KEY_ID
         sync: false
-      - key: AWS_SECRET_ACCESS_KEY
+      - key: AWS_SECRET_ACCESS_KEYe
         sync: false
       - key: AWS_S3_EXPRESS_BUCKET
         sync: false
@@ -44,6 +44,8 @@ services:
         generateValue: true
       - key: GOOGLE_CLIENT_ID
         sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
       - key: PUBLIC_BACKEND_URL
         value: "https://bartleby-backend-mn96.onrender.com"
       - key: GOOGLE_REDIRECT_URI
@@ -52,8 +54,8 @@ services:
         value: "https://hocomnia.com"
       - key: VERCEL_URL
         value: "https://bartleby.vercel.app"
-      - key: CORS_ORIGINS  
-        sync: false
+      - key: CORS_ORIGINS
+        value: "https://hocomnia.com,https://bartleby.vercel.app,https://www.hocomnia.com"
       - key: DATA_DIR
         value: "./data"
       - key: UPLOADS_DIR
@@ -68,6 +70,10 @@ services:
         value: "info"
       - key: ADMIN_PASSWORD
         sync: false
+      - key: QUART_APP
+        value: "backend.server:app"
+      - key: PYTHONPATH
+        value: "."
 
 # Free Postgres database
 databases:

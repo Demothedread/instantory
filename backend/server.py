@@ -115,7 +115,13 @@ try:
     logger.info("OAuth service initialized successfully")
 except ImportError as e:
     logger.warning(f"OAuth service not available: {e}")
-    oauth_service = None
+    # Create a minimal stub to avoid None errors
+    class OAuthServiceStub:
+        async def verify_token(self, token, **kwargs):
+            logger.warning("Using OAuth service stub - authentication may be limited")
+            return None
+            
+    oauth_service = OAuthServiceStub()
 
 # Validate environment variables
 def validate_environment():
@@ -272,12 +278,29 @@ async def shutdown():
 # Register blueprints
 register_blueprints()
 
-# Configure Hypercorn
-hypercorn_config = HypercornConfig()
-port = int(os.getenv("PORT", "8000"))
-hypercorn_config.bind = [f"0.0.0.0:{port}"]
-hypercorn_config.accesslog = "-"  # Log to stdout for Render
+# Main function for proper entry point
+def main():
+    """Entry point for the application when run as a console script."""
+    import asyncio
+    from hypercorn.config import Config
+    from hypercorn.asyncio import serve
+    
+    # Initialize settings    
+    port = int(os.getenv("PORT", "8000"))
+    
+    # Configure Hypercorn
+    hypercorn_config = Config()
+    hypercorn_config.bind = [f"0.0.0.0:{port}"]
+    hypercorn_config.accesslog = "-"  # Log to stdout
+    
+    logger.info(f"Starting server on port {port}")
+    
+    # Ensure proper auth setup is run before serving
+    app.before_serving_func = startup
+    app.after_serving_func = shutdown
+    
+    # Run the application
+    asyncio.run(serve(app, hypercorn_config))
 
 if __name__ == "__main__":
-    logger.info(f"Starting server on port {port}")
-    asyncio.run(serve(app, hypercorn_config))
+    main()
