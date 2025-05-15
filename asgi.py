@@ -19,11 +19,20 @@ logger.info("ASGI application initializing")
 
 # Import the app from the module
 try:
-    from backend.server import app
-    logger.info("Successfully imported app from backend.server")
+    # Try to import the application using different approaches
+    try:
+        # First, try direct import of the app instance
+        from backend.server import app
+        logger.info("Successfully imported app directly from backend.server")
+        application = app
+    except (ImportError, AttributeError):
+        # If direct import fails, try using the factory function
+        from backend.server import create_app
+        logger.info("Using create_app factory function from backend.server")
+        application = create_app()
     
-    # This is the ASGI application to be used by hypercorn
-    application = app
+    # Log successful initialization
+    logger.info("ASGI application initialized successfully")
 except Exception as e:
-    logger.error(f"Failed to import app: {e}")
+    logger.error(f"Failed to initialize ASGI application: {e}")
     raise

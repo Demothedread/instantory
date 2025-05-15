@@ -15,9 +15,15 @@ logger = logging.getLogger(__name__)
 
 # Create the app object
 app = Quart(__name__)
-           
-# Add Flask compatibility configuration to handle PROVIDE_AUTOMATIC_OPTIONS
-app.config['PROVIDE_AUTOMATIC_OPTIONS'] = True 
+
+# Configure options for compatibility with different ASGI servers
+app.config.update({
+    # Essential settings to avoid KeyError with flask imports in dependencies
+    'PROVIDE_AUTOMATIC_OPTIONS': True,
+    'DEBUG': os.getenv('DEBUG', 'false').lower() == 'true',
+    # Standard Quart settings
+    'MAX_CONTENT_LENGTH': int(os.getenv('MAX_UPLOAD_SIZE', str(100 * 1024 * 1024)))  # 100 MB default
+}) 
 
 # Load configuration from environment
 app.config.update({
@@ -115,6 +121,7 @@ async def index():
     """Health check endpoint with diagnostic information."""
     import platform
     import sys
+    import importlib
     
     # Get CORS settings for diagnostics
     cors_info = {
@@ -123,6 +130,15 @@ async def index():
         "credentials_allowed": allow_credentials
     }
     
+    # Get module versions for common dependencies
+    dependency_info = {}
+    for module_name in ["quart", "hypercorn", "asyncpg", "google.auth"]:
+        try:
+            module = importlib.import_module(module_name)
+            dependency_info[module_name] = getattr(module, "__version__", "unknown")
+        except ImportError:
+            dependency_info[module_name] = "not installed"
+    
     # Basic diagnostic information
     diagnostics = {
         "python_version": platform.python_version(),
@@ -130,13 +146,15 @@ async def index():
         "cors_config": cors_info,
         "debug_mode": app.debug,
         "environment": os.getenv("QUART_ENV", "production"),
-        "app_module": __name__
+        "app_module": __name__,
+        "dependencies": dependency_info,
+        "config": {k: v for k, v in app.config.items() if not isinstance(v, (bytes, str)) or len(str(v)) < 100}
     }
     
     return {
         "status": "ok", 
         "message": "Bartleby API server is running", 
-        "diagnostics": diagnostics if app.debug else None
+        "diagnostics": diagnostics
     }
 
 # Error handler for 404 Not Found
@@ -157,6 +175,13 @@ async def server_error(error):
         "message": "An unexpected error occurred", 
         "details": str(error) if app.debug else None
     }, 500
+
+# Application factory function for more flexibility in deployments
+def create_app():
+    """Create and configure the application."""
+    # This function returns the existing app instance for compatibility
+    # with deployment systems that expect a factory function
+    return app
 
 # Main function to run the app - used by entry_point in setup.py
 def main():

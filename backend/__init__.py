@@ -20,11 +20,13 @@ if is_debug:
     logger.setLevel(logging.DEBUG)
     logger.debug("Debug logging enabled")
 
+# Don't import server here to avoid circular imports
+# When this package is imported directly for deployment
+# Instead, make app importable from backend.server
+
+# Check for required modules
 try:
-    # Direct import when used as a package
-    from .server import app
-    
-    # Ensure auth routes are loadable
+    # Check if auth routes are loadable but don't import directly
     auth_routes_spec = importlib.util.find_spec('backend.routes.auth_routes')
     if auth_routes_spec is None:
         logger.warning("Auth routes module not found - authentication may not work properly")
