@@ -1,5 +1,4 @@
-from setuptools import setup, find_packages
-import pyproject
+from setuptools import setup, find_packagesBB
 
 setup(
     name="instantory",
