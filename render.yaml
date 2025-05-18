@@ -36,7 +36,7 @@ services:
       - key: ALLOW_CREDENTIALS
         value: "true"
       - key: JWT_SECRET
-        sync:
+        sync: false
       - key: SESSION_SECRET
         generateValue: true
       - key: COOKIE_SECRET
