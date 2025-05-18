@@ -8,7 +8,11 @@ from quart_cors import cors
 
 # Import blueprints at the module level
 from backend.routes.auth_routes import auth_bp, setup_auth
-from backend.routes.documents import documents_bp
+try:
+    from backend.routes.documents import documents_bp
+except Exception as e:
+    documents_bp = None
+    logging.getLogger(__name__).error(f"Failed to import documents_bp: {e}")
 from backend.routes.files import files_bp
 
 if auth_bp and setup_auth and documents_bp and files_bp:

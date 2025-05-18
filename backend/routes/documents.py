@@ -6,6 +6,7 @@ import asyncio
 from io import BytesIO
 from quart import Blueprint, request, jsonify, send_file
 from openai import AsyncOpenAI
+from asyncpg import PostgresError
 from backend.config.database import get_vector_pool, get_metadata_pool
 from backend.config.storage import storage_service
 from backend.services.storage import vercel_blob
@@ -29,12 +30,11 @@ async def get_documents():
                 user_id = getattr(request, 'user_id', request.headers.get('X-User-ID'))
                 if not user_id:
                     return jsonify({"error": "User ID is required"}), 400
-                
                 rows = await conn.fetch(
                     """
                     SELECT id, title, author, journal_publisher, publication_year,
-                           page_length, thesis, issue, summary, category, field,
-                           hashtags, influenced_by, file_path, file_type, created_at
+                    page_length, thesis, issue, summary, category, field,
+                    hashtags, influenced_by, file_path, file_type, created_at
                     FROM user_documents
                     WHERE user_id = $1 
                     ORDER BY created_at DESC
@@ -42,8 +42,11 @@ async def get_documents():
                     int(user_id)
                 )
                 return jsonify([dict(row) for row in rows])
+    except PostgresError as e:
+        logger.error("Error fetching documents: %s", e)
+        return jsonify({"error": "Failed to fetch documents"}), 500
     except Exception as e:
-        logger.error(f"Error fetching documents: {e}")
+        logger.error("Unexpected error fetching documents: %s", e)
         return jsonify({"error": "Failed to fetch documents"}), 500
 
 @documents_bp.route('/api/documents/content', methods=['GET'])

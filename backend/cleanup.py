@@ -115,7 +115,27 @@ class TaskManager:
 
 # Export instances
 task_manager = TaskManager()
-client = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+
+# Replace the direct client initialization with a function
+def get_openai_client() -> AsyncOpenAI:
+    """Create and return an OpenAI client with appropriate configuration."""
+    api_key = os.getenv('OPENAI_API_KEY')
+    
+    try:
+        # Try creating client with default parameters
+        return AsyncOpenAI(api_key=api_key)
+    except TypeError as e:
+        if 'proxies' in str(e):
+            # If error is about 'proxies' parameter, create without http_client
+            logger.warning("Creating OpenAI client without http_client due to httpx version incompatibility")
+            return AsyncOpenAI(
+                api_key=api_key,
+                http_client=None  # Let OpenAI create its own compatible client
+            )
+        raise  # Re-raise if it's a different TypeError
+
+# Use the function instead of direct instantiation
+client = get_openai_client()
 
 async def setup_task_cleanup():
     """Periodic cleanup of expired tasks."""
