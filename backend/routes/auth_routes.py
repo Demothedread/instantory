@@ -582,7 +582,10 @@ async def google_callback():
         # Get the code parameter
         code = request.args.get("code")
         state = request.args.get("state", "")
-
+        
+        logger.info(f"Google callback received: code present: {bool(code)}, state: {state}")
+        logger.info(f"Request headers: {dict(request.headers)}")
+        
         if not code:
             error = request.args.get("error", "Invalid or missing code")
             logger.warning(f"Google callback error: {error}")
@@ -592,33 +595,50 @@ async def google_callback():
         # Use static methods to properly access configuration values
         client_id = GoogleOAuthConfig.get_client_id()
         client_secret = GoogleOAuthConfig.get_client_secret()
-        frontend_origin = request.headers.get("Origin", FRONTEND_URL.split(",")[0])
-        redirect_uri = f"{frontend_origin}/auth/google/callback"
-
+        
+        # Fix the redirect_uri to match what's registered with Google
+        redirect_uri = GoogleOAuthConfig.get_redirect_uri()
+        logger.info(f"Using redirect URI: {redirect_uri}")
+        
         async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://oauth2.googleapis.com/token",
-                data={
+            try:
+                token_request_data = {
                     "client_id": client_id,
                     "client_secret": client_secret,
                     "code": code,
                     "redirect_uri": redirect_uri,
                     "grant_type": "authorization_code",
-                },
-            ) as response:
-                token_data = await response.json()
+                }
+                logger.info(f"Token exchange request data: {token_request_data}")
+                
+                async with session.post(
+                    "https://oauth2.googleapis.com/token",
+                    data=token_request_data,
+                ) as response:
+                    token_data = await response.json()
+                    logger.info(f"Token exchange response status: {response.status}")
+                    
+                    if response.status != 200:
+                        logger.error(f"Token exchange error response: {token_data}")
+            except Exception as e:
+                logger.exception(f"Error during token exchange request: {e}")
+                return redirect(f"{FRONTEND_URL}/login?error=token_exchange_error&details={urllib.parse.quote(str(e))}")
 
         if "error" in token_data:
             logger.warning(f"Token exchange error: {token_data['error']}")
             return redirect(
-                f"{FRONTEND_URL}/login?error={urllib.parse.quote(token_data['error'])}"
+                f"{FRONTEND_URL}/login?error={urllib.parse.quote(token_data.get('error'))}&details={urllib.parse.quote(token_data.get('error_description', ''))}"
             )
 
         id_token_jwt = token_data.get("id_token")
+        if not id_token_jwt:
+            logger.error("No ID token in response")
+            return redirect(f"{FRONTEND_URL}/login?error=missing_id_token")
 
         # Verify the token
         id_info = await verify_google_token(id_token_jwt)
         if not id_info:
+            logger.error("Failed to verify Google ID token")
             return redirect(f"{FRONTEND_URL}/login?error=invalid_token")
 
         # Extract user info
@@ -626,26 +646,38 @@ async def google_callback():
         name = id_info.get("name", email)
         google_id = id_info.get("sub")
         picture = id_info.get("picture")
+        
+        logger.info(f"User info from Google: email={email}, name={name}, picture={bool(picture)}")
 
         # Create or update user
-        user = await upsert_user(
-            email=email,
-            name=name,
-            google_id=google_id,
-            auth_provider="google",
-            is_verified=True,
-        )
+        try:
+            user = await upsert_user(
+                email=email,
+                name=name,
+                google_id=google_id,
+                auth_provider="google",
+                is_verified=True,
+            )
+            logger.info(f"User created/updated: {user['id']}")
+        except Exception as e:
+            logger.exception(f"Error creating/updating user: {e}")
+            return redirect(f"{FRONTEND_URL}/login?error=user_creation_failed&details={urllib.parse.quote(str(e))}")
 
         # Create tokens with appropriate expiry
-        access_token = await create_token(
-            {
-                "id": user["id"],
-                "email": user["email"],
-                "is_admin": user.get("is_admin", False),
-            },
-            "access",
-        )
-        refresh_token = await create_token({"user_id": user["id"]}, "refresh")
+        try:
+            access_token = await create_token(
+                {
+                    "id": user["id"],
+                    "email": user["email"],
+                    "is_admin": user.get("is_admin", False),
+                },
+                "access",
+            )
+            refresh_token = await create_token({"user_id": user["id"]}, "refresh")
+            logger.info(f"Tokens created for user {user['id']}")
+        except Exception as e:
+            logger.exception(f"Error creating tokens: {e}")
+            return redirect(f"{FRONTEND_URL}/login?error=token_creation_failed&details={urllib.parse.quote(str(e))}")
 
         # Redirect to frontend with tokens
         # Use state if provided (for redirecting to a specific page after login)
@@ -656,11 +688,11 @@ async def google_callback():
         # Encode tokens for URL
         encoded_access = urllib.parse.quote(access_token)
         encoded_refresh = urllib.parse.quote(refresh_token)
-
-        # Redirect with tokens in URL parameters (they will be extracted by frontend and stored as cookies)
-        return redirect(
-            f"{FRONTEND_URL}{redirect_path}?access_token={encoded_access}&refresh_token={encoded_refresh}&auth_success=true"
-        )
+        
+        final_redirect_url = f"{FRONTEND_URL}{redirect_path}?access_token={encoded_access}&refresh_token={encoded_refresh}&auth_success=true"
+        logger.info(f"Redirecting to frontend: {FRONTEND_URL}{redirect_path} with tokens")
+        
+        return redirect(final_redirect_url)
 
     except Exception as e:
         logger.exception(f"Google callback error: {e}")

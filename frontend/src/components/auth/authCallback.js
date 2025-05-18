@@ -41,6 +41,8 @@ const AuthCallback = () => {
         
         // Handle tokens from URL (Google OAuth flow)
         if (accessToken && refreshToken) {
+          console.log("Tokens found in URL parameters");
+          
           // Store tokens in local storage as fallback (they should already be in cookies)
           localStorage.setItem('auth_token', accessToken);
           
@@ -48,6 +50,7 @@ const AuthCallback = () => {
           const sessionValid = await verifySession();
           
           if (sessionValid) {
+            console.log("Session verification successful, redirecting to:", redirectPath);
             // Redirect to dashboard or the intended destination
             navigate(redirectPath, { replace: true });
           } else {
@@ -59,23 +62,27 @@ const AuthCallback = () => {
         
         // If we just have auth_success flag, verify the session
         if (authSuccess === 'true') {
+          console.log("Auth success flag found, verifying session");
           const sessionValid = await verifySession();
+          
           if (sessionValid) {
+            console.log("Session verification successful, redirecting to:", redirectPath);
             navigate(redirectPath, { replace: true });
           } else {
-            console.error("Session invalid despite auth_success=true flag");
-            navigate('/login?error=session_invalid', { replace: true });
+            console.error("Session verification failed with auth_success flag");
+            navigate('/login?error=session_verification_failed', { replace: true });
           }
           return;
         }
         
-        // Default fallback - no recognized auth parameters
-        console.error('No valid authentication parameters found');
-        navigate('/login?error=no_auth_data', { replace: true });
+        // If we have no tokens or auth_success flag, this might be an error
+        console.error("No authentication data found in URL");
+        navigate('/login?error=missing_authentication_data', { replace: true });
+        
       } catch (err) {
-        console.error('Auth callback processing error:', err);
-        setError('Authentication process failed. Please try again.');
-        navigate('/login?error=auth_process_failed', { replace: true });
+        console.error("Error handling authentication callback:", err);
+        setError(`Authentication error: ${err.message || 'Unknown error'}`);
+        navigate('/login', { replace: true });
       } finally {
         setIsProcessing(false);
       }

@@ -36,7 +36,7 @@ class GoogleOAuthConfig:
         additional_ids = GoogleOAuthConfig.get_additional_client_ids()
         if additional_ids:
             ids.extend(additional_ids)
-        return ids
+        return [id for id in ids if id]  # Filter out empty strings
 
     @staticmethod
     def get_client_secret() -> str:
@@ -61,7 +61,7 @@ class GoogleOAuthConfig:
     def get_frontend_url() -> str:
         """Get frontend URL from environment."""
         frontend_url = os.getenv("FRONTEND_URL", "https://hocomnia.com")
-        return frontend_url
+        return frontend_url.split(",")[0] if "," in frontend_url else frontend_url
 
     @staticmethod
     def get_oauth_url(state: Optional[str] = None) -> str:
@@ -83,6 +83,7 @@ class GoogleOAuthConfig:
             "scope": "email profile",
             "access_type": "offline",
             "prompt": "select_account consent",
+            "include_granted_scopes": "true"
         }
         
         if state:
