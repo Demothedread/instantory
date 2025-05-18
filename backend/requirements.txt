@@ -81,3 +81,4 @@ hypercorn==0.15.0
 uvicorn==0.24.0
 python-multipart==0.0.6
 pyjwt==2.8.0
+Flask[async]==3.0.3

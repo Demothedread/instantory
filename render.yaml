@@ -4,8 +4,8 @@ services:
     name: bartleby-backend
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt && pip install -e .
-    startCommand: PYTHONPATH=. FLASK_APP=backend.server:app python -m hypercorn backend.server:app --bind 0.0.0.0:$PORT --access-logfile - --error-logfile -
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m hypercorn backend.server:app --bind 0.0.0.0:$PORT --access-logfile - --error-logfile -
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -36,7 +36,7 @@ services:
       - key: ALLOW_CREDENTIALS
         value: "true"
       - key: JWT_SECRET
-        generateValue: true
+        sync:
       - key: SESSION_SECRET
         generateValue: true
       - key: COOKIE_SECRET
@@ -69,16 +69,10 @@ services:
         value: "info"
       - key: ADMIN_PASSWORD
         sync: false
-      - key: QUART_APP
-        value: "backend.server:app" 
+      - key: DEBUG
+        value: "true"
       - key: PYTHONPATH
         value: "."
-      - key: DEBUG
-        value: "true"  # Enable this temporarily for debugging
-      - key: FLASK_APP  # For compatibility with some libraries
-        value: "backend.server:app"
-      - key: PROVIDE_AUTOMATIC_OPTIONS
-        value: "true"
 
 # Free Postgres database
 databases:

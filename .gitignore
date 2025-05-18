@@ -86,3 +86,5 @@ frontend/src/react-oauth/google.json
 
 # Deprecated files
 frontend/src/OldApp.js
+
+chrome/
