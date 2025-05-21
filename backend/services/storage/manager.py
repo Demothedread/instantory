@@ -12,7 +12,7 @@ try:
     from .s3 import s3_service
     from .vercel_blob import vercel_blob_service
     from ...config.storage import storage_config, StorageType
-    from ...config.database import get_vector_pool, get_metadata_pool
+    from backend.config.database import get_vector_pool, get_metadata_pool
 except ImportError:
     # Alternative import path for when running as a module
     try:

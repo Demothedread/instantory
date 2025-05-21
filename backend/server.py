@@ -18,9 +18,14 @@ def create_app():
     """Create and configure the Quart application."""
     app = Quart(__name__)
     
-    # Required Flask compatibility configuration
+    # Use a try-except block when setting this Flask-specific option
+    try:
+        app.config['PROVIDE_AUTOMATIC_OPTIONS'] = True
+    except (KeyError, AttributeError):
+        # Log a warning but continue if this fails
+        logger.warning("Could not set PROVIDE_AUTOMATIC_OPTIONS, continuing without it")
+    
     app.config.update({
-        'PROVIDE_AUTOMATIC_OPTIONS': True,
         'DEBUG': os.getenv('DEBUG', 'false').lower() == 'true',
         'SECRET_KEY': os.getenv('JWT_SECRET', 'dev-secret-key'),
         'MAX_CONTENT_LENGTH': int(os.getenv('MAX_UPLOAD_SIZE', str(100 * 1024 * 1024))),  # 100 MB

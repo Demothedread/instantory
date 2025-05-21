@@ -1,15 +1,17 @@
 import os
 import logging
 import asyncio
-# Removed unused global import of boto3
 from io import BytesIO
 from pathlib import Path
 from typing import Optional
 from quart import Blueprint, request, jsonify, send_file
-from .cleanup import get_metadata_pool, get_vector_pool
+
+# Correct import path for database pools
+from backend.config.database import get_vector_pool, get_metadata_pool
+
 # Import all potential storage modules upfront
 try:
-    from .services.storage import vercel_blob
+    from backend.services.storage import vercel_blob
 except ImportError:
     vercel_blob = None
 
@@ -432,7 +434,8 @@ async def search_documents():
         if not query:
             return jsonify({'error': 'Search query is required'}), 400
 
-        async with get_vector_pool() & get_metadata_pool as pool:
+        # Fixed critical bug: changed bitwise AND operator to proper async context manager
+        async with get_vector_pool() as pool:  
             async with pool.acquire() as conn:
                 where_clause = "user_id = $1"
                 params = [int(user_id)]
