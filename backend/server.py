@@ -17,13 +17,8 @@ logger = logging.getLogger(__name__)
 def create_app():
     """Create and configure the Quart application."""
     app = Quart(__name__)
-    
+    app.config.setdefault('PROVIDE_AUTOMATIC_OPTIONS', True)
     # Use a try-except block when setting this Flask-specific option
-    try:
-        app.config['PROVIDE_AUTOMATIC_OPTIONS'] = True
-    except (KeyError, AttributeError):
-        # Log a warning but continue if this fails
-        logger.warning("Could not set PROVIDE_AUTOMATIC_OPTIONS, continuing without it")
     
     app.config.update({
         'DEBUG': os.getenv('DEBUG', 'false').lower() == 'true',

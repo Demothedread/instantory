@@ -181,3 +181,25 @@ storage_config = StorageConfig()
 def get_storage_config() -> StorageConfig:
     """Get the storage configuration instance."""
     return storage_config
+
+
+# Module-level helper for getting the temp directory
+def get_temp_dir() -> Path:
+    """
+    Return the temporary directory path for file storage (module-level helper).
+    """
+    config = get_storage_config()
+    # Prefer explicit TEMP_DIR override from config.paths
+    temp_path = config.paths.get("TEMP_DIR")
+    if temp_path:
+        return temp_path
+    import tempfile
+    return Path(tempfile.gettempdir())
+
+def cleanup_temp_files(user_id: Optional[int] = None) -> None:
+    """
+    Clean up temporary files for a user or all users.
+    Module-level helper that delegates to StorageConfig.cleanup_temp_files.
+    """
+    config = get_storage_config()
+    config.cleanup_temp_files(user_id)
