@@ -18,6 +18,14 @@ def create_app():
     """Create and configure the Quart application."""
     app = Quart(__name__)
     
+    # Required Flask compatibility configuration
+    app.config.update({
+        'PROVIDE_AUTOMATIC_OPTIONS': True,
+        'DEBUG': os.getenv('DEBUG', 'false').lower() == 'true',
+        'SECRET_KEY': os.getenv('JWT_SECRET', 'dev-secret-key'),
+        'MAX_CONTENT_LENGTH': int(os.getenv('MAX_UPLOAD_SIZE', str(100 * 1024 * 1024))),  # 100 MB
+    })
+    
     # Configure CORS
     origins = os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(',')
     app = cors(app, 
@@ -31,18 +39,18 @@ def create_app():
         from backend.routes.auth_routes import auth_bp, setup_auth
         from backend.routes.documents import documents_bp
         from backend.routes.files import files_bp
-        from backend.routes.process import process_bp
         from backend.routes.inventory import inventory_bp
+        from backend.routes.process import process_bp
         
         # Set up authentication
         setup_auth(app)
         
-        # Register blueprints
+        # Register all blueprints
         app.register_blueprint(auth_bp)
         app.register_blueprint(documents_bp)
         app.register_blueprint(files_bp)
-        app.register_blueprint(process_bp)
         app.register_blueprint(inventory_bp)
+        app.register_blueprint(process_bp)
         
         logger.info("All blueprints registered successfully")
     except Exception as e:
@@ -53,24 +61,32 @@ def create_app():
     async def index():
         return jsonify({
             "status": "ok",
-            "service": "Bartleby API"
+            "service": "Bartleby API",
+            "version": "1.0",
+            "environment": os.getenv("NODE_ENV", "production")
         })
     
     # Simplified error handlers
     @app.errorhandler(404)
     async def not_found(error):
-        return jsonify({"error": "Not found", "status": 404}), 404
-    
+        return jsonify({
+            "error": "Not found",
+            "status": 404
+        }), 404
+
     @app.errorhandler(500)
     async def server_error(error):
         logger.exception("Server error")
-        return jsonify({"error": "Internal server error", "status": 500}), 500
-    
-    # Set up task cleanup in background
+        return jsonify({
+            "error": "Internal server error",
+            "status": 500
+        }), 500
+
+    # Set up any background tasks if needed
     @app.before_serving
-    async def setup_task_cleanup():
-        from backend.task_manager import setup_task_cleanup
-        app.add_background_task(setup_task_cleanup)
+    async def setup_background_tasks():
+        # You can add background tasks setup here
+        logger.info("Setting up background tasks")
     
     return app
 
@@ -79,6 +95,7 @@ app = create_app()
 
 # Simple entry point for running directly
 def main():
+    """Run the application directly."""
     app.run(
         host='0.0.0.0', 
         port=int(os.getenv('PORT', 5000)),
