@@ -1,21 +1,23 @@
 """Processing routes for batch document and image analysis."""
+
 import logging
 import os
 import asyncio
 import uuid
 from datetime import datetime
 from quart import Blueprint, request, jsonify
-from openai import AsyncOpenAI
+
 from backend.config.database import get_metadata_pool
+from backend.config.client_factory import create_openai_client
 from backend.services.processor import create_processor_factory
 from backend.services.storage.manager import storage_manager
-
+from backend.task_manager import task_manager
 
 logger = logging.getLogger(__name__)
 process_bp = Blueprint('process', __name__)
 
-# Initialize OpenAI client
-openai_client = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+# Initialize OpenAI client safely
+openai_client = create_openai_client()
 
 @process_bp.route('/api/process', methods=['POST'])
 async def process_files():
@@ -62,7 +64,7 @@ async def process_files():
             # Download file content
             content = await storage_manager.get_file(blob_url)
             if not content:
-                logger.error(f"Failed to retrieve file content for {original_name}")
+                logger.error("Failed to retrieve file content for %s", original_name)
                 continue
                 
             file_objects.append({
@@ -71,6 +73,9 @@ async def process_files():
                 "type": file_type,
                 "name": original_name
             })
+        
+        # Add task to task manager
+        task_manager.add_task(task_id)
         
         # Start asynchronous processing
         asyncio.create_task(
@@ -83,7 +88,7 @@ async def process_files():
         })
         
     except Exception as e:
-        logger.error(f"Error processing files: {e}")
+        logger.error("Error processing files: %s", e)
         return jsonify({"error": str(e)}), 500
 
 async def process_batch_async(task_id, processor, files, user_id):

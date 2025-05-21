@@ -2,20 +2,18 @@
 
 import os
 import logging
-import asyncio
 from io import BytesIO
 from quart import Blueprint, request, jsonify, send_file
-from openai import AsyncOpenAI
 from asyncpg import PostgresError
 from backend.config.database import get_vector_pool, get_metadata_pool
 from backend.config.storage import storage_service
-from backend.services.storage import vercel_blob
-
-# Initialize OpenAI client for vector embeddings
-openai_client = AsyncOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+from backend.config.client_factory import create_openai_client
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+# Initialize OpenAI client for vector embeddings safely
+openai_client = create_openai_client()
 
 # Create blueprint
 documents_bp = Blueprint('documents', __name__)
