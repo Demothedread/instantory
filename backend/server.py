@@ -7,6 +7,9 @@ import asyncio
 from quart import Quart, jsonify
 from quart_cors import cors
 
+from quart import Quart as _QuartBase
+_QuartBase.default_config['PROVIDE_AUTOMATIC_OPTIONS'] = True
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, os.getenv('LOG_LEVEL', 'INFO').upper()),
@@ -16,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 def create_app():
     """Create and configure the Quart application."""
-    app = Quart(__name__)
+    app = Quart(__name__, static_folder=None)
     app.config.setdefault('PROVIDE_AUTOMATIC_OPTIONS', True)
     # Use a try-except block when setting this Flask-specific option
     
