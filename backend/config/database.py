@@ -2,10 +2,13 @@
 import os
 import logging
 from enum import Enum
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union, TYPE_CHECKING
 from urllib.parse import urlparse
 
 import asyncpg
+
+if TYPE_CHECKING:
+    from backend.services.vector.qdrant_service import QdrantService
 
 logger = logging.getLogger(__name__)
 
@@ -203,12 +206,28 @@ async def get_db_pool() -> Optional[asyncpg.Pool]:
         raise RuntimeError("Metadata database pool is not available.")
     return pool
 
-async def get_vector_pool() -> Optional[asyncpg.Pool]:
-    """Get the vector database connection pool.
+async def get_vector_pool() -> Optional[Union[asyncpg.Pool, 'QdrantService']]:
+    """Get the vector database connection.
     
-    Returns None if not available. Check the return value before use.
-    Falls back to the metadata pool if vector-specific pool is unavailable.
+    Returns Qdrant service instance for vector operations.
+    Falls back to PostgreSQL pool if Qdrant is unavailable.
     """
+    try:
+        # Try to import and use Qdrant service
+        from backend.services.vector.qdrant_service import qdrant_service
+        
+        # Test Qdrant connection
+        health = await qdrant_service.health_check()
+        if health.get("status") == "healthy":
+            logger.debug("Using Qdrant for vector operations")
+            return qdrant_service
+        else:
+            logger.warning("Qdrant unhealthy, falling back to PostgreSQL: %s", health.get("error"))
+            
+    except Exception as e:
+        logger.warning("Qdrant service unavailable, falling back to PostgreSQL: %s", e)
+    
+    # Fallback to PostgreSQL vector pool
     pool = await db_config.get_pool(DatabaseType.VECTOR)
     if pool is None:
         # Try to use metadata pool as fallback for vector operations
@@ -222,3 +241,11 @@ async def get_metadata_pool() -> Optional[asyncpg.Pool]:
     Returns None if not available. Check the return value before use.
     """
     return await db_config.get_pool(DatabaseType.METADATA)
+
+def is_qdrant_service(vector_client) -> bool:
+    """Check if the vector client is a Qdrant service instance."""
+    try:
+        from backend.services.vector.qdrant_service import QdrantService
+        return isinstance(vector_client, QdrantService)
+    except ImportError:
+        return False

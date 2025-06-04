@@ -23,6 +23,10 @@ services:
         value: "vercel"
       - key: BLOB_READ_WRITE_TOKEN
         sync: false
+      - key: QDRANT_URL
+        value: "https://a155b5ab-3dca-44ae-a3b7-7c8e0c472bbd.europe-west3-0.gcp.cloud.qdrant.io:6333"
+      - key: QDRANT_API_KEY
+        sync: false
       - key: AWS_ACCESS_KEY_ID
         sync: false
       - key: AWS_SECRET_ACCESS_KEY
