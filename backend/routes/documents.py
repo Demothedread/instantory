@@ -69,15 +69,15 @@ async def get_document_content():
                 
             async with metadata_pool.acquire() as conn:
                 row = await conn.fetchrow(
-                        """
-                        SELECT file_path FROM user_documents
-                        WHERE id = $1
-                        """,
-                        int(document_id)
-                    )
-                    if not row:
-                        return jsonify({"error": "Document not found in database"}), 404
-                    document_url = row['file_path']
+                    """
+                    SELECT file_path FROM user_documents
+                    WHERE id = $1
+                    """,
+                    int(document_id)
+                )
+                if not row:
+                    return jsonify({"error": "Document not found in database"}), 404
+                document_url = row['file_path']
 
         # Retrieve document content from the appropriate storage backend
         content = await storage_manager.get_file(document_url)
@@ -139,14 +139,14 @@ async def create_document():
                     data.get('issue'),
                     data.get('summary'),
                     data.get('category'),
-                    data.get('field'),
-                    data.get('hashtags'),
-                    data.get('influenced_by'),
-                    data.get('file_path'),
-                    data.get('file_type'),
-                    data.get('extracted_text')
-                )
-                return jsonify(dict(row))
+                data.get('field'),
+                data.get('hashtags'),
+                data.get('influenced_by'),
+                data.get('file_path'),
+                data.get('file_type'),
+                data.get('extracted_text')
+            )
+            return jsonify(dict(row))
     except Exception as e:
         logger.error(f"Error creating document: {e}")
         return jsonify({'error': str(e)}), 500
@@ -189,18 +189,18 @@ async def update_document(doc_id):
                     data.get('publication_year'),
                     data.get('page_length'),
                     data.get('thesis'),
-                    data.get('issue'),
-                    data.get('summary'),
-                    data.get('category'),
-                    data.get('field'),
-                    data.get('hashtags'),
-                    data.get('influenced_by'),
-                    doc_id,
-                    int(user_id)
-                )
-                if not row:
-                    return jsonify({'error': 'Document not found'}), 404
-                return jsonify(dict(row))
+                data.get('issue'),
+                data.get('summary'),
+                data.get('category'),
+                data.get('field'),
+                data.get('hashtags'),
+                data.get('influenced_by'),
+                doc_id,
+                int(user_id)
+            )
+            if not row:
+                return jsonify({'error': 'Document not found'}), 404
+            return jsonify(dict(row))
     except Exception as e:
         logger.error(f"Error updating document {doc_id}: {e}")
         return jsonify({'error': str(e)}), 500
@@ -219,26 +219,26 @@ async def delete_document(doc_id):
                 return jsonify({"error": "User ID is required"}), 400
 
             # Get document URL before deletion
-                row = await conn.fetchrow("""
-                    SELECT file_path FROM user_documents 
-                    WHERE id = $1 AND user_id = $2
-                """, doc_id, int(user_id))
-                if not row:
-                    return jsonify({"error": "Document not found"}), 404
+            row = await conn.fetchrow("""
+                SELECT file_path FROM user_documents 
+                WHERE id = $1 AND user_id = $2
+            """, doc_id, int(user_id))
+            if not row:
+                return jsonify({"error": "Document not found"}), 404
 
-                document_url = row['file_path']
+            document_url = row['file_path']
 
-                # Delete record from database
-                await conn.execute("""
-                    DELETE FROM user_documents 
-                    WHERE id = $1 AND user_id = $2
-                """, doc_id, int(user_id))
+            # Delete record from database
+            await conn.execute("""
+                DELETE FROM user_documents 
+                WHERE id = $1 AND user_id = $2
+            """, doc_id, int(user_id))
 
-                # Delete from storage if URL exists
-                if document_url:
-                    await storage_manager.delete_file(document_url)
+            # Delete from storage if URL exists
+            if document_url:
+                await storage_manager.delete_file(document_url)
 
-                return jsonify({"message": "Document deleted successfully"})
+            return jsonify({"message": "Document deleted successfully"})
     except Exception as e:
         logger.error(f"Error deleting document: {e}")
         return jsonify({"error": "Failed to delete document"}), 500
@@ -263,8 +263,11 @@ async def get_search_documents():
             return jsonify({"error": "Failed to process query"}), 500
 
         # Search in vector database for similar documents
-        async with get_vector_pool() as pool:
-            async with pool.acquire() as conn:
+        vector_pool = await get_vector_pool()
+        if not vector_pool:
+            return jsonify({"error": "Vector database unavailable"}), 503
+            
+        async with vector_pool.acquire() as conn:
                 user_id = getattr(request, 'user_id', request.headers.get('X-User-ID'))
                 if not user_id:
                     return jsonify({"error": "User ID is required"}), 400
@@ -305,7 +308,7 @@ async def get_search_documents():
                                 break
                         results.append(doc_dict)
 
-                        return jsonify({"results": results})
+                    return jsonify({"results": results})
     except Exception as e:
         logger.error(f"Error searching documents: {e}")
         return jsonify({"error": "Failed to search documents"}), 500
@@ -334,8 +337,12 @@ async def search_documents():
             query_vector = response.data[0].embedding
 
             # Search by vector similarity
-            async with get_vector_pool() as pool:
-                async with pool.acquire() as conn:
+            vector_pool = await get_vector_pool()
+            if not vector_pool:
+                logger.warning("Vector database unavailable, falling back to text search")
+                raise Exception("Vector search unavailable")
+                
+            async with vector_pool.acquire() as conn:
                     rows = await conn.fetch("""
                         SELECT document_id, 1 - (content_vector <=> $1) as similarity
                         FROM document_vectors 
@@ -386,36 +393,36 @@ async def search_documents():
             params = [int(user_id)]
             
             if field == 'content':
-                    where_clause += " AND extracted_text ILIKE $2"
-                elif field == 'metadata':
-                    where_clause += " AND (title ILIKE $2 OR author ILIKE $2 OR summary ILIKE $2 OR thesis ILIKE $2 OR hashtags ILIKE $2)"
-                else:  # 'all'
-                    where_clause += " AND (title ILIKE $2 OR author ILIKE $2 OR summary ILIKE $2 OR thesis ILIKE $2 OR hashtags ILIKE $2 OR extracted_text ILIKE $2)"
+                where_clause += " AND extracted_text ILIKE $2"
+            elif field == 'metadata':
+                where_clause += " AND (title ILIKE $2 OR author ILIKE $2 OR summary ILIKE $2 OR thesis ILIKE $2 OR hashtags ILIKE $2)"
+            else:  # 'all'
+                where_clause += " AND (title ILIKE $2 OR author ILIKE $2 OR summary ILIKE $2 OR thesis ILIKE $2 OR hashtags ILIKE $2 OR extracted_text ILIKE $2)"
+            
+            params.append(f"%{query}%")
+            
+            sql = f"""
+                SELECT id, title, author, summary, extracted_text, created_at
+                FROM user_documents
+                WHERE {where_clause}
+                ORDER BY created_at DESC
+                LIMIT 100
+            """
+            
+            rows = await conn.fetch(sql, *params)
+            
+            results = []
+            for row in rows:
+                excerpt = extract_matching_excerpt(row['extracted_text'], query)
+                results.append({
+                    'id': row['id'],
+                    'title': row['title'],
+                    'author': row['author'],
+                    'summary': row['summary'],
+                    'excerpt': excerpt
+                })
                 
-                params.append(f"%{query}%")
-                
-                sql = f"""
-                    SELECT id, title, author, summary, extracted_text, created_at
-                    FROM user_documents
-                    WHERE {where_clause}
-                    ORDER BY created_at DESC
-                    LIMIT 100
-                """
-                
-                rows = await conn.fetch(sql, *params)
-                
-                results = []
-                for row in rows:
-                    excerpt = extract_matching_excerpt(row['extracted_text'], query)
-                    results.append({
-                        'id': row['id'],
-                        'title': row['title'],
-                        'author': row['author'],
-                        'summary': row['summary'],
-                        'excerpt': excerpt
-                    })
-                    
-                return jsonify({'results': results, 'search_type': 'text'})
+            return jsonify({'results': results, 'search_type': 'text'})
     except Exception as e:
         logger.error(f"Error searching documents: {e}")
         return jsonify({'error': str(e)}), 500
