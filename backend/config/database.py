@@ -35,6 +35,26 @@ class DatabaseConfig:
             'vector': os.getenv('VECTOR_DATABASE_URL'),
             'metadata': os.getenv('METADATA_DATABASE_URL')
         }
+        
+        # Log which URLs are available (without passwords)
+        safe_urls = {}
+        for key, url in self.database_urls.items():
+            if url:
+                # Mask password in URL for logging
+                try:
+                    parsed = urlparse(url)
+                    safe_url = f"{parsed.scheme}://{parsed.username}:***@{parsed.hostname}"
+                    if parsed.port:
+                        safe_url += f":{parsed.port}"
+                    if parsed.path:
+                        safe_url += parsed.path
+                    safe_urls[key] = safe_url
+                except:
+                    safe_urls[key] = "invalid_url"
+            else:
+                safe_urls[key] = None
+        
+        logger.info("Available database URLs: %s", safe_urls)
 
         # Ensure at least one database URL is provided
         if not any(self.database_urls.values()):
@@ -53,6 +73,9 @@ class DatabaseConfig:
             self.database_urls['default']
         )
         
+        logger.info("Using vector database URL: %s", "configured" if self.vector_url else "none")
+        logger.info("Using metadata database URL: %s", "configured" if self.metadata_url else "none")
+        
         # Parse connection details if URLs are available
         self.vector_config = self._parse_url(self.vector_url) if self.vector_url else None
         self.metadata_config = self._parse_url(self.metadata_url) if self.metadata_url else None
@@ -62,14 +85,45 @@ class DatabaseConfig:
         if not url:
             return {}
             
-        parsed = urlparse(url)
-        return {
-            'user': parsed.username,
-            'password': parsed.password,
-            'database': parsed.path[1:] if parsed.path else None,
-            'host': parsed.hostname,
-            'port': parsed.port
-        }                                          
+        logger.debug("Parsing database URL: %s", url[:50] + "..." if len(url) > 50 else url)
+        
+        try:
+            parsed = urlparse(url)
+            logger.debug("Parsed URL components - scheme: %s, username: %s, hostname: %s, port: %s, path: %s", 
+                        parsed.scheme, parsed.username, parsed.hostname, parsed.port, parsed.path)
+            
+            # Handle different PostgreSQL URL formats
+            # Standard format: postgresql://user:password@host:port/database
+            # Render format: postgresql://user:password@host/database  
+            database = None
+            if parsed.path:
+                # Remove leading slash
+                path_without_slash = parsed.path[1:] if parsed.path.startswith('/') else parsed.path
+                # Split by ? to remove query parameters
+                database = path_without_slash.split('?')[0]
+                # Handle malformed URLs where hostname appears in path
+                if '/' in database:
+                    # This might be a malformed URL, extract the actual database name
+                    parts = database.split('/')
+                    # Take the last non-empty part as the database name
+                    database = [part for part in parts if part][-1] if parts else None
+                    
+            logger.debug("Extracted database name: %s", database)
+            
+            config = {
+                'user': parsed.username,
+                'password': parsed.password,
+                'database': database,
+                'host': parsed.hostname,
+                'port': parsed.port or 5432  # Default PostgreSQL port
+            }
+            
+            logger.debug("Final config (safe): %s", {k: v for k, v in config.items() if k != 'password'})
+            return config
+            
+        except Exception as e:
+            logger.error("Error parsing database URL: %s", e)
+            return {}                                          
 
     async def get_pool(self, db_type: DatabaseType) -> Optional[asyncpg.Pool]:
         """Get or create a database connection pool for the specified type.
@@ -93,6 +147,10 @@ class DatabaseConfig:
             env = os.getenv('ENVIRONMENT', 'production').lower()
             ssl = 'require' if env in ['production', 'staging'] else None
             
+            # Log connection attempt details (without password)
+            safe_config = {k: v for k, v in config.items() if k != 'password'}
+            logger.info("Attempting to create %s database pool with config: %s", db_type.value, safe_config)
+            
             # Create the connection pool
             self._pools[db_type] = await asyncpg.create_pool(
                 user=config['user'],
@@ -103,15 +161,20 @@ class DatabaseConfig:
                 ssl=ssl,
                 min_size=1,
                 max_size=10,
-                command_timeout=60
+                command_timeout=60,
+                server_settings={
+                    'application_name': f'bartleby_{db_type.value}'
+                }
             )
             logger.info("%s database pool created successfully", db_type.value)
             return self._pools[db_type]
         except asyncpg.exceptions.PostgresError as e:
             logger.error("Postgres error while creating %s database pool: %s", db_type.value, e)
+            logger.error("Config used (safe): %s", {k: v for k, v in config.items() if k != 'password'})
             return None
-        except (ValueError, KeyError) as e:
+        except Exception as e:
             logger.error("Unexpected error while creating %s database pool: %s", db_type.value, e)
+            logger.error("Config used (safe): %s", {k: v for k, v in config.items() if k != 'password'})
             return None
 
     async def close_pools(self) -> None:
