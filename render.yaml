@@ -20,7 +20,7 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: STORAGE_BACKEND
-        value: "generic"
+        value: "vercel"
       - key: BLOB_READ_WRITE_TOKEN
         sync: false
       - key: AWS_ACCESS_KEY_ID

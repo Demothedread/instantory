@@ -95,8 +95,6 @@ class DatabaseConfig:
             
             # Create the connection pool
             self._pools[db_type] = await asyncpg.create_pool(
-                client_id=config['client_id'],
-                client_secret=config['client_secret'],
                 user=config['user'],
                 password=config['password'],
                 database=config['database'],

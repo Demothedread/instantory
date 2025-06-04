@@ -7,9 +7,6 @@ import asyncio
 from quart import Quart, jsonify
 from quart_cors import cors
 
-from quart import Quart as _QuartBase
-_QuartBase.default_config['PROVIDE_AUTOMATIC_OPTIONS'] = True
-
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, os.getenv('LOG_LEVEL', 'INFO').upper()),
@@ -20,9 +17,8 @@ logger = logging.getLogger(__name__)
 def create_app():
     """Create and configure the Quart application."""
     app = Quart(__name__, static_folder=None)
-    app.config.setdefault('PROVIDE_AUTOMATIC_OPTIONS', True)
-    # Use a try-except block when setting this Flask-specific option
     
+    # Basic configuration
     app.config.update({
         'DEBUG': os.getenv('DEBUG', 'false').lower() == 'true',
         'SECRET_KEY': os.getenv('JWT_SECRET', 'dev-secret-key'),
@@ -96,8 +92,9 @@ def create_app():
             import os
             
             # Initialize metadata database
-            async with get_metadata_pool() as pool:
-                async with pool.acquire() as conn:
+            metadata_pool = await get_metadata_pool()
+            if metadata_pool:
+                async with metadata_pool.acquire() as conn:
                     # Apply metadata schema
                     if os.path.exists('backend/init_metadata_db.sql'):
                         with open('backend/init_metadata_db.sql', 'r') as f:
@@ -111,8 +108,9 @@ def create_app():
                         logger.info("Upload tracking schema initialized")
             
             # Initialize vector database if separate
-            async with get_vector_pool() as pool:
-                async with pool.acquire() as conn:
+            vector_pool = await get_vector_pool()
+            if vector_pool and vector_pool != metadata_pool:
+                async with vector_pool.acquire() as conn:
                     if os.path.exists('backend/init_vector_db.sql'):
                         with open('backend/init_vector_db.sql', 'r') as f:
                             await conn.execute(f.read())
