@@ -8,6 +8,14 @@ from datetime import datetime
 from quart import Quart, jsonify
 from quart_cors import cors
 
+# Load environment variables from .env file first
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    logging.getLogger(__name__).info("Environment variables loaded from .env file")
+except ImportError:
+    logging.getLogger(__name__).warning("python-dotenv not available, using system environment variables only")
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, os.getenv('LOG_LEVEL', 'INFO').upper()),
@@ -110,22 +118,26 @@ def create_app():
             except Exception as e:
                 logger.error("Failed to setup authentication: %s", str(e))
         
-        # Register blueprints with individual error handling
+        # Register blueprints with individual error handling and correct URL prefixes
         blueprint_configs = [
-            (auth_bp, "auth"),
-            (documents_bp, "documents"), 
-            (files_bp, "files"),
-            (inventory_bp, "inventory"),
-            (process_bp, "process"),
-            (health_bp, "health")
+            (auth_bp, "auth", "/api/auth"),  # Auth routes use simple paths, need prefix
+            (documents_bp, "documents", None),  # Documents routes already include /api/documents
+            (files_bp, "files", "/api"),  # Files routes use simple paths, need /api prefix  
+            (inventory_bp, "inventory", None),  # Inventory routes already include /api/inventory
+            (process_bp, "process", None),  # Process routes already include /api/process
+            (health_bp, "health", None)  # Health endpoints don't need prefix
         ]
         
-        for blueprint, name in blueprint_configs:
+        for blueprint, name, url_prefix in blueprint_configs:
             if blueprint is not None:
                 try:
-                    app.register_blueprint(blueprint)
+                    if url_prefix:
+                        app.register_blueprint(blueprint, url_prefix=url_prefix)
+                        logger.info("Registered %s blueprint successfully with prefix %s", name, url_prefix)
+                    else:
+                        app.register_blueprint(blueprint)
+                        logger.info("Registered %s blueprint successfully", name)
                     blueprints_registered += 1
-                    logger.info("Registered %s blueprint successfully", name)
                 except Exception as e:
                     logger.error("Failed to register %s blueprint: %s", name, str(e))
             else:
