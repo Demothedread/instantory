@@ -6,7 +6,8 @@ from io import BytesIO
 from quart import Blueprint, request, jsonify, send_file
 from asyncpg import PostgresError
 from backend.config.database import get_vector_pool, get_metadata_pool
-from backend.config.storage import storage_service
+from backend.config.storage import storage_config, storageService
+from backend.services.storage.manager import storage_manager
 from backend.config.client_factory import create_openai_client
 
 # Configure logging
@@ -52,13 +53,30 @@ async def get_document_content():
     """Get document content from storage."""
     try:
         document_url = request.args.get('url')
-        if not document_url:
-            return jsonify({"error": "URL parameter is required"}), 400
+        document_id = request.args.get('id')
+        
+        if not document_url and not document_id:
+            return jsonify({"error": "URL or ID parameter is required"}), 400
 
-        # Retrieve document content
-        content = await storage_service.get_document(document_url)
+        # If document_id is provided, get the URL from the database
+        if document_id:
+            async with get_metadata_pool() as pool:
+                async with pool.acquire() as conn:
+                    row = await conn.fetchrow(
+                        """
+                        SELECT file_path FROM user_documents
+                        WHERE id = $1
+                        """,
+                        int(document_id)
+                    )
+                    if not row:
+                        return jsonify({"error": "Document not found in database"}), 404
+                    document_url = row['file_path']
+
+        # Retrieve document content from the appropriate storage backend
+        content = await storage_manager.get_file(document_url)
         if not content:
-            return jsonify({"error": "Document not found"}), 404
+            return jsonify({"error": "Document content not found in storage"}), 404
 
         # Prepare file in-memory
         file_obj = BytesIO(content)
@@ -203,7 +221,7 @@ async def delete_document(doc_id):
 
                 # Delete from storage if URL exists
                 if document_url:
-                    await storage_service.delete_document(document_url)
+                    await storageService.delete_document(document_url)
 
                 return jsonify({"message": "Document deleted successfully"})
     except Exception as e:

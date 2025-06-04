@@ -11,7 +11,7 @@ from PIL import Image
 # Import with fallbacks to handle different execution contexts
 try:
     from backend.services.storage.manager import storage_manager
-    from backend.db import get_db_pool
+    from backend.config.database import get_db_pool
 except ImportError:
     # Alternative import path for when running as a module
         # Fallback to imports from app context
@@ -109,6 +109,7 @@ async def get_upload_url():
         content_type = data.get('contentType')
         file_size = data.get('fileSize', 0)
         user_id = data.get('user_id')
+        file_type = data.get('fileType', 'document')  # 'document' or 'image'
 
         if not all([filename, content_type, user_id]):
             return jsonify({'error': 'Filename, content type, and user ID are required'}), 400
@@ -122,7 +123,8 @@ async def get_upload_url():
         # Generate unique filename
         unique_filename = f"{uuid.uuid4()}_{filename}"
         
-        # Store file temporarily
+        # Store file temporarily in the appropriate location
+        # Prefer Vercel Blob for direct uploads when available
         temp_url = await storage_manager.store_file(
             int(user_id),
             b'',  # Empty placeholder, real content will be uploaded later
@@ -130,6 +132,24 @@ async def get_upload_url():
             content_type,
             is_temporary=True
         )
+
+        # Record in the database for tracking
+        async with get_db_pool() as pool:
+            async with pool.acquire() as conn:
+                if file_type == 'image':
+                    # Track the image upload in progress
+                    await conn.execute("""
+                        INSERT INTO upload_tracking (
+                            user_id, filename, temp_url, status, file_type
+                        ) VALUES ($1, $2, $3, $4, $5)
+                    """, int(user_id), unique_filename, temp_url, 'pending', 'image')
+                else:
+                    # Track the document upload in progress
+                    await conn.execute("""
+                        INSERT INTO upload_tracking (
+                            user_id, filename, temp_url, status, file_type
+                        ) VALUES ($1, $2, $3, $4, $5)
+                    """, int(user_id), unique_filename, temp_url, 'pending', 'document')
 
         return jsonify({
             'filename': unique_filename,
@@ -148,10 +168,22 @@ async def finalize_upload():
         temp_url = data.get('temp_url')
         user_id = data.get('user_id')
         filename = data.get('filename')
+        file_type = data.get('fileType', 'document')  # 'document' or 'image'
+        metadata = data.get('metadata', {})
 
         if not all([temp_url, user_id, filename]):
             return jsonify({'error': 'Missing required parameters'}), 400
 
+        # Update tracking status
+        async with get_db_pool() as pool:
+            async with pool.acquire() as conn:
+                await conn.execute("""
+                    UPDATE upload_tracking
+                    SET status = 'processing'
+                    WHERE user_id = $1 AND temp_url = $2
+                """, int(user_id), temp_url)
+
+        # Move file to permanent storage (either Vercel Blob or fallback)
         content_type = get_content_type(filename)
         permanent_url = await storage_manager.move_to_permanent(
             temp_url,
@@ -161,12 +193,70 @@ async def finalize_upload():
         )
 
         if not permanent_url:
+            # Update tracking with error
+            async with get_db_pool() as pool:
+                async with pool.acquire() as conn:
+                    await conn.execute("""
+                        UPDATE upload_tracking
+                        SET status = 'error', error_message = 'Failed to move to permanent storage'
+                        WHERE user_id = $1 AND temp_url = $2
+                    """, int(user_id), temp_url)
             return jsonify({'error': 'Failed to move file to permanent storage'}), 500
+
+        # Update database with permanent URL based on file type
+        async with get_db_pool() as pool:
+            async with pool.acquire() as conn:
+                async with conn.transaction():
+                    # Update tracking record
+                    await conn.execute("""
+                        UPDATE upload_tracking
+                        SET status = 'complete', permanent_url = $1
+                        WHERE user_id = $2 AND temp_url = $3
+                    """, permanent_url, int(user_id), temp_url)
+                    
+                    # Update relevant data table based on file type
+                    if file_type == 'image':
+                        # If this is an inventory item image
+                        inventory_id = metadata.get('inventory_id')
+                        if inventory_id:
+                            await conn.execute("""
+                                UPDATE user_inventory
+                                SET original_image_url = $1
+                                WHERE id = $2 AND user_id = $3
+                            """, permanent_url, inventory_id, int(user_id))
+                    else:
+                        # For documents, update or insert into user_documents
+                        doc_id = metadata.get('document_id')
+                        if doc_id:
+                            # Update existing document
+                            await conn.execute("""
+                                UPDATE user_documents
+                                SET file_path = $1, file_type = $2
+                                WHERE id = $3 AND user_id = $4
+                            """, permanent_url, content_type, doc_id, int(user_id))
+                        else:
+                            # Create minimal document entry - additional metadata will be added later
+                            await conn.execute("""
+                                INSERT INTO user_documents (user_id, title, file_path, file_type)
+                                VALUES ($1, $2, $3, $4)
+                            """, int(user_id), filename, permanent_url, content_type)
 
         return jsonify({'url': permanent_url}), 200
 
     except Exception as e:
         logger.error(f"Error finalizing upload: {e}")
+        # Update tracking with error
+        try:
+            async with get_db_pool() as pool:
+                async with pool.acquire() as conn:
+                    await conn.execute("""
+                        UPDATE upload_tracking
+                        SET status = 'error', error_message = $1
+                        WHERE user_id = $2 AND temp_url = $3
+                    """, str(e)[:500], int(user_id), temp_url)
+        except Exception as db_error:
+            logger.error(f"Failed to update error status: {db_error}")
+            
         return jsonify({'error': str(e)}), 500
 
 @files_bp.route('/download/<path:filename>')

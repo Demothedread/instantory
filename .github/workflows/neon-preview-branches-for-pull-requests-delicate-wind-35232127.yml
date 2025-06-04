@@ -1,4 +1,4 @@
-name: Create/Delete Branch for Pull Request
+name: Create/ Branch for Pull Request
 
 on:
   pull_request:
@@ -60,14 +60,14 @@ jobs:
 #          # OR to use unpooled connection
 #          # DATABASE_URL: "${{ steps.create_neon_branch.outputs.db_url }}"
 
-  delete_neon_branch:
-    name: Delete Neon Branch
+  _neon_branch:
+    name:  Neon Branch
     needs: setup
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
     steps:
-      - name: Delete Neon Branch
-        uses: neondatabase/delete-branch-action@v3
+      - name:  Neon Branch
+        uses: neondatabase/-branch-action@v3
         with:
           project_id: ${{ vars.NEON_PROJECT_ID }}
           branch: preview/pr-${{ github.event.number }}-${{ needs.setup.outputs.branch }}

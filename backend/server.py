@@ -44,6 +44,7 @@ def create_app():
         from backend.routes.files import files_bp
         from backend.routes.inventory import inventory_bp
         from backend.routes.process import process_bp
+        from backend.routes.health import health_bp
         
         # Set up authentication
         setup_auth(app)
@@ -54,6 +55,7 @@ def create_app():
         app.register_blueprint(files_bp)
         app.register_blueprint(inventory_bp)
         app.register_blueprint(process_bp)
+        app.register_blueprint(health_bp)
         
         logger.info("All blueprints registered successfully")
     except Exception as e:
@@ -85,11 +87,46 @@ def create_app():
             "status": 500
         }), 500
 
-    # Set up any background tasks if needed
+    # Set up database and background tasks
     @app.before_serving
-    async def setup_background_tasks():
-        # You can add background tasks setup here
-        logger.info("Setting up background tasks")
+    async def setup_app():
+        # Initialize database schemas
+        try:
+            from backend.config.database import get_metadata_pool, get_vector_pool
+            import os
+            
+            # Initialize metadata database
+            async with get_metadata_pool() as pool:
+                async with pool.acquire() as conn:
+                    # Apply metadata schema
+                    if os.path.exists('backend/init_metadata_db.sql'):
+                        with open('backend/init_metadata_db.sql', 'r') as f:
+                            await conn.execute(f.read())
+                        logger.info("Metadata database schema initialized")
+                    
+                    # Apply upload tracking schema
+                    if os.path.exists('backend/upload_tracking_schema.sql'):
+                        with open('backend/upload_tracking_schema.sql', 'r') as f:
+                            await conn.execute(f.read())
+                        logger.info("Upload tracking schema initialized")
+            
+            # Initialize vector database if separate
+            async with get_vector_pool() as pool:
+                async with pool.acquire() as conn:
+                    if os.path.exists('backend/init_vector_db.sql'):
+                        with open('backend/init_vector_db.sql', 'r') as f:
+                            await conn.execute(f.read())
+                        logger.info("Vector database schema initialized")
+                        
+        except Exception as e:
+            logger.error(f"Error initializing database schemas: {e}")
+
+        # Set up background tasks
+        try:
+            # Background tasks can be added here
+            logger.info("Setting up background tasks")
+        except Exception as e:
+            logger.error(f"Error setting up background tasks: {e}")
     
     return app
 
