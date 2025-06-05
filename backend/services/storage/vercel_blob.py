@@ -19,13 +19,13 @@ class Blob:
 
 class VercelBlobService:
     def __init__(self):
-        self.token = os.getenv('VERCEL_BLOB_READ_WRITE_TOKEN')
+        self.token = os.getenv('BLOB_READ_WRITE_TOKEN')
         if not self.token:
-            raise ValueError("VERCEL_BLOB_READ_WRITE_TOKEN environment variable is required")
+            logger.warning("BLOB_READ_WRITE_TOKEN environment variable is missing")
         # The upload endpoint per Vercel Blob API documentation.
         self.upload_endpoint = "https://api.vercel.com/v9/blob/upload"
 
-    async def upload_document(self, file_data: bytes, filename: str, content_type: str) -> Blob:
+    async def upload_document(self, file_data: bytes, filename: str, content_type: str) -> Optional[str]:
         """
         Upload a document (or image) to Vercel Blob Storage.
         
@@ -35,8 +35,12 @@ class VercelBlobService:
             content_type: The MIME type of the file.
             
         Returns:
-            A Blob object representing the uploaded file.
+            URL of the uploaded blob, or None if the upload failed
         """
+        if not self.token:
+            logger.error("Cannot upload to Vercel Blob: BLOB_READ_WRITE_TOKEN not set")
+            return None
+            
         headers = {
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json"
@@ -45,26 +49,35 @@ class VercelBlobService:
             "filename": filename,
             "contentType": content_type
         }
-        # Step 1: Request an upload URL from Vercel
-        async with aiohttp.ClientSession() as session:
-            async with session.post(self.upload_endpoint, headers=headers, json=payload) as resp:
-                if resp.status != 200:
-                    text = await resp.text()
-                    logger.error(f"Failed to get upload URL: {resp.status} {text}")
-                    raise Exception("Failed to get Vercel Blob upload URL")
-                data = await resp.json()
-                put_url = data.get("url")
-                if not put_url:
-                    raise Exception("Upload URL not provided in response")
-        # Step 2: Upload the file data using the provided PUT URL.
-        async with aiohttp.ClientSession() as session:
-            async with session.put(put_url, data=file_data, headers={"Content-Type": content_type}) as put_resp:
-                if put_resp.status not in [200, 201]:
-                    text = await put_resp.text()
-                    logger.error(f"Failed to upload file: {put_resp.status} {text}")
-                    raise Exception("Failed to upload file to Vercel Blob")
-        # Return a Blob object representing the uploaded file.
-        return Blob(url=put_url, filename=filename, content_type=content_type)
+        try:
+            # Step 1: Request an upload URL from Vercel
+            async with aiohttp.ClientSession() as session:
+                async with session.post(self.upload_endpoint, headers=headers, json=payload) as resp:
+                    if resp.status != 200:
+                        text = await resp.text()
+                        logger.error(f"Failed to get upload URL: {resp.status} {text}")
+                        return None
+                    data = await resp.json()
+                    put_url = data.get("url")
+                    blob_url = data.get("blob", {}).get("url")
+                    if not put_url:
+                        logger.error("Upload URL not provided in response")
+                        return None
+            
+            # Step 2: Upload the file data using the provided PUT URL
+            async with aiohttp.ClientSession() as session:
+                async with session.put(put_url, data=file_data, headers={"Content-Type": content_type}) as put_resp:
+                    if put_resp.status not in [200, 201]:
+                        text = await put_resp.text()
+                        logger.error(f"Failed to upload file: {put_resp.status} {text}")
+                        return None
+            
+            # Return URL for accessing the file
+            return blob_url or put_url
+        
+        except Exception as e:
+            logger.error(f"Error uploading to Vercel Blob: {e}")
+            return None
 
     async def get_document(self, document_url: str) -> Optional[bytes]:
         """

@@ -1,7 +1,7 @@
 """Inventory management routes with image handling."""
 import logging
 from quart import Blueprint, jsonify, request
-from backend.db import get_db_pool
+from backend.config.database import get_db_pool
 from backend.services.storage.manager import storage_manager
 
 logger = logging.getLogger(__name__)
@@ -249,3 +249,4 @@ async def search_inventory():
     except Exception as e:
         logger.error(f"Error searching inventory: {e}")
         return jsonify({'error': str(e)}), 500
+

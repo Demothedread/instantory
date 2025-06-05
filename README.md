@@ -30,6 +30,11 @@ Bartleby is an elegant, comprehensive application for analyzing, organizing, and
 │                     │       │                     │
 │  Storage Services   │       │   Database Storage  │
 │  - Vercel Blob      │       │   - PostgreSQL      │
+│  - S3 (Fallback)    │       │   - Vector DB       │
+│  - Local Filesystem │       │   - Metadata Store  │
+│  - Vercel Blob      │       │   - PostgreSQL      │
+│  - S3 (Fallback)    │       │   - Vector DB       │
+│  - Vercel Blob      │       │   - PostgreSQL      │
 │  - AWS S3 (optional)│       │   - Vector DB (Neon)│
 │                     │       │                     │
 └─────────────────────┘       └─────────────────────┘
@@ -160,3 +165,30 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## Support
 
 For issues and feature requests, please create an issue in the GitHub repository.
+
+## Storage System
+
+Instantory uses a hybrid storage approach that combines:
+
+1. **PostgreSQL on Render** - For document and inventory metadata storage
+2. **Vercel Blob Storage** - Primary file storage solution for documents and images
+3. **AWS S3** - Optional fallback for file storage when Vercel Blob is unavailable
+4. **Local Filesystem** - Used in development and as a last resort fallback
+
+The storage system is designed to be:
+
+- **Scalable** - Can handle growing volumes of documents and images
+- **Flexible** - Configurable through environment variables
+- **Resilient** - Multiple fallback options ensure data availability
+- **Efficient** - Optimized for metadata and vector search operations
+
+For detailed storage system documentation:
+- [Storage System README](backend/STORAGE_README.md)
+- [Storage Deployment Guide](backend/STORAGE_DEPLOYMENT.md)
+
+The storage implementation features:
+- Health checks through `/api/health/storage` endpoint
+- Automatic failover between storage providers
+- File type-specific storage routing
+- Database-tracked uploads with error handling
+- Integration with vector database for semantic search

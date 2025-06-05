@@ -8,10 +8,10 @@ _backend = os.getenv('STORAGE_BACKEND', 'generic').lower()
 
 # Import backend-specific service
 if _backend == 's3':
-    from .s3 import s3_service  # s3_service is the global instance from s3.py
+    from backend.services.storage.s3 import s3_service  # Changed to absolute import
 elif _backend == 'vercel':
     try:
-        from .vercel_blob import vercel_blob_service  # Assume you have this module
+        from backend.services.storage.vercel_blob import vercel_blob_service  # Changed to absolute import
     except ImportError:
         logger.error("Vercel Blob service module not found; please install it or check configuration.")
         vercel_blob_service = None

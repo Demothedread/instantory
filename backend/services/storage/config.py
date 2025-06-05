@@ -1,7 +1,10 @@
 """Storage configuration and provider management."""
 import os
+import logging
 from enum import Enum
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 class StorageProvider(Enum):
     """Available storage providers."""
@@ -54,7 +57,13 @@ class StorageConfig:
             self.inventory_images_dir
         ]
         for directory in directories:
-            os.makedirs(directory, exist_ok=True)
+            try:
+                os.makedirs(directory, exist_ok=True)
+            except (OSError, PermissionError) as e:
+                # Log warning but don't fail - directory creation might not be possible
+                # in some environments (e.g., read-only file systems, containers)
+                logger.warning(f"Could not create directory {directory}: {e}")
+                pass
     
     def get_provider(self, storage_type: StorageType, file_type: str) -> StorageProvider:
         """Get the appropriate storage provider based on type and context."""

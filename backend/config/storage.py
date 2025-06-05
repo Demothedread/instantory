@@ -7,6 +7,20 @@ from typing import Dict, Optional, Tuple, Any
 import logging
 from enum import Enum
 
+try:
+    from backend.config.storage_settings import (
+        DEFAULT_STORAGE_BACKEND, 
+        STORAGE_FALLBACK_ORDER,
+        STORAGE_CONFIG,
+        FILE_TYPE_STORAGE_MAPPING
+    )
+except ImportError:
+    # Default values if settings module is not available
+    DEFAULT_STORAGE_BACKEND = "vercel"
+    STORAGE_FALLBACK_ORDER = ["vercel", "s3", "local"]
+    STORAGE_CONFIG = {}
+    FILE_TYPE_STORAGE_MAPPING = {}
+
 logger = logging.getLogger(__name__)
 
 
@@ -24,8 +38,11 @@ class StorageConfig:
     """Storage configuration and path management."""
 
     def __init__(self):
-        # Base directories
-        self.data_dir = Path(os.getenv("DATA_DIR", "/tmp/instantory"))
+        # Base directories - use settings from storage_settings if available
+        local_config = STORAGE_CONFIG.get('local', {})
+        base_dir_env_var = local_config.get('base_dir_env_var', 'DATA_DIR')
+        default_base_dir = local_config.get('default_base_dir', '/tmp/instantory')
+        self.data_dir = Path(os.getenv(base_dir_env_var, default_base_dir))
 
         # Storage paths
         self.paths: Dict[str, Path] = {
@@ -38,15 +55,20 @@ class StorageConfig:
             "USER_STORAGE_DIR": self.data_dir / "users",
         }
 
-        # Storage backend configuration
-        self.storage_backend = os.getenv("STORAGE_BACKEND", "generic").lower()
+        # Storage backend configuration - use settings module or environment variable
+        self.storage_backend = os.getenv("STORAGE_BACKEND", DEFAULT_STORAGE_BACKEND).lower()
+        self.storage_fallbacks = STORAGE_FALLBACK_ORDER
 
-        # Provider-specific configuration
-        self.vercel_blob_token = os.getenv("BLOB_READ_WRITE_TOKEN")
-        self.s3_bucket = os.getenv("AWS_S3_EXPRESS_BUCKET")
-        self.s3_region = os.getenv("AWS_REGION", "us-west-2")
-        self.s3_access_key = os.getenv("AWS_ACCESS_KEY_ID")
-        self.s3_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        # Provider-specific configuration from settings module or environment variables
+        vercel_config = STORAGE_CONFIG.get('vercel', {})
+        vercel_token_env = vercel_config.get('token_env_var', 'BLOB_READ_WRITE_TOKEN')
+        self.vercel_blob_token = os.getenv(vercel_token_env)
+        
+        s3_config = STORAGE_CONFIG.get('s3', {})
+        self.s3_bucket = os.getenv(s3_config.get('bucket_env_var', 'AWS_S3_EXPRESS_BUCKET'))
+        self.s3_region = os.getenv(s3_config.get('region_env_var', 'AWS_REGION'), "us-west-2")
+        self.s3_access_key = os.getenv(s3_config.get('access_key_env_var', 'AWS_ACCESS_KEY_ID'))
+        self.s3_secret_key = os.getenv(s3_config.get('secret_key_env_var', 'AWS_SECRET_ACCESS_KEY'))
 
         # Validate configuration (soft validation)
         self._validate_config()
@@ -86,13 +108,14 @@ class StorageConfig:
         if storage_type == StorageType.TEMP:
             return "local", {"base_path": str(self.paths["TEMP_DIR"])}
 
-        # Default to the configured storage backend
+        # Default to the configured storage backend - prioritize Vercel
         if self.storage_backend == "vercel" and self.vercel_blob_token:
-            if storage_type in [StorageType.IMAGE, StorageType.THUMBNAIL]:
+            # Use Vercel for most storage types including documents
+            if storage_type in [StorageType.IMAGE, StorageType.THUMBNAIL, StorageType.DOCUMENT]:
                 return "vercel", {
                     "token": self.vercel_blob_token,
                     "content_type": (
-                        file_type if storage_type == StorageType.IMAGE else "image/jpeg"
+                        file_type if storage_type != StorageType.THUMBNAIL else "image/jpeg"
                     ),
                 }
 
@@ -181,3 +204,25 @@ storage_config = StorageConfig()
 def get_storage_config() -> StorageConfig:
     """Get the storage configuration instance."""
     return storage_config
+
+
+# Module-level helper for getting the temp directory
+def get_temp_dir() -> Path:
+    """
+    Return the temporary directory path for file storage (module-level helper).
+    """
+    config = get_storage_config()
+    # Prefer explicit TEMP_DIR override from config.paths
+    temp_path = config.paths.get("TEMP_DIR")
+    if temp_path:
+        return temp_path
+    import tempfile
+    return Path(tempfile.gettempdir())
+
+def cleanup_temp_files(user_id: Optional[int] = None) -> None:
+    """
+    Clean up temporary files for a user or all users.
+    Module-level helper that delegates to StorageConfig.cleanup_temp_files.
+    """
+    config = get_storage_config()
+    config.cleanup_temp_files(user_id)

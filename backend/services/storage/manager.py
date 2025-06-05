@@ -80,7 +80,101 @@ class StorageManager:
         self.s3 = s3_service
         self.vercel = vercel_blob_service
         self.max_thumbnail_size = (300, 300)  # Maximum thumbnail dimensions
+
+        # Determine storage type from environment variable, default to Vercel
+        self.storage_type = os.getenv("STORAGE_TYPE", "vercel").lower()
         
+    async def check_storage_health(self) -> dict:
+        """
+        Check the health of all storage providers.
+        
+        Returns:
+            Dictionary with health status of each storage provider
+        """
+        health = {
+            "status": "healthy",
+            "providers": {}
+        }
+        
+        # Check Vercel Blob
+        try:
+            if self.vercel.token:
+                # Create a small test file
+                test_data = b"storage health check"
+                test_url = await self.vercel.upload_document(
+                    test_data,
+                    "health_check.txt",
+                    "text/plain"
+                )
+                
+                if test_url:
+                    # Try to read it back
+                    content = await self.vercel.get_document(test_url)
+                    if content == test_data:
+                        health["providers"]["vercel"] = {"status": "healthy"}
+                    else:
+                        health["providers"]["vercel"] = {
+                            "status": "degraded", 
+                            "details": "Content mismatch in read test"
+                        }
+                        health["status"] = "degraded"
+                else:
+                    health["providers"]["vercel"] = {
+                        "status": "unhealthy", 
+                        "details": "Failed to upload test file"
+                    }
+                    health["status"] = "degraded"
+            else:
+                health["providers"]["vercel"] = {
+                    "status": "unavailable", 
+                    "details": "API token not configured"
+                }
+        except Exception as e:
+            health["providers"]["vercel"] = {
+                "status": "unhealthy", 
+                "details": str(e)
+            }
+            health["status"] = "degraded"
+            
+        # Check S3 
+        try:
+            if self.s3 and hasattr(self.s3, 'check_health'):
+                s3_health = await self.s3.check_health()
+                health["providers"]["s3"] = s3_health
+                if s3_health["status"] != "healthy" and self.storage_type == "s3":
+                    health["status"] = "degraded"
+            else:
+                health["providers"]["s3"] = {"status": "not_configured"}
+        except Exception as e:
+            health["providers"]["s3"] = {
+                "status": "unhealthy", 
+                "details": str(e)
+            }
+            if self.storage_type == "s3":
+                health["status"] = "degraded"
+                
+        # Check local storage
+        try:
+            temp_dir = self.config.get_temp_dir()
+            if temp_dir.exists() and os.access(temp_dir, os.W_OK):
+                health["providers"]["local"] = {"status": "healthy"}
+            else:
+                health["providers"]["local"] = {
+                    "status": "unhealthy", 
+                    "details": "Temp directory not accessible"
+                }
+                if self.storage_type == "local":
+                    health["status"] = "degraded"
+        except Exception as e:
+            health["providers"]["local"] = {
+                "status": "unhealthy", 
+                "details": str(e)
+            }
+            if self.storage_type == "local":
+                health["status"] = "degraded"
+                
+        return health
+    
     async def store_file(
         self,
         user_id: int,
@@ -130,14 +224,31 @@ class StorageManager:
                 return original_url
                 
             elif content_type in ['application/pdf', 'text/plain', 'application/msword']:
-                # Store document in S3
                 file_bytes = file_data if isinstance(file_data, bytes) else file_data.read()
-                document_url = await self.s3.upload_document(
-                    user_id,
-                    file_bytes,
-                    filename
-                )
-                
+                # Select storage backend based on environment variable - prioritize Vercel
+                if self.storage_type == "vercel":
+                    document_url = await self.vercel.upload_document(
+                        file_bytes,
+                        filename,
+                        content_type
+                    )
+                elif self.storage_type == "s3":
+                    document_url = await self.s3.upload_document(
+                        user_id,
+                        file_bytes,
+                        filename
+                    )
+                elif self.storage_type == "local":
+                    # Store in local directory
+                    local_dir = Path(self.config.get_temp_dir()) / "permanent" / str(user_id)
+                    local_dir.mkdir(parents=True, exist_ok=True)
+                    local_path = local_dir / filename
+                    local_path.write_bytes(file_bytes)
+                    document_url = str(local_path)
+                else:
+                    logger.error(f"Unknown storage type: {self.storage_type}")
+                    raise ValueError("Invalid storage type")
+
                 # Store document content for vector search
                 if document_url:
                     try:
@@ -181,12 +292,29 @@ class StorageManager:
                         
                 return document_url
             else:
-                # Default to S3 for unknown types
-                return await self.s3.upload_document(
-                    user_id,
-                    file_data if isinstance(file_data, bytes) else file_data.read(),
-                    filename
-                )
+                # Default to selected storage backend for unknown types - prioritize Vercel
+                file_bytes = file_data if isinstance(file_data, bytes) else file_data.read()
+                if self.storage_type == "vercel":
+                    return await self.vercel.upload_document(
+                        file_bytes,
+                        filename,
+                        content_type
+                    )
+                elif self.storage_type == "s3":
+                    return await self.s3.upload_document(
+                        user_id,
+                        file_bytes,
+                        filename
+                    )
+                elif self.storage_type == "local":
+                    local_dir = Path(self.config.get_temp_dir()) / "permanent" / str(user_id)
+                    local_dir.mkdir(parents=True, exist_ok=True)
+                    local_path = local_dir / filename
+                    local_path.write_bytes(file_bytes)
+                    return str(local_path)
+                else:
+                    logger.error(f"Unknown storage type: {self.storage_type}")
+                    raise ValueError("Invalid storage type")
                 
         except Exception as e:
             logger.error(f"Error storing file {filename}: {e}")

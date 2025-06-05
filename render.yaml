@@ -5,7 +5,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python -m hypercorn backend.server:app --bind 0.0.0.0:$PORT --access-logfile - --error-logfile -
+    startCommand: python -c "import os; os.environ['RENDER'] = 'true'; import backend.server; backend.server.main()"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -20,8 +20,12 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: STORAGE_BACKEND
-        value: "generic"
+        value: "vercel"
       - key: BLOB_READ_WRITE_TOKEN
+        sync: false
+      - key: QDRANT_URL
+        value: "https://a155b5ab-3dca-44ae-a3b7-7c8e0c472bbd.europe-west3-0.gcp.cloud.qdrant.io:6333"
+      - key: QDRANT_API_KEY
         sync: false
       - key: AWS_ACCESS_KEY_ID
         sync: false

@@ -6,7 +6,8 @@ from io import BytesIO
 from quart import Blueprint, request, jsonify, send_file
 from asyncpg import PostgresError
 from backend.config.database import get_vector_pool, get_metadata_pool
-from backend.config.storage import storage_service
+from backend.config.storage import storage_config
+from backend.services.storage.manager import storage_manager
 from backend.config.client_factory import create_openai_client
 
 # Configure logging
@@ -22,8 +23,11 @@ documents_bp = Blueprint('documents', __name__)
 async def get_documents():
     """Get all documents for a user."""
     try:
-        async with get_metadata_pool() as pool:
-            async with pool.acquire() as conn:
+        metadata_pool = await get_metadata_pool()
+        if not metadata_pool:
+            return jsonify({"error": "Database unavailable"}), 503
+            
+        async with metadata_pool.acquire() as conn:
                 # Get user_id from request or headers
                 user_id = getattr(request, 'user_id', request.headers.get('X-User-ID'))
                 if not user_id:
@@ -52,13 +56,33 @@ async def get_document_content():
     """Get document content from storage."""
     try:
         document_url = request.args.get('url')
-        if not document_url:
-            return jsonify({"error": "URL parameter is required"}), 400
+        document_id = request.args.get('id')
+        
+        if not document_url and not document_id:
+            return jsonify({"error": "URL or ID parameter is required"}), 400
 
-        # Retrieve document content
-        content = await storage_service.get_document(document_url)
+        # If document_id is provided, get the URL from the database
+        if document_id:
+            metadata_pool = await get_metadata_pool()
+            if not metadata_pool:
+                return jsonify({"error": "Database unavailable"}), 503
+                
+            async with metadata_pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    """
+                    SELECT file_path FROM user_documents
+                    WHERE id = $1
+                    """,
+                    int(document_id)
+                )
+                if not row:
+                    return jsonify({"error": "Document not found in database"}), 404
+                document_url = row['file_path']
+
+        # Retrieve document content from the appropriate storage backend
+        content = await storage_manager.get_file(document_url)
         if not content:
-            return jsonify({"error": "Document not found"}), 404
+            return jsonify({"error": "Document content not found in storage"}), 404
 
         # Prepare file in-memory
         file_obj = BytesIO(content)
@@ -91,10 +115,13 @@ async def create_document():
         if not user_id:
             return jsonify({'error': 'User ID required'}), 400
 
-        async with get_metadata_pool() as pool:
-            async with pool.acquire() as conn:
-                row = await conn.fetchrow("""
-                    INSERT INTO user_documents (
+        metadata_pool = await get_metadata_pool()
+        if not metadata_pool:
+            return jsonify({"error": "Database unavailable"}), 503
+            
+        async with metadata_pool.acquire() as conn:
+            row = await conn.fetchrow("""
+                INSERT INTO user_documents (
                         user_id, title, author, journal_publisher,
                         publication_year, page_length, thesis, issue,
                         summary, category, field, hashtags,
@@ -112,14 +139,14 @@ async def create_document():
                     data.get('issue'),
                     data.get('summary'),
                     data.get('category'),
-                    data.get('field'),
-                    data.get('hashtags'),
-                    data.get('influenced_by'),
-                    data.get('file_path'),
-                    data.get('file_type'),
-                    data.get('extracted_text')
-                )
-                return jsonify(dict(row))
+                data.get('field'),
+                data.get('hashtags'),
+                data.get('influenced_by'),
+                data.get('file_path'),
+                data.get('file_type'),
+                data.get('extracted_text')
+            )
+            return jsonify(dict(row))
     except Exception as e:
         logger.error(f"Error creating document: {e}")
         return jsonify({'error': str(e)}), 500
@@ -133,10 +160,13 @@ async def update_document(doc_id):
         if not user_id:
             return jsonify({'error': 'User ID required'}), 400
 
-        async with get_metadata_pool() as pool:
-            async with pool.acquire() as conn:
-                row = await conn.fetchrow("""
-                    UPDATE user_documents SET
+        metadata_pool = await get_metadata_pool()
+        if not metadata_pool:
+            return jsonify({"error": "Database unavailable"}), 503
+            
+        async with metadata_pool.acquire() as conn:
+            row = await conn.fetchrow("""
+                UPDATE user_documents SET
                         title = $1,
                         author = $2,
                         journal_publisher = $3,
@@ -159,18 +189,18 @@ async def update_document(doc_id):
                     data.get('publication_year'),
                     data.get('page_length'),
                     data.get('thesis'),
-                    data.get('issue'),
-                    data.get('summary'),
-                    data.get('category'),
-                    data.get('field'),
-                    data.get('hashtags'),
-                    data.get('influenced_by'),
-                    doc_id,
-                    int(user_id)
-                )
-                if not row:
-                    return jsonify({'error': 'Document not found'}), 404
-                return jsonify(dict(row))
+                data.get('issue'),
+                data.get('summary'),
+                data.get('category'),
+                data.get('field'),
+                data.get('hashtags'),
+                data.get('influenced_by'),
+                doc_id,
+                int(user_id)
+            )
+            if not row:
+                return jsonify({'error': 'Document not found'}), 404
+            return jsonify(dict(row))
     except Exception as e:
         logger.error(f"Error updating document {doc_id}: {e}")
         return jsonify({'error': str(e)}), 500
@@ -179,33 +209,36 @@ async def update_document(doc_id):
 async def delete_document(doc_id):
     """Delete a document and its storage content."""
     try:
-        async with get_metadata_pool() as pool:
-            async with pool.acquire() as conn:
-                user_id = getattr(request, 'user_id', request.headers.get('X-User-ID'))
-                if not user_id:
-                    return jsonify({"error": "User ID is required"}), 400
+        metadata_pool = await get_metadata_pool()
+        if not metadata_pool:
+            return jsonify({"error": "Database unavailable"}), 503
+            
+        async with metadata_pool.acquire() as conn:
+            user_id = getattr(request, 'user_id', request.headers.get('X-User-ID'))
+            if not user_id:
+                return jsonify({"error": "User ID is required"}), 400
 
-                # Get document URL before deletion
-                row = await conn.fetchrow("""
-                    SELECT file_path FROM user_documents 
-                    WHERE id = $1 AND user_id = $2
-                """, doc_id, int(user_id))
-                if not row:
-                    return jsonify({"error": "Document not found"}), 404
+            # Get document URL before deletion
+            row = await conn.fetchrow("""
+                SELECT file_path FROM user_documents 
+                WHERE id = $1 AND user_id = $2
+            """, doc_id, int(user_id))
+            if not row:
+                return jsonify({"error": "Document not found"}), 404
 
-                document_url = row['file_path']
+            document_url = row['file_path']
 
-                # Delete record from database
-                await conn.execute("""
-                    DELETE FROM user_documents 
-                    WHERE id = $1 AND user_id = $2
-                """, doc_id, int(user_id))
+            # Delete record from database
+            await conn.execute("""
+                DELETE FROM user_documents 
+                WHERE id = $1 AND user_id = $2
+            """, doc_id, int(user_id))
 
-                # Delete from storage if URL exists
-                if document_url:
-                    await storage_service.delete_document(document_url)
+            # Delete from storage if URL exists
+            if document_url:
+                await storage_manager.delete_file(document_url)
 
-                return jsonify({"message": "Document deleted successfully"})
+            return jsonify({"message": "Document deleted successfully"})
     except Exception as e:
         logger.error(f"Error deleting document: {e}")
         return jsonify({"error": "Failed to delete document"}), 500
@@ -230,8 +263,11 @@ async def get_search_documents():
             return jsonify({"error": "Failed to process query"}), 500
 
         # Search in vector database for similar documents
-        async with get_vector_pool() as pool:
-            async with pool.acquire() as conn:
+        vector_pool = await get_vector_pool()
+        if not vector_pool:
+            return jsonify({"error": "Vector database unavailable"}), 503
+            
+        async with vector_pool.acquire() as conn:
                 user_id = getattr(request, 'user_id', request.headers.get('X-User-ID'))
                 if not user_id:
                     return jsonify({"error": "User ID is required"}), 400
@@ -250,26 +286,29 @@ async def get_search_documents():
                     return jsonify({"results": [], "message": "No similar documents found"}), 200
 
                 # Get document details from metadata database
-                async with get_metadata_pool() as metadata_pool:
-                    async with metadata_pool.acquire() as metadata_conn:
-                        doc_rows = await metadata_conn.fetch("""
-                            SELECT id, title, author, summary, category, field, file_path, created_at
-                            FROM user_documents 
-                            WHERE id = ANY($1) AND user_id = $2
-                        """, document_ids, int(user_id))
+                metadata_pool = await get_metadata_pool()
+                if not metadata_pool:
+                    return jsonify({"error": "Database unavailable"}), 503
+                    
+                async with metadata_pool.acquire() as metadata_conn:
+                    doc_rows = await metadata_conn.fetch("""
+                        SELECT id, title, author, summary, category, field, file_path, created_at
+                        FROM user_documents 
+                        WHERE id = ANY($1) AND user_id = $2
+                    """, document_ids, int(user_id))
 
-                        # Combine with similarity scores
-                        results = []
-                        for doc in doc_rows:
-                            doc_dict = dict(doc)
-                            # Find matching similarity
-                            for row in rows:
-                                if row['document_id'] == doc_dict['id']:
-                                    doc_dict['similarity'] = row['similarity']
-                                    break
-                            results.append(doc_dict)
+                    # Combine with similarity scores
+                    results = []
+                    for doc in doc_rows:
+                        doc_dict = dict(doc)
+                        # Find matching similarity
+                        for row in rows:
+                            if row['document_id'] == doc_dict['id']:
+                                doc_dict['similarity'] = row['similarity']
+                                break
+                        results.append(doc_dict)
 
-                        return jsonify({"results": results})
+                    return jsonify({"results": results})
     except Exception as e:
         logger.error(f"Error searching documents: {e}")
         return jsonify({"error": "Failed to search documents"}), 500
@@ -298,8 +337,12 @@ async def search_documents():
             query_vector = response.data[0].embedding
 
             # Search by vector similarity
-            async with get_vector_pool() as pool:
-                async with pool.acquire() as conn:
+            vector_pool = await get_vector_pool()
+            if not vector_pool:
+                logger.warning("Vector database unavailable, falling back to text search")
+                raise Exception("Vector search unavailable")
+                
+            async with vector_pool.acquire() as conn:
                     rows = await conn.fetch("""
                         SELECT document_id, 1 - (content_vector <=> $1) as similarity
                         FROM document_vectors 
@@ -311,69 +354,75 @@ async def search_documents():
                     if rows:
                         document_ids = [row['document_id'] for row in rows]
                         
-                        async with get_metadata_pool() as metadata_pool:
-                            async with metadata_pool.acquire() as metadata_conn:
-                                # Get full document details
-                                doc_rows = await metadata_conn.fetch("""
-                                    SELECT id, title, author, summary, category, extracted_text
-                                    FROM user_documents 
-                                    WHERE id = ANY($1) AND user_id = $2
-                                """, document_ids, int(user_id))
+                        metadata_pool = await get_metadata_pool()
+                        if not metadata_pool:
+                            return jsonify({"error": "Database unavailable"}), 503
+                            
+                        async with metadata_pool.acquire() as metadata_conn:
+                            # Get full document details
+                            doc_rows = await metadata_conn.fetch("""
+                                SELECT id, title, author, summary, category, extracted_text
+                                FROM user_documents 
+                                WHERE id = ANY($1) AND user_id = $2
+                            """, document_ids, int(user_id))
 
-                                # Combine results with similarity scores and excerpts
-                                results = []
-                                for doc in doc_rows:
-                                    doc_dict = dict(doc)
-                                    doc_dict['excerpt'] = extract_matching_excerpt(doc_dict.get('extracted_text', ''), query)
-                                    # Find matching similarity score
-                                    for row in rows:
-                                        if row['document_id'] == doc_dict['id']:
-                                            doc_dict['similarity'] = row['similarity']
-                                            break
-                                    results.append(doc_dict)
+                            # Combine results with similarity scores and excerpts
+                            results = []
+                            for doc in doc_rows:
+                                doc_dict = dict(doc)
+                                doc_dict['excerpt'] = extract_matching_excerpt(doc_dict.get('extracted_text', ''), query)
+                                # Find matching similarity score
+                                for row in rows:
+                                    if row['document_id'] == doc_dict['id']:
+                                        doc_dict['similarity'] = row['similarity']
+                                        break
+                                results.append(doc_dict)
 
-                                return jsonify({'results': results, 'search_type': 'vector'})
+                            return jsonify({'results': results, 'search_type': 'vector'})
         except Exception as vector_error:
             logger.warning(f"Vector search failed, falling back to text search: {vector_error}")
             # Fall through to text search below
 
         # Fallback to traditional text search
-        async with get_metadata_pool() as pool:
-            async with pool.acquire() as conn:
-                where_clause = "user_id = $1"
-                params = [int(user_id)]
+        metadata_pool = await get_metadata_pool()
+        if not metadata_pool:
+            return jsonify({"error": "Database unavailable"}), 503
+            
+        async with metadata_pool.acquire() as conn:
+            where_clause = "user_id = $1"
+            params = [int(user_id)]
+            
+            if field == 'content':
+                where_clause += " AND extracted_text ILIKE $2"
+            elif field == 'metadata':
+                where_clause += " AND (title ILIKE $2 OR author ILIKE $2 OR summary ILIKE $2 OR thesis ILIKE $2 OR hashtags ILIKE $2)"
+            else:  # 'all'
+                where_clause += " AND (title ILIKE $2 OR author ILIKE $2 OR summary ILIKE $2 OR thesis ILIKE $2 OR hashtags ILIKE $2 OR extracted_text ILIKE $2)"
+            
+            params.append(f"%{query}%")
+            
+            sql = f"""
+                SELECT id, title, author, summary, extracted_text, created_at
+                FROM user_documents
+                WHERE {where_clause}
+                ORDER BY created_at DESC
+                LIMIT 100
+            """
+            
+            rows = await conn.fetch(sql, *params)
+            
+            results = []
+            for row in rows:
+                excerpt = extract_matching_excerpt(row['extracted_text'], query)
+                results.append({
+                    'id': row['id'],
+                    'title': row['title'],
+                    'author': row['author'],
+                    'summary': row['summary'],
+                    'excerpt': excerpt
+                })
                 
-                if field == 'content':
-                    where_clause += " AND extracted_text ILIKE $2"
-                elif field == 'metadata':
-                    where_clause += " AND (title ILIKE $2 OR author ILIKE $2 OR summary ILIKE $2 OR thesis ILIKE $2 OR hashtags ILIKE $2)"
-                else:  # 'all'
-                    where_clause += " AND (title ILIKE $2 OR author ILIKE $2 OR summary ILIKE $2 OR thesis ILIKE $2 OR hashtags ILIKE $2 OR extracted_text ILIKE $2)"
-                
-                params.append(f"%{query}%")
-                
-                sql = f"""
-                    SELECT id, title, author, summary, extracted_text, created_at
-                    FROM user_documents
-                    WHERE {where_clause}
-                    ORDER BY created_at DESC
-                    LIMIT 100
-                """
-                
-                rows = await conn.fetch(sql, *params)
-                
-                results = []
-                for row in rows:
-                    excerpt = extract_matching_excerpt(row['extracted_text'], query)
-                    results.append({
-                        'id': row['id'],
-                        'title': row['title'],
-                        'author': row['author'],
-                        'summary': row['summary'],
-                        'excerpt': excerpt
-                    })
-                    
-                return jsonify({'results': results, 'search_type': 'text'})
+            return jsonify({'results': results, 'search_type': 'text'})
     except Exception as e:
         logger.error(f"Error searching documents: {e}")
         return jsonify({'error': str(e)}), 500

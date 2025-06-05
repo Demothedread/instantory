@@ -81,11 +81,14 @@ ALLOWED_GOOGLE_CLIENT_IDS = [GOOGLE_CLIENT_ID] + [
 # Backend URL
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://hocomnia.com")
 
-if not JWT_SECRET:
-    raise EnvironmentError("JWT_SECRET is not set")
-
 # Blueprint setup
 auth_bp = Blueprint("auth", __name__)
+
+def validate_jwt_secret():
+    """Validate JWT_SECRET at runtime"""
+    if not JWT_SECRET:
+        raise EnvironmentError("JWT_SECRET is not set")
+    return JWT_SECRET
 
 # --- Custom Auth User Class --- #
 
@@ -124,15 +127,17 @@ def setup_auth(app):
 
 async def create_token(payload: dict, token_type: str) -> str:
     """Create a signed JWT token with an expiration."""
+    jwt_secret = validate_jwt_secret()
     expiry = ACCESS_TOKEN_EXPIRY if token_type == "access" else REFRESH_TOKEN_EXPIRY
     payload.update({"exp": datetime.now(tz=timezone.utc) + expiry, "type": token_type})
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return jwt.encode(payload, jwt_secret, algorithm=JWT_ALGORITHM)
 
 
 def verify_token(token: str, expected_type: str) -> dict:
     """Verify the JWT token and ensure the type is correct."""
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        jwt_secret = validate_jwt_secret()
+        payload = jwt.decode(token, jwt_secret, algorithms=[JWT_ALGORITHM])
         if payload.get("type") != expected_type:
             raise jwt.InvalidTokenError("Invalid token type")
         return payload
