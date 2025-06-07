@@ -20,6 +20,9 @@ from quart_auth import (
     logout_user
 )
 
+# Import centralized configuration manager
+from backend.config.manager import config_manager
+
 # Try to import the GoogleOAuthConfig from two possible locations
 try:
     from ..config.security import GoogleOAuthConfig
@@ -38,15 +41,15 @@ except ImportError:
         class GoogleOAuthConfig:
             @staticmethod
             def get_client_id():
-                return os.getenv("GOOGLE_CLIENT_ID", "")
+                return config_manager.get("GOOGLE_CLIENT_ID", "")
                 
             @staticmethod
             def get_client_secret():
-                return os.getenv("GOOGLE_CLIENT_SECRET", "")
+                return config_manager.get("GOOGLE_CLIENT_SECRET", "")
                 
             @staticmethod
             def get_redirect_uri():
-                backend_url = os.getenv("PUBLIC_BACKEND_URL", "https://bartleby-backend-mn96.onrender.com")
+                backend_url = config_manager.get("PUBLIC_BACKEND_URL", "https://bartleby-backend-mn96.onrender.com")
                 return f"{backend_url}/api/auth/google/callback"
 
 # Import with fallbacks to handle different execution contexts
@@ -64,31 +67,42 @@ except ImportError:
         raise RuntimeError("Database connection not available")
 
 
-# Environment variables
-JWT_SECRET = os.getenv("JWT_SECRET")
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-ADMIN_PASSWORD_OVERRIDE = os.getenv("ADMIN_PASSWORD_OVERRIDE")
+# Environment variables using config manager
+def get_auth_config():
+    """Get authentication configuration at runtime."""
+    return config_manager.get_auth_config()
+
+def get_jwt_secret():
+    """Get JWT secret with validation."""
+    jwt_secret = config_manager.get_auth_config()['jwt_secret']
+    if not jwt_secret or jwt_secret == 'dev-secret-key':
+        if config_manager.is_production():
+            raise EnvironmentError("JWT_SECRET must be set in production")
+        logger.warning("Using default JWT_SECRET in development")
+    return jwt_secret
+
+# Get Google configuration
+GOOGLE_CLIENT_ID = config_manager.get("GOOGLE_CLIENT_ID")
+ADMIN_PASSWORD_OVERRIDE = config_manager.get("ADMIN_PASSWORD_OVERRIDE")
 ACCESS_TOKEN_EXPIRY = timedelta(minutes=30)
 REFRESH_TOKEN_EXPIRY = timedelta(days=7)
 JWT_ALGORITHM = "HS256"
 
 # Additional allowed Google client IDs (for multi-client setups)
-ADDITIONAL_GOOGLE_CLIENT_IDS = os.getenv("ADDITIONAL_GOOGLE_CLIENT_IDS", "").split(",")
+ADDITIONAL_GOOGLE_CLIENT_IDS = config_manager.get_list("ADDITIONAL_GOOGLE_CLIENT_IDS")
 ALLOWED_GOOGLE_CLIENT_IDS = [GOOGLE_CLIENT_ID] + [
     id for id in ADDITIONAL_GOOGLE_CLIENT_IDS if id
 ]
 
 # Backend URL
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://hocomnia.com")
+FRONTEND_URL = config_manager.get("FRONTEND_URL", "https://hocomnia.com")
 
 # Blueprint setup
 auth_bp = Blueprint("auth", __name__)
 
 def validate_jwt_secret():
     """Validate JWT_SECRET at runtime"""
-    if not JWT_SECRET:
-        raise EnvironmentError("JWT_SECRET is not set")
-    return JWT_SECRET
+    return get_jwt_secret()
 
 # --- Custom Auth User Class --- #
 

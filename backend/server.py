@@ -8,17 +8,13 @@ from datetime import datetime
 from quart import Quart, jsonify
 from quart_cors import cors
 
-# Load environment variables from .env file first
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-    logging.getLogger(__name__).info("Environment variables loaded from .env file")
-except ImportError:
-    logging.getLogger(__name__).warning("python-dotenv not available, using system environment variables only")
+# Import centralized configuration manager
+from backend.config.manager import config_manager
 
-# Configure logging
+# Configure logging using config manager
+server_config = config_manager.get_server_config()
 logging.basicConfig(
-    level=getattr(logging, os.getenv('LOG_LEVEL', 'INFO').upper()),
+    level=getattr(logging, server_config['log_level']),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -28,24 +24,34 @@ def create_app():
     app = Quart(__name__, static_folder=None)
     blueprints_registered = 0  # Track successful blueprint registrations
     
-    # Basic configuration
+    # Get configuration from centralized manager
+    server_config = config_manager.get_server_config()
+    auth_config = config_manager.get_auth_config()
+    api_config = config_manager.get_api_config()
+    
+    # Basic configuration using config manager
     app.config.update({
-        'DEBUG': os.getenv('DEBUG', 'false').lower() == 'true',
-        'SECRET_KEY': os.getenv('JWT_SECRET', 'dev-secret-key'),
-        'MAX_CONTENT_LENGTH': int(os.getenv('MAX_UPLOAD_SIZE', str(100 * 1024 * 1024))),  # 100 MB
+        'DEBUG': server_config['debug'],
+        'SECRET_KEY': auth_config['jwt_secret'],
+        'MAX_CONTENT_LENGTH': server_config['max_content_length'],
         'PROVIDE_AUTOMATIC_OPTIONS': True,  # Required for CORS preflight
         'SEND_FILE_MAX_AGE_DEFAULT': 0,
-        'TESTING': False,
+        'TESTING': config_manager.is_testing(),
     })
     
-    # Configure CORS
-    origins = os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(',')
+    # Configure CORS using config manager
+    origins = api_config['cors_origins']
     try:
-        app = cors(app, 
-                   allow_origin=origins,
-                   allow_credentials=True,
-                   allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-                   allow_headers=["Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"])
+        app = cors(
+            app,
+            allow_origin=origins,
+            allow_credentials=api_config['allow_credentials'],
+            allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            allow_headers=[
+                "Content-Type", "Authorization", "Accept", 
+                "Origin", "X-Requested-With"
+            ]
+        )
         logger.info("CORS configured with origins: %s", origins)
     except Exception as e:
         logger.error("Error configuring CORS: %s", str(e))
@@ -53,6 +59,7 @@ def create_app():
         try:
             from quart_cors import cors as simple_cors
             app = simple_cors(app)
+            logger.info("Fallback CORS configuration applied")
         except Exception as cors_e:
             logger.error("Failed to configure fallback CORS: %s", str(cors_e))
     
@@ -62,7 +69,10 @@ def create_app():
         
         # Clear any test-related modules that might cause import issues
         import sys
-        test_modules = [mod for mod in sys.modules.keys() if 'test' in mod.lower() or 'conftest' in mod.lower()]
+        test_modules = [
+            mod for mod in sys.modules.keys() 
+            if 'test' in mod.lower() or 'conftest' in mod.lower()
+        ]
         for mod in test_modules:
             if 'backend' in mod:
                 logger.debug("Removing test module: %s", mod)
@@ -75,6 +85,7 @@ def create_app():
         inventory_bp = None
         process_bp = None
         health_bp = None
+        stats_bp = None
         setup_auth = None
         
         # Import each blueprint individually with isolation
@@ -84,7 +95,8 @@ def create_app():
             ('backend.routes.files', ['files_bp'], 'files'),
             ('backend.routes.inventory', ['inventory_bp'], 'inventory'),
             ('backend.routes.process', ['process_bp'], 'process'),
-            ('backend.routes.health', ['health_bp'], 'health')
+            ('backend.routes.health', ['health_bp'], 'health'),
+            ('backend.routes.stats', ['stats_bp'], 'stats')
         ]
         
         imported_blueprints = {}
@@ -94,12 +106,23 @@ def create_app():
                 module = __import__(module_name, fromlist=import_names)
                 for import_name in import_names:
                     if hasattr(module, import_name):
-                        imported_blueprints[import_name] = getattr(module, import_name)
-                        logger.info("%s from %s imported successfully", import_name, blueprint_name)
+                        imported_blueprints[import_name] = getattr(
+                            module, import_name
+                        )
+                        logger.info(
+                            "%s from %s imported successfully", 
+                            import_name, blueprint_name
+                        )
                     else:
-                        logger.warning("%s not found in %s module", import_name, blueprint_name)
+                        logger.warning(
+                            "%s not found in %s module", 
+                            import_name, blueprint_name
+                        )
             except Exception as e:
-                logger.error("Failed to import %s blueprint: %s", blueprint_name, str(e))
+                logger.error(
+                    "Failed to import %s blueprint: %s", 
+                    blueprint_name, str(e)
+                )
         
         # Extract imported blueprints
         auth_bp = imported_blueprints.get('auth_bp')
@@ -108,6 +131,7 @@ def create_app():
         inventory_bp = imported_blueprints.get('inventory_bp')
         process_bp = imported_blueprints.get('process_bp')
         health_bp = imported_blueprints.get('health_bp')
+        stats_bp = imported_blueprints.get('stats_bp')
         setup_auth = imported_blueprints.get('setup_auth')
         
         # Set up authentication
@@ -120,12 +144,20 @@ def create_app():
         
         # Register blueprints with individual error handling and correct URL prefixes
         blueprint_configs = [
-            (auth_bp, "auth", "/api/auth"),  # Auth routes use simple paths, need prefix
-            (documents_bp, "documents", None),  # Documents routes already include /api/documents
-            (files_bp, "files", "/api"),  # Files routes use simple paths, need /api prefix  
-            (inventory_bp, "inventory", None),  # Inventory routes already include /api/inventory
-            (process_bp, "process", None),  # Process routes already include /api/process
-            (health_bp, "health", None)  # Health endpoints don't need prefix
+            # Auth routes use simple paths, need prefix
+            (auth_bp, "auth", "/api/auth"),
+            # Documents routes already include /api/documents  
+            (documents_bp, "documents", None),
+            # Files routes use simple paths, need /api prefix
+            (files_bp, "files", "/api"),
+            # Inventory routes already include /api/inventory
+            (inventory_bp, "inventory", None),
+            # Process routes already include /api/process
+            (process_bp, "process", None),
+            # Health endpoints don't need prefix
+            (health_bp, "health", None),
+            # Stats routes already include /api/stats
+            (stats_bp, "stats", None)
         ]
         
         for blueprint, name, url_prefix in blueprint_configs:
@@ -133,13 +165,21 @@ def create_app():
                 try:
                     if url_prefix:
                         app.register_blueprint(blueprint, url_prefix=url_prefix)
-                        logger.info("Registered %s blueprint successfully with prefix %s", name, url_prefix)
+                        logger.info(
+                            "Registered %s blueprint successfully with prefix %s", 
+                            name, url_prefix
+                        )
                     else:
                         app.register_blueprint(blueprint)
-                        logger.info("Registered %s blueprint successfully", name)
+                        logger.info(
+                            "Registered %s blueprint successfully", name
+                        )
                     blueprints_registered += 1
                 except Exception as e:
-                    logger.error("Failed to register %s blueprint: %s", name, str(e))
+                    logger.error(
+                        "Failed to register %s blueprint: %s", 
+                        name, str(e)
+                    )
             else:
                 logger.warning("Skipping %s blueprint (not imported)", name)
         
@@ -155,7 +195,7 @@ def create_app():
             "status": "ok",
             "service": "Bartleby API",
             "version": "1.0",
-            "environment": os.getenv("NODE_ENV", "production"),
+            "environment": config_manager.get('NODE_ENV', 'production'),
             "blueprints_registered": blueprints_registered
         })
     
@@ -212,11 +252,15 @@ def create_app():
                     # Initialize metadata database
                     try:
                         logger.info("Attempting to initialize metadata database...")
-                        metadata_pool = await asyncio.wait_for(get_metadata_pool(), timeout=5.0)
+                        metadata_pool = await asyncio.wait_for(
+                            get_metadata_pool(), timeout=5.0
+                        )
                         if metadata_pool:
                             # Test the connection quickly
-                            async with asyncio.wait_for(metadata_pool.acquire(), timeout=3.0) as conn:
-                                # Just test the connection, skip schema for now in production
+                            async with asyncio.wait_for(
+                                metadata_pool.acquire(), timeout=3.0
+                            ) as conn:
+                                # Just test the connection, skip schema for now
                                 await conn.fetchval("SELECT 1")
                                 logger.info("Metadata database connection successful")
                                 database_initialized = True
@@ -225,22 +269,34 @@ def create_app():
                     except asyncio.TimeoutError:
                         logger.error("Timeout while initializing metadata database")
                     except Exception as e:
-                        logger.error("Error initializing metadata database: %s", str(e))
+                        logger.error(
+                            "Error initializing metadata database: %s", str(e)
+                        )
                     
                     # Skip vector database initialization for now to speed up startup
-                    logger.info("Skipping vector database initialization for fast startup")
+                    logger.info(
+                        "Skipping vector database initialization for fast startup"
+                    )
                         
                 except Exception as e:
-                    logger.error("Error during database initialization: %s", str(e))
+                    logger.error(
+                        "Error during database initialization: %s", str(e)
+                    )
                     
             # Run database initialization with overall timeout
             try:
-                await asyncio.wait_for(init_database_with_timeout(), timeout=10.0)
+                await asyncio.wait_for(
+                    init_database_with_timeout(), timeout=10.0
+                )
             except asyncio.TimeoutError:
-                logger.error("Database initialization timed out after 10 seconds")
+                logger.error(
+                    "Database initialization timed out after 10 seconds"
+                )
                 
         except Exception as e:
-            logger.error("Error importing database configuration: %s", str(e))
+            logger.error(
+                "Error importing database configuration: %s", str(e)
+            )
 
         # Set up background tasks
         try:
@@ -249,9 +305,13 @@ def create_app():
             logger.error("Error setting up background tasks: %s", str(e))
             
         if database_initialized:
-            logger.info("Application setup completed successfully with database")
+            logger.info(
+                "Application setup completed successfully with database"
+            )
         else:
-            logger.warning("Application setup completed without database connection")
+            logger.warning(
+                "Application setup completed without database connection"
+            )
     
     return app
 
@@ -264,24 +324,32 @@ def main():
     try:
         logger.info("Starting Bartleby application...")
         
+        # Get server configuration
+        server_config = config_manager.get_server_config()
+        
         # For production deployment, use simple Quart run
-        if os.getenv('RENDER'):
+        if config_manager.get('RENDER'):
             logger.info("Running on Render platform")
             # Use Quart's built-in server for Render deployment
             # Render will handle the ASGI server externally
-            host = '0.0.0.0'
-            port = int(os.getenv('PORT', 5000))
-            debug = os.getenv('DEBUG', 'false').lower() == 'true'
-            
-            logger.info("Starting server on %s:%d (debug=%s)", host, port, debug)
-            app.run(host=host, port=port, debug=debug)
+            logger.info(
+                "Starting server on %s:%d (debug=%s)", 
+                server_config['host'], 
+                server_config['port'], 
+                server_config['debug']
+            )
+            app.run(
+                host=server_config['host'], 
+                port=server_config['port'], 
+                debug=server_config['debug']
+            )
         else:
             # Local development
             logger.info("Running in local development mode")
             app.run(
-                host='0.0.0.0', 
-                port=int(os.getenv('PORT', 5000)),
-                debug=os.getenv('DEBUG', 'false').lower() == 'true'
+                host=server_config['host'], 
+                port=server_config['port'],
+                debug=server_config['debug']
             )
     except Exception as e:
         logger.error("Failed to start application: %s", str(e))

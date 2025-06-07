@@ -3,13 +3,14 @@
 import logging
 from typing import Optional, Dict, Any
 import asyncio
+from asyncpg.exceptions import ConnectionDoesNotExistError, ConnectionFailureError
+from openai import AsyncOpenAI
 
 logger = logging.getLogger(__name__)
 
 # Global service instances (singletons)
 _storage_manager = None
 _document_processor = None
-_auth_service = None
 _qdrant_service = None
 
 def get_storage_manager():
@@ -20,8 +21,11 @@ def get_storage_manager():
             from backend.services.storage.manager import StorageManager
             _storage_manager = StorageManager()
             logger.info("Storage manager instance created")
+        except ImportError as e:
+            logger.error("Failed to import storage manager: %s", e)
+            _storage_manager = None
         except Exception as e:
-            logger.error(f"Failed to create storage manager: {e}")
+            logger.error("Failed to create storage manager: %s", e)
             _storage_manager = None
     return _storage_manager
 
@@ -32,26 +36,33 @@ def get_document_processor():
     if _document_processor is None:
         try:
             from backend.services.processor.document_processor import DocumentProcessor
-            _document_processor = DocumentProcessor()
-            logger.info("Document processor instance created")
+            from backend.config.database import get_metadata_pool
+            from backend.config.client_factory import create_openai_client
+            
+            # Get required dependencies
+            db_pool = None
+            openai_client = None
+            
+            try:
+                db_pool = get_metadata_pool()
+                openai_client = create_openai_client()
+            except Exception as dep_error:
+                logger.error("Failed to get dependencies for document processor: %s", dep_error)
+                return None
+                
+            if db_pool and openai_client:
+                _document_processor = DocumentProcessor(db_pool, openai_client)
+                logger.info("Document processor instance created")
+            else:
+                logger.error("Missing required dependencies for document processor")
+                _document_processor = None
+        except ImportError as e:
+            logger.error("Failed to import document processor dependencies: %s", e)
+            _document_processor = None
         except Exception as e:
-            logger.error(f"Failed to create document processor: {e}")
+            logger.error("Failed to create document processor: %s", e)
             _document_processor = None
     return _document_processor
-
-
-def get_auth_service():
-    """Get the singleton authentication service instance."""
-    global _auth_service
-    if _auth_service is None:
-        try:
-            from backend.services.auth.auth_service import AuthService
-            _auth_service = AuthService()
-            logger.info("Auth service instance created")
-        except Exception as e:
-            logger.error(f"Failed to create auth service: {e}")
-            _auth_service = None
-    return _auth_service
 
 
 def get_qdrant_service():
@@ -62,8 +73,11 @@ def get_qdrant_service():
             from backend.services.vector.qdrant_service import qdrant_service
             _qdrant_service = qdrant_service
             logger.info("Qdrant service instance retrieved")
+        except ImportError as e:
+            logger.error("Failed to import Qdrant service: %s", e)
+            _qdrant_service = None
         except Exception as e:
-            logger.error(f"Failed to get Qdrant service: {e}")
+            logger.error("Failed to get Qdrant service: %s", e)
             _qdrant_service = None
     return _qdrant_service
 
@@ -76,9 +90,16 @@ async def check_services_health() -> Dict[str, Dict[str, Any]]:
     storage_manager = get_storage_manager()
     if storage_manager:
         try:
-            storage_health = await storage_manager.health_check()
+            storage_health = await storage_manager.check_storage_health()
             health_results['storage'] = {
-                'status': 'healthy' if storage_health else 'unhealthy',
+                'status': 'healthy' if storage_health.get('status') == 'healthy' else 'unhealthy',
+                'service': 'storage_manager',
+                'details': storage_health
+            }
+        except (ConnectionDoesNotExistError, ConnectionFailureError) as e:
+            health_results['storage'] = {
+                'status': 'unhealthy',
+                'error': f"Connection error: {e}",
                 'service': 'storage_manager'
             }
         except Exception as e:
@@ -93,21 +114,13 @@ async def check_services_health() -> Dict[str, Dict[str, Any]]:
             'service': 'storage_manager'
         }
 
-    # Check document processor
+    # Check document processor availability (no health check method)
     document_processor = get_document_processor()
     if document_processor:
-        try:
-            processor_health = await document_processor.health_check()
-            health_results['document_processor'] = {
-                'status': 'healthy' if processor_health else 'unhealthy',
-                'service': 'document_processor'
-            }
-        except Exception as e:
-            health_results['document_processor'] = {
-                'status': 'unhealthy',
-                'error': str(e),
-                'service': 'document_processor'
-            }
+        health_results['document_processor'] = {
+            'status': 'healthy',
+            'service': 'document_processor'
+        }
     else:
         health_results['document_processor'] = {
             'status': 'unavailable',
@@ -207,10 +220,10 @@ async def check_services_health() -> Dict[str, Dict[str, Any]]:
                 'error': str(e),
                 'service': 'vector_database'
             }
-    except Exception as e:
+    except ImportError as e:
         health_results['database_import'] = {
             'status': 'unhealthy',
-            'error': f"Database module import failed: {e}",
+            'error': "Database module import failed: %s" % e,
             'service': 'database_config'
         }
 
@@ -222,13 +235,11 @@ def initialize_services():
     logger.info("Initializing all services...")
     get_storage_manager()
     get_document_processor()
-    get_auth_service()
     
     # Initialize Qdrant service and collection
     qdrant_service = get_qdrant_service()
     if qdrant_service:
         try:
-            import asyncio
             # Run initialization in a new event loop if needed
             try:
                 loop = asyncio.get_event_loop()
@@ -242,20 +253,19 @@ def initialize_services():
                 asyncio.run(qdrant_service.initialize_collection())
             logger.info("Qdrant collection initialization scheduled")
         except Exception as e:
-            logger.error(f"Failed to initialize Qdrant collection: {e}")
+            logger.error("Failed to initialize Qdrant collection: %s", e)
     
     logger.info("Service initialization completed")
 
 
 def cleanup_services():
     """Cleanup all services."""
-    global _storage_manager, _document_processor, _auth_service, _qdrant_service
+    global _storage_manager, _document_processor, _qdrant_service
     logger.info("Cleaning up services...")
     
     # Cleanup Qdrant service
     if _qdrant_service:
         try:
-            import asyncio
             try:
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
@@ -265,12 +275,11 @@ def cleanup_services():
             except RuntimeError:
                 asyncio.run(_qdrant_service.close())
         except Exception as e:
-            logger.error(f"Error cleaning up Qdrant service: {e}")
+            logger.error("Error cleaning up Qdrant service: %s", e)
     
     # Reset global instances
     _storage_manager = None
     _document_processor = None
-    _auth_service = None
     _qdrant_service = None
     logger.info("Service cleanup completed")                                                                                                                                           
 
@@ -286,54 +295,19 @@ async def monitor_services():
                 if status.get('status') == 'unhealthy'
             ]
             if unhealthy_services:
-                logger.warning(f"Unhealthy services detected: {unhealthy_services}")
+                logger.warning("Unhealthy services detected: %s", unhealthy_services)
             else:
                 logger.debug("All services healthy")
         except Exception as e:
-            logger.error(f"Service monitoring error: {e}")
+            logger.error("Service monitoring error: %s", e)
 
 
 __all__ = [
     'get_storage_manager',
     'get_document_processor',
-    'get_auth_service',
     'get_qdrant_service',
     'check_services_health',
     'initialize_services',
     'cleanup_services',
     'monitor_services'
 ]
-"""Service components for the backend application."""
-
-# Import services lazily to avoid import issues during deployment
-try:
-    from .processor import (
-        BaseProcessor,
-        ProcessingStatus,
-        DocumentProcessor,
-        ImageProcessor,
-        BatchProcessor,
-        BatchFiles,
-        BatchStatus,
-        ProcessorFactory,
-        create_processor_factory
-    )
-    
-    __all__ = [
-        'BaseProcessor',
-        'ProcessingStatus',
-        'DocumentProcessor',
-        'ImageProcessor',
-        'BatchProcessor',
-        'BatchFiles',
-        'BatchStatus',
-        'ProcessorFactory',
-        'create_processor_factory'
-    ]
-except ImportError as e:
-    # If imports fail during deployment, provide minimal fallbacks
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.warning(f"Failed to import processor services: {e}")
-    
-    __all__ = []

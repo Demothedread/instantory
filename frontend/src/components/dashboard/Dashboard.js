@@ -1,21 +1,49 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { css } from '@emotion/react';
 import { AuthContext } from '../../contexts/auth';
 import HowToUseOverlay from '../common/HowToUseOverlay';
+import { dataApi } from '../../services/api';
 
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const [showHowTo, setShowHowTo] = useState(false);
-  
-  // Placeholder stats (in a real app, these would come from API calls)
-  const stats = {
+  const [stats, setStats] = useState({
     documentsProcessed: 0,
     inventoryItems: 0,
     recentActivity: []
-  };
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch real statistics when component mounts
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user?.id) return;
+      
+      try {
+        setLoading(true);
+        const response = await dataApi.getDashboardStats(user.id);
+        setStats(response.data);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching dashboard stats:', err);
+        setError('Failed to load statistics');
+        // Keep placeholder stats on error
+        setStats({
+          documentsProcessed: 0,
+          inventoryItems: 0,
+          recentActivity: []
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [user?.id]);
 
   return (
     <div css={styles.container}>
@@ -85,23 +113,39 @@ const Dashboard = () => {
       <div css={styles.statsSection}>
         <h2 css={styles.sectionTitle}>Your Statistics</h2>
         
-        <div css={styles.statsGrid}>
-          <div css={styles.statCard}>
-            <h3 css={styles.statTitle}>Documents Processed</h3>
-            <div css={styles.statValue}>{stats.documentsProcessed}</div>
+        {loading ? (
+          <div css={styles.loadingContainer}>
+            <div css={styles.loadingSpinner}></div>
+            <p css={styles.loadingText}>Loading statistics...</p>
           </div>
-          
-          <div css={styles.statCard}>
-            <h3 css={styles.statTitle}>Inventory Items</h3>
-            <div css={styles.statValue}>{stats.inventoryItems}</div>
+        ) : error ? (
+          <div css={styles.errorContainer}>
+            <p css={styles.errorText}>{error}</p>
           </div>
-        </div>
+        ) : (
+          <div css={styles.statsGrid}>
+            <div css={styles.statCard}>
+              <h3 css={styles.statTitle}>Documents Processed</h3>
+              <div css={styles.statValue}>{stats.documentsProcessed}</div>
+            </div>
+            
+            <div css={styles.statCard}>
+              <h3 css={styles.statTitle}>Inventory Items</h3>
+              <div css={styles.statValue}>{stats.inventoryItems}</div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div css={styles.recentSection}>
         <h2 css={styles.sectionTitle}>Recent Activity</h2>
         
-        {stats.recentActivity.length === 0 ? (
+        {loading ? (
+          <div css={styles.loadingContainer}>
+            <div css={styles.loadingSpinner}></div>
+            <p css={styles.loadingText}>Loading recent activity...</p>
+          </div>
+        ) : stats.recentActivity.length === 0 ? (
           <div css={styles.emptyState}>
             <p css={styles.emptyMessage}>
               No recent activity. Start by processing some files!
@@ -114,7 +158,18 @@ const Dashboard = () => {
           <div css={styles.activityList}>
             {stats.recentActivity.map((activity, index) => (
               <div key={index} css={styles.activityItem}>
-                {/* Activity content */}
+                <div css={styles.activityIcon}>
+                  {activity.type === 'document' ? '📄' : '📦'}
+                </div>
+                <div css={styles.activityContent}>
+                  <div css={styles.activityName}>{activity.name}</div>
+                  <div css={styles.activityType}>
+                    {activity.type === 'document' ? 'Document' : 'Inventory Item'}
+                  </div>
+                  <div css={styles.activityDate}>
+                    {activity.created_at ? new Date(activity.created_at).toLocaleDateString() : 'Unknown date'}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -355,6 +410,29 @@ const styles = {
       0 10px 30px rgba(0, 0, 0, 0.3),
       0 0 30px rgba(64, 224, 208, 0.1);
     min-height: 500px;
+  `,
+  
+  loadingText: css`
+    color: #40E0D0;
+    font-family: 'Josefin Sans', sans-serif;
+    font-size: 1.1rem;
+    margin-left: 1rem;
+  `,
+  
+  errorContainer: css`
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    position: relative;
+    z-index: 1;
+  `,
+  
+  errorText: css`
+    color: #924747;
+    font-family: 'Josefin Sans', sans-serif;
+    font-size: 1.1rem;
+    text-align: center;
   `
 };
 
