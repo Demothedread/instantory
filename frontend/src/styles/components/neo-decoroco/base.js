@@ -1,199 +1,229 @@
-import { animations } from '../../theme/animations';
-import { colors } from '../../theme/colors';
 import { css } from '@emotion/react';
-import { layout } from '../../layouts/constraints';
-import { typography } from '../../theme/typography';
+import { colors } from '../../theme/colors';
 
 export const neoDecorocoBase = {
-  // Panel styling with Art Deco geometry and Rococo flourishes
+  // Panel styling - main container elements
   panel: css`
-    background: ${colors.darkGradient};
+    background: ${colors.glass};
     border: 1px solid ${colors.border};
     border-radius: 12px;
-    box-shadow: ${colors.neonGlow} ${colors.neonTeal},
-                0 4px 20px ${colors.shadow};
-    position: relative;
-    overflow: hidden;
-    transition: ${animations.transitions.all};
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        ${colors.neonTeal},
-        transparent
-      );
-    }
-
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        ${colors.neonGold},
-        transparent
-      );
+    backdrop-filter: blur(10px);
+    box-shadow: 
+      0 4px 20px rgba(0, 255, 255, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    
+    &:hover {
+      border-color: ${colors.neonTeal};
+      box-shadow: 
+        0 8px 30px rgba(0, 255, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
     }
   `,
 
-  // Button styling with neon accents
-  button: css`
-    background: linear-gradient(135deg, ${colors.primary}, ${colors.primary}dd);
-    border: none;
+  // Card styling - smaller content containers
+  card: css`
+    background: ${colors.surface};
+    border: 1px solid ${colors.borderLight};
     border-radius: 8px;
-    color: ${colors.textLight};
-    cursor: pointer;
-    font-family: ${typography.fonts.modern};
-    font-size: ${typography.sizes.base};
-    letter-spacing: ${typography.letterSpacing.wide};
-    padding: ${layout.spacing.sm} ${layout.spacing.lg};
-    position: relative;
-    transition: ${animations.transitions.all};
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     
     &:hover {
       transform: translateY(-2px);
-      box-shadow: ${colors.neonGlow} ${colors.neonTeal};
-      
-      &::before {
-        opacity: 1;
-      }
+      border-color: ${colors.neonTeal};
+      box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.4),
+        0 0 20px rgba(0, 255, 255, 0.1);
     }
+  `,
 
-    &::before {
-      content: '';
-      position: absolute;
-      inset: -2px;
-      background: linear-gradient(45deg, ${colors.neonTeal}, ${colors.neonGold});
-      border-radius: 10px;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      z-index: -1;
+  // Button styling
+  button: css`
+    padding: 0.75rem 1.5rem;
+    border: 1px solid ${colors.neonTeal};
+    border-radius: 6px;
+    background: transparent;
+    color: ${colors.neonTeal};
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    font-size: 1rem;
+    
+    &:hover {
+      background: ${colors.neonTeal};
+      color: ${colors.background};
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+      transform: translateY(-1px);
     }
-
+    
+    &:active {
+      transform: translateY(0);
+    }
+    
     &:disabled {
-      opacity: 0.6;
+      opacity: 0.5;
       cursor: not-allowed;
-      transform: none;
-      
-      &::before {
-        opacity: 0;
+      &:hover {
+        background: transparent;
+        color: ${colors.neonTeal};
+        transform: none;
+        box-shadow: none;
       }
     }
   `,
 
-  // Input field styling
+  // Input styling
   input: css`
-    background: rgba(255, 255, 255, 0.05);
+    width: 100%;
+    padding: 0.75rem 1rem;
     border: 1px solid ${colors.border};
     border-radius: 6px;
+    background: ${colors.surface};
     color: ${colors.textLight};
-    font-family: ${typography.fonts.primary};
-    font-size: ${typography.sizes.base};
-    padding: ${layout.spacing.sm} ${layout.spacing.md};
-    transition: ${animations.transitions.all};
-    width: 100%;
-
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    
+    &::placeholder {
+      color: ${colors.textMuted};
+    }
+    
     &:focus {
       outline: none;
-      border-color: ${colors.primary};
-      box-shadow: 0 0 0 2px ${colors.primary}33;
-      background: rgba(255, 255, 255, 0.1);
+      border-color: ${colors.neonTeal};
+      box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.2);
     }
-
-    &::placeholder {
-      color: rgba(255, 255, 255, 0.5);
+    
+    &:hover {
+      border-color: ${colors.borderLight};
     }
   `,
 
-  // Heading styles with Art Deco influence
+  // Heading styling
   heading: css`
-    font-family: ${typography.fonts.decorative};
-    letter-spacing: ${typography.letterSpacing.artDeco};
-    text-transform: uppercase;
-    position: relative;
-    padding-bottom: ${layout.spacing.sm};
-    margin-bottom: ${layout.spacing.md};
+    font-family: "Cinzel Decorative", serif;
+    color: ${colors.neonGold};
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+    margin: 0 0 1rem 0;
+  `,
 
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(
-        90deg,
-        transparent,
-        ${colors.neonTeal},
-        ${colors.neonGold},
-        transparent
-      );
+  // Alert/notification styling
+  alert: css`
+    padding: 1rem 1.5rem;
+    border-radius: 6px;
+    border: 1px solid ${colors.neonRed};
+    background: rgba(255, 7, 58, 0.1);
+    color: ${colors.neonRed};
+    font-size: 0.9rem;
+    
+    &.success {
+      border-color: ${colors.neonGreen};
+      background: rgba(57, 255, 20, 0.1);
+      color: ${colors.neonGreen};
+    }
+    
+    &.warning {
+      border-color: ${colors.neonGold};
+      background: rgba(255, 215, 0, 0.1);
+      color: ${colors.neonGold};
+    }
+    
+    &.info {
+      border-color: ${colors.neonBlue};
+      background: rgba(0, 162, 255, 0.1);
+      color: ${colors.neonBlue};
     }
   `,
 
-  // Table styling with elegant borders
-  table: css`
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    margin: ${layout.spacing.md} 0;
-
-    th {
-      background: rgba(255, 255, 255, 0.05);
-      font-family: ${typography.fonts.modern};
-      font-weight: ${typography.weights.medium};
-      letter-spacing: ${typography.letterSpacing.wide};
-      padding: ${layout.spacing.sm} ${layout.spacing.md};
-      text-align: left;
-      border-bottom: 2px solid ${colors.primary}66;
-    }
-
-    td {
-      padding: ${layout.spacing.sm} ${layout.spacing.md};
-      border-bottom: 1px solid ${colors.border};
-      transition: ${animations.transitions.all};
-    }
-
-    tr:hover td {
-      background: rgba(255, 255, 255, 0.05);
+  // Loading spinner
+  spinner: css`
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border: 3px solid ${colors.border};
+    border-radius: 50%;
+    border-top-color: ${colors.neonTeal};
+    animation: spin 1s ease-in-out infinite;
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   `,
 
-  // Card styling with decorative elements
-  card: css`
-    background: ${colors.darkGradient};
-    border-radius: 12px;
-    padding: ${layout.spacing.lg};
-    position: relative;
-    overflow: hidden;
-
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(
-        135deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.05) 50%,
-        transparent 100%
-      );
-      pointer-events: none;
+  // Badge/tag styling
+  badge: css`
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid ${colors.neonTeal};
+    background: rgba(0, 255, 255, 0.1);
+    color: ${colors.neonTeal};
+    
+    &.gold {
+      border-color: ${colors.neonGold};
+      background: rgba(255, 215, 0, 0.1);
+      color: ${colors.neonGold};
+    }
+    
+    &.green {
+      border-color: ${colors.neonGreen};
+      background: rgba(57, 255, 20, 0.1);
+      color: ${colors.neonGreen};
     }
   `,
+
+  // Navigation link styling
+  navLink: css`
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    color: ${colors.textLight};
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: ${colors.hover};
+      color: ${colors.neonTeal};
+    }
+    
+    &.active {
+      background: ${colors.active};
+      color: ${colors.neonTeal};
+      border-left: 3px solid ${colors.neonTeal};
+    }
+  `,
+
+  // Modal/overlay backdrop
+  backdrop: css`
+    position: fixed;
+    inset: 0;
+    background: ${colors.overlay};
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `,
+
+  // Divider/separator
+  divider: css`
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      ${colors.border},
+      transparent
+    );
+    margin: 1rem 0;
+  `
 };
-
-export default neoDecorocoBase;

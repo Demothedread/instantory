@@ -1,6 +1,8 @@
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthContext, AuthProvider } from './contexts/auth';
+import config from './config';
 
 import About from './pages/About';
 import Resources from './pages/Resources';
@@ -208,9 +210,17 @@ function App() {
 }
 
 export default function AppWrapper() {
+  const googleClientId = config.googleClientId || process.env.REACT_APP_GOOGLE_CLIENT_ID;
+  
+  if (!googleClientId) {
+    console.warn('Google Client ID not found. Google OAuth will not work.');
+  }
+
   return (
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+    <GoogleOAuthProvider clientId={googleClientId || "dummy-client-id"}>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </GoogleOAuthProvider>
   );
 }

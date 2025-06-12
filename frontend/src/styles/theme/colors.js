@@ -1,53 +1,48 @@
 export const colors = {
-  // Base colors
-  primary:'rgb(39, 163, 148)',  // Teal - main brand color
-  secondary: '#FFD700', // Gold - accent color
+  // Primary brand colors
+  primary: '#1a1a2e',
+  secondary: '#16213e',
+  accent: '#0f3460',
   
-  // Neon accents
-  neonTeal: 'rgba(26, 148, 133, 0.8)',
-  neonGold: 'rgba(255, 215, 0, 0.8)',
+  // Neon accent colors for the Bartleby theme
+  neonTeal: '#00ffff',
+  neonGold: '#ffd700',
+  neonGreen: '#39ff14',
+  neonPink: '#ff073a',
+  neonPurple: '#bf00ff',
+  neonRed: '#ff073a',
+  neonBlue: '#00a2ff',
   
   // Background gradients
-  darkGradient: 'linear-gradient(45deg, #1a1a1a, #2a2a2a)',
-  lightGradient: 'linear-gradient(45deg, #f5f5f5, #e5e5e5)',
+  darkGradient: 'linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%)',
+  lightGradient: 'linear-gradient(135deg, #16213e 0%, #0f3460 100%)',
   
-  // Art Deco metallics
-  gold: '#FFD700',
-  silver: '#C0C0C0',
-  bronze: '#CD7F32',
+  // Text colors
+  textLight: '#e8e8e8',
+  textDark: '#2c2c54',
+  textMuted: '#a0a0a0',
+  textAccent: '#00ffff',
   
-  // Rococo pastels
-  blushPink: '#FFB6C1',
-  mintGreen: '#98FF98',
-  lavender: '#E6E6FA',
+  // Semantic colors
+  success: '#39ff14',
+  warning: '#ffd700',
+  error: '#ff073a',
+  info: '#00a2ff',
   
   // UI colors
-  text: '#333333',
-  textLight: '#FFFFFF',
-  border: 'rgba(255, 255, 255, 0.1)',
-  shadow: 'rgba(0, 0, 0, 0.2)',
+  background: '#0c0c0c',
+  surface: '#1a1a2e',
+  card: '#16213e',
+  border: '#333366',
+  borderLight: '#4a4a6a',
   
-  // Status colors
-  success: '#4CAF50',
-  error: '#FF5252',
-  warning: '#FFC107',
-  info: '#2196F3',
+  // Interactive states
+  hover: '#0f3460',
+  active: '#1a2f5a',
+  disabled: '#333333',
   
-  // Overlay colors
-  overlay: 'rgba(0, 0, 0, 0.5)',
-  modalBg: 'rgba(26, 26, 26, 0.95)',
-  
-  // Glow effects
-  neonGlow: '0 0 10px',
-  softGlow: '0 0 20px',
+  // Transparency levels
+  overlay: 'rgba(0, 0, 0, 0.8)',
+  glass: 'rgba(26, 26, 46, 0.9)',
+  subtle: 'rgba(255, 255, 255, 0.1)',
 };
-
-export const generateNeonShadow = (color, intensity = 1) => {
-  return `
-    0 0 ${5 * intensity}px ${color},
-    0 0 ${10 * intensity}px ${color},
-    0 0 ${15 * intensity}px ${color}
-  `;
-};
-
-export default colors;
