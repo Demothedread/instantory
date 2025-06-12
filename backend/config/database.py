@@ -4,8 +4,8 @@ import logging
 from enum import Enum
 from typing import Optional, Dict, Any, Union, TYPE_CHECKING
 from urllib.parse import urlparse
-
 import asyncpg
+from backend.config.manager import config_manager
 
 if TYPE_CHECKING:
     from backend.services.vector.qdrant_service import QdrantService
@@ -52,7 +52,7 @@ class DatabaseConfig:
                     if parsed.path:
                         safe_url += parsed.path
                     safe_urls[key] = safe_url
-                except:
+                except (ValueError, TypeError):
                     safe_urls[key] = "invalid_url"
             else:
                 safe_urls[key] = None
@@ -124,7 +124,7 @@ class DatabaseConfig:
             logger.debug("Final config (safe): %s", {k: v for k, v in config.items() if k != 'password'})
             return config
             
-        except Exception as e:
+        except (ValueError, TypeError, AttributeError) as e:
             logger.error("Error parsing database URL: %s", e)
             return {}                                          
 
@@ -175,8 +175,8 @@ class DatabaseConfig:
             logger.error("Postgres error while creating %s database pool: %s", db_type.value, e)
             logger.error("Config used (safe): %s", {k: v for k, v in config.items() if k != 'password'})
             return None
-        except Exception as e:
-            logger.error("Unexpected error while creating %s database pool: %s", db_type.value, e)
+        except (OSError, ConnectionError, asyncpg.exceptions.ConnectionFailureError) as e:
+            logger.error("Connection error while creating %s database pool: %s", db_type.value, e)
             logger.error("Config used (safe): %s", {k: v for k, v in config.items() if k != 'password'})
             return None
 
@@ -224,7 +224,7 @@ async def get_vector_pool() -> Optional[Union[asyncpg.Pool, 'QdrantService']]:
         else:
             logger.warning("Qdrant unhealthy, falling back to PostgreSQL: %s", health.get("error"))
             
-    except Exception as e:
+    except (ImportError, ModuleNotFoundError, ConnectionError) as e:
         logger.warning("Qdrant service unavailable, falling back to PostgreSQL: %s", e)
     
     # Fallback to PostgreSQL vector pool
@@ -235,12 +235,33 @@ async def get_vector_pool() -> Optional[Union[asyncpg.Pool, 'QdrantService']]:
         return await db_config.get_pool(DatabaseType.METADATA)
     return pool
 
-async def get_metadata_pool() -> Optional[asyncpg.Pool]:
-    """Get the metadata database connection pool.
-    
-    Returns None if not available. Check the return value before use.
-    """
-    return await db_config.get_pool(DatabaseType.METADATA)
+class DatabaseManager:
+    def __init__(self):
+        self._metadata_pool = None
+        self._vector_pool = None
+        
+    async def get_metadata_pool(self):
+        if not self._metadata_pool:
+            config = config_manager.get_database_config()
+            self._metadata_pool = await asyncpg.create_pool(
+                config['metadata_url'],
+                min_size=config['min_connections'],
+                max_size=config['max_connections']
+            )
+        return self._metadata_pool
+        
+    async def get_vector_pool(self):
+        if not self._vector_pool:
+            config = config_manager.get_database_config()
+            if config['vector_url']:
+                self._vector_pool = await asyncpg.create_pool(config['vector_url'])
+        return self._vector_pool
+
+# Global instance
+db_manager = DatabaseManager()
+
+async def get_metadata_pool():
+    return await db_manager.get_metadata_pool()
 
 def is_qdrant_service(vector_client) -> bool:
     """Check if the vector client is a Qdrant service instance."""

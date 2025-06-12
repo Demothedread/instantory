@@ -72,8 +72,11 @@ class QdrantService:
         except (ResponseHandlingException, UnexpectedResponse) as e:
             logger.error("Error initializing collection: %s", e)
             return False
-        except Exception as e:
-            logger.error("Unexpected error initializing collection: %s", e)
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.error("Connection error initializing collection: %s", e)
+            return False
+        except (ValueError, TypeError) as e:
+            logger.error("Configuration error initializing collection: %s", e)
             return False
     
     async def health_check(self) -> Dict[str, Any]:
@@ -105,11 +108,11 @@ class QdrantService:
                 "error": str(e),
                 "url": self.url
             }
-        except Exception as e:
-            logger.error("Unexpected error in health check: %s", e)
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.error("Connection error in health check: %s", e)
             return {
                 "status": "unhealthy",
-                "error": str(e),
+                "error": f"Connection error: {str(e)}",
                 "url": self.url
             }
     
@@ -148,8 +151,11 @@ class QdrantService:
         except (ResponseHandlingException, UnexpectedResponse) as e:
             logger.error("Error storing document vector %s: %s", document_id, e)
             return False
-        except Exception as e:
-            logger.error("Unexpected error storing document vector %s: %s", document_id, e)
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.error("Connection error storing document vector %s: %s", document_id, e)
+            return False
+        except (ValueError, TypeError) as e:
+            logger.error("Data validation error storing document vector %s: %s", document_id, e)
             return False
     
     async def search_similar_documents(
@@ -197,8 +203,11 @@ class QdrantService:
         except (ResponseHandlingException, UnexpectedResponse) as e:
             logger.error("Error searching similar documents: %s", e)
             return []
-        except Exception as e:
-            logger.error("Unexpected error searching similar documents: %s", e)
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.error("Connection error searching similar documents: %s", e)
+            return []
+        except (ValueError, TypeError, KeyError) as e:
+            logger.error("Data error searching similar documents: %s", e)
             return []
     
     async def delete_document_vector(self, document_id: int) -> bool:
@@ -220,8 +229,11 @@ class QdrantService:
         except (ResponseHandlingException, UnexpectedResponse) as e:
             logger.error("Error deleting document vector %s: %s", document_id, e)
             return False
-        except Exception as e:
-            logger.error("Unexpected error deleting document vector %s: %s", document_id, e)
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.error("Connection error deleting document vector %s: %s", document_id, e)
+            return False
+        except (ValueError, TypeError) as e:
+            logger.error("Data validation error deleting document vector %s: %s", document_id, e)
             return False
     
     async def delete_user_vectors(self, user_id: int) -> bool:
@@ -251,8 +263,11 @@ class QdrantService:
         except (ResponseHandlingException, UnexpectedResponse) as e:
             logger.error("Error deleting vectors for user %s: %s", user_id, e)
             return False
-        except Exception as e:
-            logger.error("Unexpected error deleting vectors for user %s: %s", user_id, e)
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.error("Connection error deleting vectors for user %s: %s", user_id, e)
+            return False
+        except (ValueError, TypeError) as e:
+            logger.error("Data validation error deleting vectors for user %s: %s", user_id, e)
             return False
     
     async def get_document_vector(self, document_id: int) -> Optional[Dict[str, Any]]:
@@ -279,8 +294,11 @@ class QdrantService:
         except (ResponseHandlingException, UnexpectedResponse) as e:
             logger.error("Error retrieving document vector %s: %s", document_id, e)
             return None
-        except Exception as e:
-            logger.error("Unexpected error retrieving document vector %s: %s", document_id, e)
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.error("Connection error retrieving document vector %s: %s", document_id, e)
+            return None
+        except (ValueError, TypeError, KeyError) as e:
+            logger.error("Data error retrieving document vector %s: %s", document_id, e)
             return None
     
     async def count_user_vectors(self, user_id: int) -> int:
@@ -304,8 +322,11 @@ class QdrantService:
         except (ResponseHandlingException, UnexpectedResponse) as e:
             logger.error("Error counting vectors for user %s: %s", user_id, e)
             return 0
-        except Exception as e:
-            logger.error("Unexpected error counting vectors for user %s: %s", user_id, e)
+        except (ConnectionError, TimeoutError, OSError) as e:
+            logger.error("Connection error counting vectors for user %s: %s", user_id, e)
+            return 0
+        except (ValueError, TypeError) as e:
+            logger.error("Data validation error counting vectors for user %s: %s", user_id, e)
             return 0
     
     async def close(self):
@@ -316,8 +337,10 @@ class QdrantService:
             if hasattr(self, 'client'):
                 await self._run_in_executor(self.client.close)
             logger.info("Qdrant client closed successfully")
-        except Exception as e:
-            logger.error("Error closing Qdrant client: %s", str(e))
+        except (ConnectionError, OSError) as e:
+            logger.error("Connection error closing Qdrant client: %s", str(e))
+        except (RuntimeError, AttributeError) as e:
+            logger.error("Runtime error closing Qdrant client: %s", str(e))
 
 # Global instance
 qdrant_service = QdrantService()

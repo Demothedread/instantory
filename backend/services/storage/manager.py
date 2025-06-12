@@ -82,6 +82,7 @@ class StorageManager:
         self.max_thumbnail_size = (300, 300)  # Maximum thumbnail dimensions
 
         # Determine storage type from environment variable, default to Vercel
+        # The storage_type is determined once in __init__:
         self.storage_type = os.getenv("STORAGE_TYPE", "vercel").lower()
         
     async def check_storage_health(self) -> dict:
@@ -449,116 +450,80 @@ class StorageManager:
         filename: str,
         content_type: str
     ) -> Tuple[Optional[str], Optional[str]]:
-        """
-        Process and store an image with its thumbnail.
-        
-        Args:
-            user_id: The ID of the user who owns the file
-            file_data: The image content
-            filename: Original filename
-            content_type: Image MIME type
-            
-        Returns:
-            Tuple of (original_url, thumbnail_url) if successful, (None, None) otherwise
-        """
+        """Process and store an image with its thumbnail."""
         try:
-            # Convert to bytes if needed
-            image_bytes = file_data if isinstance(file_data, bytes) else file_data.read()
+            # Read file data if it's a file-like object
+            if hasattr(file_data, 'read'):
+                file_data = file_data.read()
             
             # Generate thumbnail
-            thumbnail_bytes = await self.generate_thumbnail(image_bytes, filename)
-            if not thumbnail_bytes:
-                return None, None
+            thumbnail_bytes = await self.generate_thumbnail(file_data, filename)
             
-            # Store original image
+            # Upload original image
             original_url = await self.vercel.upload_document(
-                image_bytes,
+                file_data,
                 filename,
                 content_type
             )
             
-            # Generate thumbnail filename
-            thumbnail_name = f"thumb_{filename}"
-            if not thumbnail_name.lower().endswith('.jpg'):
-                thumbnail_name = f"{thumbnail_name}.jpg"
-            
-            # Store thumbnail
-            thumbnail_url = await self.vercel.upload_document(
-                thumbnail_bytes,
-                thumbnail_name,
-                'image/jpeg'
-            )
+            thumbnail_url = None
+            if thumbnail_bytes:
+                thumbnail_name = f"thumb_{filename}.jpg"
+                thumbnail_url = await self.vercel.upload_document(
+                    thumbnail_bytes,
+                    thumbnail_name,
+                    'image/jpeg'
+                )
             
             # Update database with URLs
-            async with await get_metadata_pool() as pool:
-                async with pool.acquire() as conn:
-                    await conn.execute(
-                        """
-                        UPDATE user_inventory
-                        SET original_image_url = $1,
-                            thumbnail_url = $2
-                        WHERE user_id = $3 AND original_image_url = $1
-                        """,
-                        original_url,
-                        thumbnail_url,
-                        user_id
-                    )
+            from backend.config.database import get_metadata_pool
+            async with (await get_metadata_pool()).acquire() as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO user_images (user_id, filename, original_url, thumbnail_url, content_type)
+                    VALUES ($1, $2, $3, $4, $5)
+                    """,
+                    user_id, filename, original_url, thumbnail_url, content_type
+                )
             
             return original_url, thumbnail_url
-            
+        
         except Exception as e:
             logger.error(f"Error processing image {filename}: {e}")
             return None, None
 
-    def cleanup_temp_files(self, user_id: Optional[int] = None):
-        """
-        Clean up temporary files for a user or all users.
-        
-        Args:
-            user_id: Optional user ID to clean up specific user's files
-        """
-        try:
-            self.config.cleanup_temp_files(user_id)
-        except Exception as e:
-            logger.error(f"Error cleaning up temporary files: {e}")
-
     async def _extract_text_content(self, file_bytes: bytes, content_type: str) -> Optional[str]:
-        """
-        Extract text content from different file types.
-        
-        Args:
-            file_bytes: Raw file content
-            content_type: MIME type of the file
-            
-        Returns:
-            Extracted text if successful, None otherwise
-        """
+        """Extract text content from different file types."""
         try:
             if content_type == 'text/plain':
                 return file_bytes.decode('utf-8', errors='ignore')
                 
             elif content_type == 'application/pdf':
+                # Use PyPDF2 or similar library
                 import PyPDF2
-                pdf_file = io.BytesIO(file_bytes)
-                pdf_reader = PyPDF2.PdfReader(pdf_file)
-                text = []
+                from io import BytesIO
+                
+                pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))
+                text = ""
                 for page in pdf_reader.pages:
-                    text.append(page.extract_text())
-                return '\n'.join(text)
-                
+                    text += page.extract_text()
+                return text
+            
             elif content_type == 'application/msword' or content_type.endswith('wordprocessingml.document'):
-                from docx import Document
-                doc_file = io.BytesIO(file_bytes)
-                doc = Document(doc_file)
-                text = []
-                for para in doc.paragraphs:
-                    text.append(para.text)
-                return '\n'.join(text)
+                # Use python-docx for Word documents
+                import docx
+                from io import BytesIO
                 
+                doc = docx.Document(BytesIO(file_bytes))
+                text = ""
+                for paragraph in doc.paragraphs:
+                    text += paragraph.text + "\n"
+                return text
+            
             else:
                 logger.warning(f"Unsupported content type for text extraction: {content_type}")
                 return None
-                
+            
         except Exception as e:
             logger.error(f"Error extracting text content: {e}")
             return None
@@ -594,65 +559,42 @@ class StorageManager:
         match_threshold: float = 0.7,
         match_count: int = 10
     ) -> list:
-        """
-        Search documents using vector similarity.
-        
-        Args:
-            user_id: The ID of the user performing the search
-            query: Search query text
-            match_threshold: Minimum similarity threshold (0-1)
-            match_count: Maximum number of results to return
-            
-        Returns:
-            List of matching documents with similarity scores
-        """
+        """Search documents using vector similarity."""
         try:
-            # Generate query embedding
+            # Generate embedding for query
             query_embedding = await self._generate_embedding(query)
             if not query_embedding:
                 return []
             
-            # Search using vector similarity
-            async with await get_vector_pool() as pool:
-                async with pool.acquire() as conn:
-                    # Get matching documents with similarity scores
-                    rows = await conn.fetch(
-                        """
-                        WITH vector_matches AS (
-                            SELECT document_id, similarity
-                            FROM search_documents($1, $2, $3)
-                        )
-                        SELECT 
-                            d.id,
-                            d.title,
-                            d.author,
-                            d.summary,
-                            dc.content,
-                            vm.similarity
-                        FROM vector_matches vm
-                        JOIN user_documents d ON d.id = vm.document_id
-                        JOIN document_content dc ON dc.document_id = vm.document_id
-                        WHERE d.user_id = $4
-                        ORDER BY vm.similarity DESC
-                        """,
-                        query_embedding,
-                        match_threshold,
-                        match_count,
-                        user_id
-                    )
-                    
-                    return [
-                        {
-                            'id': row['id'],
-                            'title': row['title'],
-                            'author': row['author'],
-                            'summary': row['summary'],
-                            'excerpt': self._extract_relevant_excerpt(row['content'], query),
-                            'similarity': row['similarity']
-                        }
-                        for row in rows
-                    ]
-                    
+            # Search using Qdrant service
+            from backend.services import get_qdrant_service
+            qdrant_service = get_qdrant_service()
+            
+            if qdrant_service:
+                results = await qdrant_service.search_similar(
+                    query_vector=query_embedding,
+                    user_id=user_id,
+                    limit=match_count,
+                    score_threshold=match_threshold
+                )
+                return results
+            
+            # Fallback to database search
+            from backend.config.database import get_metadata_pool
+            async with (await get_metadata_pool()).acquire() as conn:
+                documents = await conn.fetch(
+                    """
+                    SELECT id, title, content, file_url, similarity_score
+                    FROM documents 
+                    WHERE user_id = $1 
+                    AND content ILIKE $2
+                    ORDER BY similarity_score DESC
+                    LIMIT $3
+                    """,
+                    user_id, f"%{query}%", match_count
+                )
+                return [dict(doc) for doc in documents]
+            
         except Exception as e:
             logger.error(f"Error searching documents: {e}")
             return []

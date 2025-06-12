@@ -6,7 +6,7 @@ import shutil
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Tuple, Optional, List
+from typing import Dict, Any, Tuple, Optional, List, Union
 import asyncpg
 
 from openai import AsyncOpenAI
@@ -58,6 +58,118 @@ class DocumentProcessor(BaseProcessor):
                 await self._store_document_data(conn, doc_info, new_path, full_text)
             
             return True
+            
+        except Exception as e:
+            logger.error(f"Error processing document {file_path}: {e}")
+            raise
+    
+    async def process(self, files: Union[Path, List[Path]], user_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Process single file or multiple files with comprehensive result tracking.
+        
+        Args:
+            files: Single file path or list of file paths to process
+            user_id: User ID for document ownership (defaults to 1 if not provided)
+            
+        Returns:
+            Dict containing processing results with success/failure details
+        """
+        # Normalize input to list
+        file_list = [files] if isinstance(files, Path) else files
+        user_id = user_id or 1  # Default user ID
+        
+        results = {
+            'total_files': len(file_list),
+            'processed_successfully': 0,
+            'failed_files': 0,
+            'results': [],
+            'errors': [],
+            'processing_time': 0
+        }
+        
+        start_time = datetime.now()
+        logger.info(f"Starting batch processing of {len(file_list)} files for user {user_id}")
+        
+        for file_path in file_list:
+            file_result = {
+                'file_path': str(file_path),
+                'file_name': file_path.name,
+                'status': 'pending',
+                'document_id': None,
+                'error': None,
+                'processing_time': 0
+            }
+            
+            file_start_time = datetime.now()
+            
+            try:
+                # Check if file exists and is supported
+                if not file_path.exists():
+                    raise FileNotFoundError(f"File not found: {file_path}")
+                
+                if not self.is_supported_file(file_path):
+                    raise ValueError(f"Unsupported file type: {file_path.suffix}")
+                
+                # Process the individual file
+                success = await self._process_single_file(file_path, user_id)
+                
+                if success:
+                    file_result['status'] = 'success'
+                    results['processed_successfully'] += 1
+                    logger.info(f"Successfully processed: {file_path.name}")
+                else:
+                    file_result['status'] = 'failed'
+                    file_result['error'] = 'Processing returned False'
+                    results['failed_files'] += 1
+                    logger.warning(f"Processing failed for: {file_path.name}")
+                    
+            except Exception as e:
+                file_result['status'] = 'error'
+                file_result['error'] = str(e)
+                results['failed_files'] += 1
+                results['errors'].append({
+                    'file': str(file_path),
+                    'error': str(e)
+                })
+                logger.error(f"Error processing {file_path.name}: {e}")
+            
+            finally:
+                file_result['processing_time'] = (datetime.now() - file_start_time).total_seconds()
+                results['results'].append(file_result)
+        
+        results['processing_time'] = (datetime.now() - start_time).total_seconds()
+        
+        logger.info(f"Batch processing completed: {results['processed_successfully']}/{results['total_files']} successful")
+        
+        return results
+    
+    async def _process_single_file(self, file_path: Path, user_id: int) -> bool:
+        """
+        Process a single document file with user context.
+        Enhanced version of process_file with user_id support.
+        """
+        try:
+            # Extract text for analysis and storage
+            analysis_text, full_text = await self._extract_text(file_path)
+            if not analysis_text or not full_text:
+                logger.error(f"No text could be extracted from {file_path}")
+                return False
+            
+            # Analyze document using GPT-4
+            doc_info = await self._analyze_document(analysis_text)
+            
+            # Save document to storage
+            new_path = await self._save_document(file_path)
+            
+            # Store in database with user context
+            document_id = await self._store_document_data_with_user(doc_info, new_path, full_text, user_id)
+            
+            if document_id:
+                logger.info(f"Document {file_path.name} stored with ID: {document_id}")
+                return True
+            else:
+                logger.error(f"Failed to store document {file_path.name} in database")
+                return False
             
         except Exception as e:
             logger.error(f"Error processing document {file_path}: {e}")
@@ -286,6 +398,84 @@ class DocumentProcessor(BaseProcessor):
                         document_id,
                         full_text
                     )
+                    
+        except Exception as e:
+            logger.error(f"Error storing document data: {e}")
+            raise
+    
+    async def _store_document_data_with_user(self, doc_info: Dict[str, Any], 
+                                           file_path: Path,
+                                           full_text: str,
+                                           user_id: int) -> Optional[int]:
+        """
+        Store document metadata and text in database with user context.
+        Enhanced version that returns document_id and uses provided user_id.
+        """
+        try:
+            # First, compute vector embedding for the full text
+            vector_embedding = await self._compute_vector_embedding(full_text)
+            
+            # 1. Store metadata in the main metadata database
+            from backend.config.database import get_metadata_pool
+            async with (await get_metadata_pool()) as metadata_pool:
+                async with metadata_pool.acquire() as metadata_conn:
+                    document_id = await metadata_conn.fetchval('''
+                        INSERT INTO user_documents
+                        (user_id, title, author, journal_publisher, publication_year, page_length,
+                         thesis, issue, summary, category, field, hashtags, influenced_by,
+                         file_path, file_type, created_at)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                        RETURNING id
+                    ''',
+                        user_id,
+                        doc_info.get('title', ''),
+                        doc_info.get('author', ''),
+                        doc_info.get('journal_publisher', ''),
+                        doc_info.get('publication_year'),
+                        len(full_text.split('\n')),
+                        doc_info.get('thesis', ''),
+                        doc_info.get('issue', ''),
+                        doc_info.get('summary', '')[:400],
+                        doc_info.get('category', ''),
+                        doc_info.get('field', ''),
+                        doc_info.get('hashtags', []),
+                        doc_info.get('influenced_by', []),
+                        str(file_path),
+                        file_path.suffix[1:],
+                        datetime.now()
+                    )
+            
+            # 2. Store the full text and vector embedding in the vector database
+            from backend.config.database import get_vector_pool
+            async with (await get_vector_pool()) as vector_pool:
+                async with vector_pool.acquire() as vector_conn:
+                    try:
+                        # Try to store in document_vectors table (Neon DB with vector extension)
+                        await vector_conn.execute('''
+                            INSERT INTO document_vectors
+                            (document_id, content_vector, embedding_model, created_at)
+                            VALUES ($1, $2, $3, $4)
+                        ''',
+                            document_id,
+                            vector_embedding,
+                            'openai:text-embedding-3-small',
+                            datetime.now()
+                        )
+                    except Exception as vector_error:
+                        logger.warning(f"Could not store vector embedding, falling back to text storage: {vector_error}")
+                    
+                    # Store full text for search
+                    await vector_conn.execute('''
+                        INSERT INTO document_content
+                        (document_id, content, created_at)
+                        VALUES ($1, $2, $3)
+                    ''',
+                        document_id,
+                        full_text,
+                        datetime.now()
+                    )
+            
+            return document_id
                     
         except Exception as e:
             logger.error(f"Error storing document data: {e}")

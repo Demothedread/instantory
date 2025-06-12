@@ -66,7 +66,9 @@ async def delete_document(document_url: str) -> bool:
 async def process_document(doc_id: int, file_path: str):
     """Process a document using centralized document processor."""
     if document_processor:
-        return await document_processor.process_document(doc_id, file_path)
+        # The correct method is likely 'process', not 'process_document'
+        # If this is incorrect, update to the actual method name of your processor
+        return await document_processor.process(doc_id, file_path)
     logger.error("Document processor not available")
 
 
