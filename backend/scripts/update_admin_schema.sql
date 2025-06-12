@@ -54,9 +54,11 @@ END $$;
 -- Uncomment and modify this section if you want to create an admin user
 
 DO $$ 
+DECLARE
+    admin_password TEXT := 'admin'; -- Default password, should be changed in production
 BEGIN
     -- Create or update the admin user
-    PASSWORD=os.getenv('ADMIN_PASSWORD', 'admin'); -- Replace with your method of getting the password
+    -- In a real application, get this from a secure source
     IF EXISTS (SELECT FROM users WHERE email = 'admin@example.com') THEN
         UPDATE users SET is_admin = TRUE WHERE email = 'admin@example.com';
         RAISE NOTICE 'Updated admin@example.com to have admin privileges';
@@ -64,7 +66,7 @@ BEGIN
         -- Insert will fail if the users table has additional required fields
         -- Modify as needed for your schema
         INSERT INTO users (email, name, password_hash, is_admin, is_verified, auth_provider)
-        VALUES ('admin@example.com', 'Admin User', NULL, TRUE, TRUE, 'admin_override');
+        VALUES ('admin@example.com', 'Admin User', crypt(admin_password, gen_salt('bf')), TRUE, TRUE, 'admin_override');
         RAISE NOTICE 'Created admin user admin@example.com';
     END IF;
 END $$;
