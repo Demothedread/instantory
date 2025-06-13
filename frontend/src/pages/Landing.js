@@ -1,10 +1,10 @@
-import React, { useState, useContext } from 'react';
+import { css } from '@emotion/react';
+import { GoogleLogin } from '@react-oauth/google';
+import { useContext, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../contexts/auth';
-import { GoogleLogin } from '@react-oauth/google';
-import { css } from '@emotion/react';
-import { colors } from '../../styles/theme/colors';
-import { neoDecorocoBase } from '../../styles/components/neo-decoroco/base';
+import { neoDecorocoBase } from '../styles/components/neo-decoroco/base';
+import { colors } from '../styles/theme/colors';
 
 const OptimizedLandingPage = () => {
   const { loginWithGoogle, login, error, clearError, user } = useContext(AuthContext);

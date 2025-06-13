@@ -1,9 +1,8 @@
-import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { css } from '@emotion/react';
-import { colors } from '../../styles/theme/colors';
 import { neoDecorocoBase } from '../../styles/components/neo-decoroco/base';
 import layout from '../../styles/layouts/constraints';
+import { colors } from '../../styles/theme/colors';
+import { css } from '@emotion/react';
 
 const Navigation = () => {
   const location = useLocation();
@@ -11,6 +10,7 @@ const Navigation = () => {
   const navigationItems = [
     { path: '/', label: 'Home', icon: '🏠' },
     { path: '/dashboard', label: 'Dashboard', icon: '📊' },
+    { path: '/workspace', label: 'Workspace', icon: '⚡' },
     { path: '/process', label: 'Process', icon: '⚙️' },
     { path: '/inventory', label: 'Inventory', icon: '📦' },
     { path: '/documents', label: 'Documents', icon: '📄' },

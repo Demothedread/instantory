@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-import config from '../../../config';
-import { inventoryCache } from '../../../utils/cache';
 import placeholderImage from '../../../assets/icons/placeholder.png';
-import styles from './styles';
+import config from '../../../config';
 import useImagePreload from '../../../hooks/useImagePreload';
-import useInfiniteScroll from '../../../hooks/useInfiniteScroll';
+import { inventoryCache } from '../../../utils/cache';
+import ExportButton from '../../common/ExportButton';
+import Pagination from '../../common/Pagination';
+import styles from './styles';
 
 const PAGE_SIZE = 20;
 
@@ -18,7 +19,8 @@ function InventoryTable() {
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
   const searchTimeout = useRef(null);
 
   // Get all image URLs for preloading
@@ -32,15 +34,14 @@ function InventoryTable() {
     preloadThreshold: 3
   });
 
-  const fetchInventory = useCallback(async (searchParams = {}, isNextPage = false) => {
+  const fetchInventory = useCallback(async (searchParams = {}, requestedPage = 1) => {
     if (isLoading) return;
     setIsLoading(true);
 
     try {
-      const currentPage = isNextPage ? page : 1;
       const queryParams = new URLSearchParams({
         ...searchParams,
-        page: currentPage,
+        page: requestedPage,
         limit: PAGE_SIZE
       });
 
@@ -53,8 +54,10 @@ function InventoryTable() {
       const cacheKey = url;
       const cachedData = inventoryCache.get(cacheKey);
       
-      if (cachedData && !isNextPage) {
-        setInventory(cachedData);
+      if (cachedData) {
+        setInventory(cachedData.items || cachedData);
+        setTotalPages(cachedData.totalPages || Math.ceil((cachedData.total || cachedData.length) / PAGE_SIZE));
+        setTotalItems(cachedData.total || cachedData.length);
         return;
       }
 
@@ -68,40 +71,52 @@ function InventoryTable() {
       
       const data = await response.json();
       
-      // Update cache
-      inventoryCache.set(cacheKey, data);
-      
-      // Update state
-      if (isNextPage) {
-        setInventory(prev => [...prev, ...data]);
-        setHasMore(data.length === PAGE_SIZE);
-        setPage(currentPage + 1);
+      // Handle both paginated and non-paginated responses
+      if (data.items && data.pagination) {
+        // Paginated response from backend
+        setInventory(data.items);
+        setTotalPages(data.pagination.totalPages);
+        setTotalItems(data.pagination.total);
+        inventoryCache.set(cacheKey, data);
       } else {
-        setInventory(data);
-        setHasMore(data.length === PAGE_SIZE);
-        setPage(2);
+        // Non-paginated response - implement client-side pagination
+        const items = Array.isArray(data) ? data : [];
+        const total = items.length;
+        const totalPagesCalc = Math.ceil(total / PAGE_SIZE);
+        const startIndex = (requestedPage - 1) * PAGE_SIZE;
+        const endIndex = startIndex + PAGE_SIZE;
+        const pageItems = items.slice(startIndex, endIndex);
+        
+        setInventory(pageItems);
+        setTotalPages(totalPagesCalc);
+        setTotalItems(total);
+        
+        // Cache the full dataset
+        inventoryCache.set(cacheKey, {
+          items: pageItems,
+          totalPages: totalPagesCalc,
+          total: total,
+          allItems: items
+        });
       }
     } catch (error) {
       console.error('Error fetching inventory:', error);
       setInventory([]);
+      setTotalPages(0);
+      setTotalItems(0);
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, page]);
+  }, [isLoading]);
 
   // Setup infinite scroll
-  const loadMore = useCallback(() => {
-    if (!hasMore) return;
+  const handlePageChange = useCallback((newPage) => {
+    setPage(newPage);
     const searchParams = {};
     if (searchTerm) searchParams.query = searchTerm;
     if (filterCategory) searchParams.category = filterCategory;
-    fetchInventory(searchParams, true);
-  }, [fetchInventory, hasMore, searchTerm, filterCategory]);
-
-  useInfiniteScroll(loadMore, {
-    enabled: hasMore && !isLoading,
-    dependencies: [hasMore, isLoading]
-  });
+    fetchInventory(searchParams, newPage);
+  }, [fetchInventory, searchTerm, filterCategory]);
 
   useEffect(() => {
     if (searchTimeout.current) {
@@ -112,7 +127,8 @@ function InventoryTable() {
       const searchParams = {};
       if (searchTerm) searchParams.query = searchTerm;
       if (filterCategory) searchParams.category = filterCategory;
-      fetchInventory(searchParams);
+      setPage(1); // Reset to first page when searching
+      fetchInventory(searchParams, 1);
     }, 300);
 
     return () => {
@@ -134,13 +150,11 @@ function InventoryTable() {
   const handleFilter = useCallback((category) => {
     setFilterCategory(category);
     setPage(1);
-    setHasMore(true);
   }, []);
 
   const handleSearch = useCallback((term) => {
     setSearchTerm(term);
     setPage(1);
-    setHasMore(true);
   }, []);
 
   if (!Array.isArray(inventory) || inventory.length === 0) {
@@ -193,6 +207,11 @@ function InventoryTable() {
         <h1 css={styles.title}>
           <span className="title-text">Inventory</span>
         </h1>
+        <ExportButton 
+          data={inventory}
+          filename="inventory_data"
+          includeTypes={['csv', 'json', 'xlsx']}
+        />
       </div>
 
       <div css={styles.filterSection}>
@@ -318,9 +337,17 @@ function InventoryTable() {
       {isLoading && (
         <div css={styles.loadingIndicator}>
           <div className="loading-spinner"></div>
-          <p>Loading more items...</p>
+          <p>Loading items...</p>
         </div>
       )}
+
+      <Pagination
+        currentPage={page}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        pageSize={PAGE_SIZE}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 }

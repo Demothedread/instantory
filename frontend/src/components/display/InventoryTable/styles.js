@@ -1,8 +1,8 @@
-import { animations } from '../../../styles/theme/animations';
-import colors from '../../../styles/theme/colors';
 import { css } from '@emotion/react';
-import { layout } from '../../../styles/layouts/constraints';
 import { neoDecorocoBase } from '../../../styles/components/neo-decoroco/base';
+import { layout } from '../../../styles/layouts/constraints';
+import { animations } from '../../../styles/theme/animations';
+import { colors } from '../../../styles/theme/colors';
 import { typography } from '../../../styles/theme/typography';
 
 export const styles = {
@@ -26,6 +26,19 @@ export const styles = {
     &::-webkit-scrollbar-thumb {
       background-color: ${colors.neonTeal};
       border-radius: 3px;
+    }
+    
+    .header-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: ${layout.spacing.lg};
+      
+      @media (max-width: 768px) {
+        flex-direction: column;
+        gap: ${layout.spacing.md};
+        align-items: stretch;
+      }
     }
   `,
 

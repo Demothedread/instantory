@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
 import { css } from '@emotion/react';
-import { colors } from '../../styles/theme/colors';
+import { useState } from 'react';
 import { neoDecorocoBase } from '../../styles/components/neo-decoroco/base';
 import layout from '../../styles/layouts/constraints';
+import { colors } from '../../styles/theme/colors';
 
-const ProcessHub = () => {
+const ProcessHub = ({ onProcessComplete }) => {
   const [files, setFiles] = useState([]);
   const [instructions, setInstructions] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [urlInput, setUrlInput] = useState('');
 
   const handleFileUpload = (e) => {
     const uploadedFiles = Array.from(e.target.files);
@@ -18,13 +19,42 @@ const ProcessHub = () => {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const parseUrlsFromInstructions = (text) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.match(urlRegex) || [];
+  };
+
   const handleProcess = async () => {
     setProcessing(true);
-    // TODO: Implement actual processing logic
-    setTimeout(() => {
+    try {
+      // Parse URLs from instructions
+      const urls = parseUrlsFromInstructions(instructions + ' ' + urlInput);
+      
+      // TODO: Implement actual processing logic
+      // This would send files and URLs to the backend for AI processing
+      console.log('Processing files:', files);
+      console.log('Processing URLs:', urls);
+      console.log('Instructions:', instructions);
+      
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Clear files after processing
+      setFiles([]);
+      setInstructions('');
+      setUrlInput('');
+      
+      // Notify parent component to refresh data
+      onProcessComplete?.();
+      
+      // Show success message
+      alert('Processing complete! Check the results table below.');
+    } catch (error) {
+      console.error('Processing error:', error);
+      alert('Processing failed. Please try again.');
+    } finally {
       setProcessing(false);
-      alert('Processing complete! (This is a placeholder)');
-    }, 2000);
+    }
   };
 
   return (
