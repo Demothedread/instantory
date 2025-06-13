@@ -17,9 +17,7 @@ import BartlebyMain from './components/main/BartlebyMain';
 import DocumentsView from './pages/DocumentsView';
 import InventoryView from './pages/InventoryView';
 // Page components
-import LandingPage from './components/landing/LandingPage';
-// Auth components
-import LoginOverlay from './components/auth/LoginOverlay';
+import HomePage from './pages/HomePage';
 // Layout components
 import { css } from '@emotion/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
@@ -55,94 +53,102 @@ function App() {
 
   return (
     <Router>
-      <div css={css`
-        background: ${colors.darkGradient};
-        color: ${colors.textLight};
-        font-family: ${typography.fonts.primary};
-        min-height: 100vh;
-        display: grid;
-        grid-template-columns: auto 1fr;
-        grid-template-rows: auto 1fr auto;
-        grid-template-areas:
-          "nav header"
-          "nav main"
-          "nav footer";
-      `}>
-        <Navigation />
-        
-        <header css={css`
-          grid-area: header;
-          ${neoDecorocoBase.panel};
-          height: ${layout.heights.header};
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
-          padding: 0 ${layout.spacing.md};
+      {!user ? (
+        // Simple layout for homepage/login
+        <div css={css`
+          background: ${colors.darkGradient};
+          color: ${colors.textLight};
+          font-family: ${typography.fonts.primary};
+          min-height: 100vh;
         `}>
-          {user && <UserMenu user={user} />}
-        </header>
-
-        <main css={css`
-          grid-area: main;
-          padding: ${layout.spacing.md};
-          overflow-y: auto;
-        `}>
-          {!user && (
-            <LoginOverlay isVisible={!user} />
-          )}
-
           <Routes>
-            {/* Public routes */}
-            <Route path="/" element={!user ? <LandingPage /> : <Navigate to="/dashboard" />} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/about" element={<About />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/auth-callback" element={<AuthCallback />} />
-            
-            {/* Protected routes with consistent pattern */}
-            <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/" />} />
-            <Route path="/workspace" element={user ? <BartlebyMain /> : <Navigate to="/" />} />
-            <Route path="/process" element={user ? <BartlebyMain /> : <Navigate to="/" />} />
-            <Route path="/inventory" element={user ? <InventoryView /> : <Navigate to="/" />} />
-            <Route path="/documents" element={user ? <DocumentsView /> : <Navigate to="/" />} />
-            <Route path="/kaboodles" element={user ? <Kaboodles /> : <Navigate to="/" />} />
-            
-            {/* Media hub for focused file viewing/analysis */}
-            <Route path="/media-hub" element={user ? <MediaHub /> : <Navigate to="/" />} />
-            
-            {/* Terms page - public */}
             <Route path="/terms" element={<Terms />} />
-            
-            {/* 404 route */}
-            <Route path="*" element={<NotFound />} />
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
-        </main>
-
-        <footer css={css`
-          grid-area: footer;
-          ${neoDecorocoBase.panel};
-          height: ${layout.heights.footer || '60px'};
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0 ${layout.spacing.md};
+        </div>
+      ) : (
+        // Full app layout for authenticated users
+        <div css={css`
+          background: ${colors.darkGradient};
+          color: ${colors.textLight};
+          font-family: ${typography.fonts.primary};
+          min-height: 100vh;
+          display: grid;
+          grid-template-columns: auto 1fr;
+          grid-template-rows: auto 1fr auto;
+          grid-template-areas:
+            "nav header"
+            "nav main"
+            "nav footer";
         `}>
-          <button 
-            css={css`
-              ${neoDecorocoBase.button};
-              background: none;
-              border: none;
-              color: ${colors.neonTeal};
-              &:hover {
-                color: ${colors.neonGold};
-                text-shadow: 0 0 10px ${colors.neonGold};
-              }
-            `}
-            onClick={() => setShowHowTo(true)}
-          >
-            How to Use Bartleby
-          </button>
-        </footer>
-      </div>
+          <Navigation />
+          
+          <header css={css`
+            grid-area: header;
+            ${neoDecorocoBase.panel};
+            height: ${layout.heights.header};
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 ${layout.spacing.md};
+          `}>
+            <UserMenu user={user} />
+          </header>
+
+          <main css={css`
+            grid-area: main;
+            padding: ${layout.spacing.md};
+            overflow-y: auto;
+          `}>
+            <Routes>
+              {/* Protected routes */}
+              <Route path="/" element={<Navigate to="/dashboard" />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/workspace" element={<BartlebyMain />} />
+              <Route path="/process" element={<BartlebyMain />} />
+              <Route path="/inventory" element={<InventoryView />} />
+              <Route path="/documents" element={<DocumentsView />} />
+              <Route path="/kaboodles" element={<Kaboodles />} />
+              <Route path="/media-hub" element={<MediaHub />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/resources" element={<Resources />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/auth-callback" element={<AuthCallback />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </main>
+
+          <footer css={css`
+            grid-area: footer;
+            ${neoDecorocoBase.panel};
+            height: ${layout.heights.footer || '60px'};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 ${layout.spacing.md};
+          `}>
+            <button 
+              css={css`
+                ${neoDecorocoBase.button};
+                background: none;
+                border: none;
+                color: ${colors.neonTeal};
+                &:hover {
+                  color: ${colors.neonGold};
+                  text-shadow: 0 0 10px ${colors.neonGold};
+                }
+              `}
+              onClick={() => setShowHowTo(true)}
+            >
+              How to Use Bartleby
+            </button>
+          </footer>
+        </div>
+      )}
 
       <HowToUseOverlay isOpen={showHowTo} onClose={() => setShowHowTo(false)} />
       <SpeedInsights />
