@@ -58,7 +58,7 @@ services:
       - key: VERCEL_URL
         value: "https://bartleby.vercel.app"
       - key: CORS_ORIGINS
-        value: "https://hocomnia.com,https://www.hocomnia.com,https://bartleby.vercel.app,http://localhost:3000,https://accounts.google.com"
+        value: "https://hocomnia.com,https://www.hocomnia.com,http://localhost:3000,https://accounts.google.com"
       - key: DATA_DIR
         value: "./data"
       - key: UPLOADS_DIR

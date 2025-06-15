@@ -57,11 +57,9 @@ const config = {
   // Domain configuration
   domains: {
     main: 'hocomnia.com',
-    backendUrl: apiUrl,
     allowedOrigins: [
       'https://hocomnia.com',
       'https://www.hocomnia.com',
-      'https://bartleby.vercel.app',
       'https://bartleby-backend-mn96.onrender.com',
       'http://localhost:3000'
     ]
