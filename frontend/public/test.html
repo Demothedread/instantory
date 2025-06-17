@@ -1,0 +1,24 @@
+// Create a simple test page in frontend/public/test.html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bartleby Test</title>
+</head>
+<body>
+    <h1>Bartleby Test Page</h1>
+    <p>If you can see this, the basic deployment is working.</p>
+    <script>
+        console.log('Test page loaded successfully');
+        fetch('/api/health')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Backend health check:', data);
+                document.body.innerHTML += '<p>Backend Status: ' + JSON.stringify(data) + '</p>';
+            })
+            .catch(error => {
+                console.error('Backend connection failed:', error);
+                document.body.innerHTML += '<p>Backend connection failed: ' + error.message + '</p>';
+            });
+    </script>
+</body>
+</html>

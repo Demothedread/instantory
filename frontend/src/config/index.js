@@ -61,6 +61,7 @@ const config = {
       'https://hocomnia.com',
       'https://www.hocomnia.com',
       'https://bartleby-backend-mn96.onrender.com',
+      'https://bartleby-frontend.onrender.com',
       'http://localhost:3000'
     ]
   },
