@@ -49,7 +49,7 @@ except ImportError:
                 
             @staticmethod
             def get_redirect_uri():
-                backend_url = config_manager.get("PUBLIC_BACKEND_URL", "https://bartleby-backend-mn96.onrender.com")
+                backend_url = config_manager.get("BACKEND_URL", "https://bartleby-backend-mn96.onrender.com")
                 return f"{backend_url}/api/auth/google/callback"
 
 # Import with fallbacks to handle different execution contexts
