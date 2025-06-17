@@ -1,19 +1,18 @@
 {
-  "version": 2,
-  "framework": "create-react-app",
-  "buildCommand": "npm run build",
-  "outputDirectory": "build",
-  "public": true,
-  "rewrites": [
-    { 
-      "source": "/api/(.*)", 
-      "destination": "https://bartleby-backend-mn96.onrender.com/api/$1" 
-    },
-    { 
-      "source": "/(.*)", 
-      "destination": "/index.html" 
+  "build": {
+    "env": {
+      "REACT_APP_BACKEND_URL": "https://bartleby-backend-mn96.onrender.com",
+      "REACT_APP_FRONTEND_URL": "https://hocomnia.com",
+      "REACT_APP_GOOGLE_REDIRECT_URI": "https://hocomnia.com/api/auth/google/callback"
     }
-  ], 
+  },
+  "buildCommand": "npm run build",
+  "env": {
+    "REACT_APP_BACKEND_URL": "https://bartleby-backend-mn96.onrender.com",
+    "REACT_APP_FRONTEND_URL": "https://hocomnia.com",
+    "REACT_APP_GOOGLE_REDIRECT_URI": "https://hocomnia.com/api/auth/google/callback"
+  },
+  "framework": "create-react-app",
   "headers": [
     {
       "key": "Content-Security-Policy",
@@ -36,12 +35,17 @@
       "value": "Content-Type, Authorization, Accept, Origin, X-Requested-With"
     }
   ],
-  "source": "/(.*)"
-}
+  "outputDirectory": "build",
+  "public": true,
+  "rewrites": [
+    {
+      "destination": "https://bartleby-backend-mn96.onrender.com/api/$1",
+      "source": "/api/(.*)"
+    },
+    {
+      "destination": "/index.html",
+      "source": "/(.*)"
+    }
   ],
-  "env": {
-    "REACT_APP_BACKEND_URL": "https://bartleby-backend-mn96.onrender.com",
-    "REACT_APP_FRONTEND_URL": "https://hocomnia.com",
-    "REACT_APP_GOOGLE_REDIRECT_URI": "https://bartleby-backend-mn96.onrender.com/api/auth/google/callback"
-  }
+  "version": 2
 }

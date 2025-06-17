@@ -7,7 +7,7 @@ import logging
 import os
 from datetime import datetime
 
-from quart import Quart, jsonify
+from quart import Quart, jsonify, request, redirect
 from quart_cors import cors
 
 # Import centralized configuration manager
@@ -226,6 +226,58 @@ def create_app():
                 "timestamp": datetime.now().isoformat(),
             }
         )
+
+    # Google OAuth callback endpoint
+    @app.route("/api/auth/google/callback")
+    async def google_oauth_callback():
+        """Handle Google OAuth callback redirect."""
+        try:
+            # Get query parameters from the callback
+            args = request.args
+
+            # Check for authorization code (success case)
+            auth_code = args.get("code")
+
+            # Check for error (error case)
+            error = args.get("error")
+            error_description = args.get("error_description", "")
+
+            # Get frontend URL from config
+            api_config = config_manager.get_api_config()
+            frontend_url = config_manager.get(
+                "REACT_APP_FRONTEND_URL", "https://hocomnia.com"
+            )
+
+            if error:
+                # Handle OAuth error (user denied, etc.)
+                logger.warning("Google OAuth error: %s - %s", error, error_description)
+                return redirect(
+                    f"{frontend_url}/auth/error?error={error}&description={error_description}"
+                )
+
+            if auth_code:
+                # Success case - redirect to frontend with auth code
+                logger.info("Google OAuth callback successful, redirecting to frontend")
+                return redirect(
+                    f"{frontend_url}/auth/success?code={auth_code}"
+                )
+
+            # No code and no error - something went wrong
+            logger.error(
+                "Google OAuth callback missing both code and error parameters"
+            )
+            return redirect(
+                f"{frontend_url}/auth/error?error=invalid_callback&description=Missing authorization parameters"
+            )
+
+        except Exception as e:
+            logger.exception("Error processing Google OAuth callback")
+            frontend_url = config_manager.get(
+                "REACT_APP_FRONTEND_URL", "https://hocomnia.com"
+            )
+            return redirect(
+                f"{frontend_url}/auth/error?error=server_error&description=Internal server error"
+            )
 
     # Simplified error handlers
     @app.errorhandler(404)
