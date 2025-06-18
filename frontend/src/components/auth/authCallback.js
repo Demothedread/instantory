@@ -1,10 +1,10 @@
-import { css } from '@emotion/react';
-import { useContext, useEffect } from 'react';
+import React, { useEffect, useContext } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { css } from '@emotion/react';
 import { AuthContext } from '../../contexts/auth';
+import { colors } from '../../styles/theme/colors';
 import { neoDecorocoBase } from '../../styles/components/neo-decoroco/base';
 import layout from '../../styles/layouts/constraints';
-import { colors } from '../../styles/theme/colors';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ const AuthCallback = () => {
         // Get the credential from URL parameters or hash
         const credential = searchParams.get('credential');
         const code = searchParams.get('code');
-        // eslint-disable-next-line no-unused-vars
+        const state = searchParams.get('state');
         
         if (credential) {
           // Handle Google OAuth credential

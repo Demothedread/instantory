@@ -20,7 +20,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self' https://hocomnia.com https://bartleby-backend-mn96.onrender.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://bartleby-backend-mn96.onrender.com https://hocomnia.com https://lh3.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://hocomnia.com https://bartleby-backend-mn96.onrender.com https://api.openai.com https://accounts.google.com https://vercel.live; frame-src https://accounts.google.com; upgrade-insecure-requests;"
+          "value": "default-src 'self' https://hocomnia.com https://www.hocomnia.comhttps://bartleby-backend-mn96.onrender.com https://localhost:3000; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://bartleby-backend-mn96.onrender.com https://bartleby-backend.onrender.com https://hocomnia.com https://lh3.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://hocomnia.com https://bartleby-backend-mn96.onrender.com https://api.openai.com https://accounts.google.com https://vercel.live https://instantory.vercel.app; frame-src https://accounts.google.com; upgrade-insecure-requests;"
         },
         {
           "key": "X-Frame-Options",
@@ -41,27 +41,6 @@
       ]
     },
     {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "https://hocomnia.com,https://www.hocomnia.com,https://localhost:3000,https://accounts.google.com,https://vercel.live,https://bartleby.vercel.app"
-        },
-        {
-          "key": "Access-Control-Allow-Credentials",
-          "value": "true"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, Accept, Origin, X-Requested-With"
-        }
-      ]
-    },
-    {
       "source": "/static/(.*)",
       "headers": [
         {
@@ -75,7 +54,8 @@
     "env": {
       "REACT_APP_BACKEND_URL": "https://bartleby-backend-mn96.onrender.com",
       "REACT_APP_FRONTEND_URL": "https://hocomnia.com",
-      "REACT_APP_GOOGLE_REDIRECT_URI": "https://bartleby-backend-mn96.onrender.com/api/auth/google/callback",
+      "REACT_APP_GOOGLE_REDIRECT_URI": "https://hocomnia.com/api/auth/google/callback",
+      "REACT_APP_GOOGLE_CLIENT_ID": "@google_client_id",
       "GENERATE_SOURCEMAP": "false"
     }
   }

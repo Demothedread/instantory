@@ -1,10 +1,10 @@
 import './index.css';
 
-import App from './App';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import React from 'react';
-import config from './config';
 import { createRoot } from 'react-dom/client';
+import App from './App';
+import config from './config';
 import reportWebVitals from './reportWebVitals';
 
 // Ensure Google client ID is available
@@ -14,9 +14,11 @@ if (!config.googleClientId) {
 
 const root = createRoot(document.getElementById("root"));
 root.render(
+  <React.StrictMode>
     <GoogleOAuthProvider clientId={config.googleClientId}>
       <App />
     </GoogleOAuthProvider>
+  </React.StrictMode>
 );
   
 // If you want to start measuring performance in your app, pass a function

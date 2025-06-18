@@ -1,6 +1,6 @@
+import colors from '../../../styles/theme/colors'; //frontend/src/styles/theme/colors.js
 import { css } from '@emotion/react';
 import neoDecorocoBase from '../../../styles/components/neo-decoroco/base'; // Verify this path
-import colors from '../../../styles/theme/colors'; //frontend/src/styles/theme/colors.js
 
 const styles = {
   container: css`
@@ -30,19 +30,6 @@ const styles = {
         #00ff9d 100%
       );
       box-shadow: 0 0 20px rgba(0, 255, 157, 0.5);
-    }
-  `,
-
-  headerSection: css`
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    
-    @media (max-width: 768px) {
-      flex-direction: column;
-      gap: 15px;
-      align-items: stretch;
     }
   `,
 

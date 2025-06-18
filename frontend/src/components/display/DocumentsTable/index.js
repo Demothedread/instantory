@@ -1,12 +1,11 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { documentCache, searchCache } from '../../../utils/cache';
 
 import config from '../../../config';
-import ExportButton from '../../common/ExportButton';
-import Pagination from '../../common/Pagination';
 import styles from './styles';
+import useInfiniteScroll from '../../../hooks/useInfiniteScroll';
 
-const PAGE_SIZE = 22;
+const PAGE_SIZE = 20;
 
 const DocumentsTable = () => {
   const [documents, setDocuments] = useState([]);
@@ -19,18 +18,18 @@ const DocumentsTable = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalItems, setTotalItems] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchDocuments = useCallback(async (searchParams = {}, requestedPage = 1) => {
+  const fetchDocuments = useCallback(async (searchParams = {}, isNextPage = false) => {
     if (isLoading) return;
     setIsLoading(true);
 
     try {
+      const currentPage = isNextPage ? page : 1;
       const queryParams = new URLSearchParams({
         ...searchParams,
-        page: requestedPage,
+        page: currentPage,
         limit: PAGE_SIZE
       });
 
@@ -43,10 +42,8 @@ const DocumentsTable = () => {
       const cacheKey = url;
       const cachedData = documentCache.get(cacheKey);
       
-      if (cachedData) {
-        setDocuments(cachedData.items || cachedData);
-        setTotalPages(cachedData.totalPages || Math.ceil((cachedData.total || cachedData.length) / PAGE_SIZE));
-        setTotalItems(cachedData.total || cachedData.length);
+      if (cachedData && !isNextPage) {
+        setDocuments(cachedData);
         return;
       }
 
@@ -60,51 +57,39 @@ const DocumentsTable = () => {
 
       const data = await response.json();
       
-      // Handle both paginated and non-paginated responses
-      if (data.items && data.pagination) {
-        // Paginated response from backend
-        setDocuments(data.items);
-        setTotalPages(data.pagination.totalPages);
-        setTotalItems(data.pagination.total);
-        documentCache.set(cacheKey, data);
+      // Update cache
+      documentCache.set(cacheKey, data);
+      
+      // Update state
+      if (isNextPage) {
+        setDocuments(prev => [...prev, ...data]);
+        setHasMore(data.length === PAGE_SIZE);
+        setPage(currentPage + 1);
       } else {
-        // Non-paginated response - implement client-side pagination
-        const items = Array.isArray(data) ? data : [];
-        const total = items.length;
-        const totalPagesCalc = Math.ceil(total / PAGE_SIZE);
-        const startIndex = (requestedPage - 1) * PAGE_SIZE;
-        const endIndex = startIndex + PAGE_SIZE;
-        const pageItems = items.slice(startIndex, endIndex);
-        
-        setDocuments(pageItems);
-        setTotalPages(totalPagesCalc);
-        setTotalItems(total);
-        
-        documentCache.set(cacheKey, {
-          items: pageItems,
-          totalPages: totalPagesCalc,
-          total: total,
-          allItems: items
-        });
+        setDocuments(data);
+        setHasMore(data.length === PAGE_SIZE);
+        setPage(2);
       }
     } catch (error) {
       console.error('Error fetching documents:', error);
-      setDocuments([]);
-      setTotalPages(0);
-      setTotalItems(0);
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading]);
+  }, [isLoading, page]);
 
-  // Setup pagination handler
-  const handlePageChange = useCallback((newPage) => {
-    setPage(newPage);
+  // Setup infinite scroll
+  const loadMore = useCallback(() => {
+    if (!hasMore) return;
     const searchParams = {};
     if (searchTerm) searchParams.query = searchTerm;
     if (filterCategory) searchParams.category = filterCategory;
-    fetchDocuments(searchParams, newPage);
-  }, [fetchDocuments, searchTerm, filterCategory]);
+    fetchDocuments(searchParams, true);
+  }, [fetchDocuments, hasMore, searchTerm, filterCategory]);
+
+  useInfiniteScroll(loadMore, {
+    enabled: hasMore && !isLoading && !semanticResults,
+    dependencies: [hasMore, isLoading, semanticResults]
+  });
 
   const handleSemanticSearch = async () => {
     if (!semanticQuery.trim()) return;
@@ -196,7 +181,7 @@ const DocumentsTable = () => {
 
   useEffect(() => {
     if (!semanticResults) {
-      fetchDocuments({}, 1);
+      fetchDocuments();
     }
   }, [fetchDocuments, semanticResults]);
 
@@ -211,14 +196,7 @@ const DocumentsTable = () => {
 
   return (
     <div css={styles.container}>
-      <div css={styles.headerSection}>
-        <h1 css={styles.header}>Document Vault</h1>
-        <ExportButton 
-          data={semanticResults || documents}
-          filename="documents_data"
-          includeTypes={['csv', 'json', 'xlsx']}
-        />
-      </div>
+      <h1 css={styles.header}>Document Vault</h1>
 
       <div css={styles.filterSection}>
         <div css={styles.searchFilter}>
@@ -415,22 +393,12 @@ const DocumentsTable = () => {
       {isLoading && !semanticResults && (
         <div css={styles.loadingIndicator}>
           <div className="loading-spinner"></div>
-          <p>Loading documents...</p>
+          <p>Loading more documents...</p>
         </div>
       )}
 
-      {!semanticResults && (
-        <Pagination
-          currentPage={page}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          pageSize={PAGE_SIZE}
-          onPageChange={handlePageChange}
-        />
-      )}
-
       <div css={styles.footer}>
-        <p>Total Documents: {semanticResults ? semanticResults.length : totalItems}</p>
+        <p>Total Documents: {semanticResults ? semanticResults.length : filteredDocuments.length}</p>
       </div>
     </div>
   );
