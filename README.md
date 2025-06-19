@@ -79,8 +79,8 @@ Bartleby is an elegant, comprehensive application for analyzing, organizing, and
 
 This repository contains both the frontend and backend components of Bartleby. For detailed deployment instructions, see:
 
-- [Deployment Guide](DEPLOYMENT.md) - Step-by-step instructions for deploying on Render and Vercel
-- [Database Setup Guide](DATABASE_SETUP.md) - Configuration for PostgreSQL, Neon, and storage services
+- [Deployment Guide](readme/DEPLOYMENT.md) - Step-by-step instructions for deploying on Render and Vercel
+- [Database Setup Guide](readme/DATABASE_SETUP.md) - Configuration for PostgreSQL, Neon, and storage services
 
 ## Local Development
 
@@ -147,7 +147,7 @@ The frontend will be available at http://localhost:3000 and will connect to the 
 
 For comprehensive testing information:
 
-- Backend testing: See [Backend Testing Guide](backend/BACKEND_TESTING_README.md)
+- Backend testing: See [Backend Testing Guide](readme/BACKEND_TESTING_README.md)
 - Frontend testing: Run `npm test` in the frontend directory
 
 ## Security Notes
@@ -183,8 +183,8 @@ The storage system is designed to be:
 - **Efficient** - Optimized for metadata and vector search operations
 
 For detailed storage system documentation:
-- [Storage System README](backend/STORAGE_README.md)
-- [Storage Deployment Guide](backend/STORAGE_DEPLOYMENT.md)
+- [Storage System README](readme/STORAGE_README.md)
+- [Storage Deployment Guide](readme/STORAGE_DEPLOYMENT.md)
 
 The storage implementation features:
 - Health checks through `/api/health/storage` endpoint

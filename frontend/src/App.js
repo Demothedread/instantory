@@ -33,6 +33,69 @@ import layout from './styles/layouts/constraints';
 import { neoDecorocoBase } from './styles/components/neo-decoroco/base';
 import { typography } from './styles/theme/typography';
 
+const DefaultLayout = ({ children }) => {
+  return (
+    <div
+      css={css`
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        background: ${colors.darkGradient};
+        color: ${colors.textLight};
+        font-family: ${layout.fonts.primary || 'system-ui, sans-serif'};
+      `}
+    >
+      <header
+        css={css`
+          ${neoDecorocoBase.panel};
+          height: ${layout.heights.header};
+          display: flex;
+          align-items: center;
+          padding: 0 ${layout.spacing.md};
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+          z-index: 100;
+          font-weight: 600;
+          font-size: 1.25rem;
+        `}
+      >
+        {/* Optionally put header content here or leave blank */}
+      </header>
+
+      <main
+        css={css`
+          flex-grow: 1;
+          padding: ${layout.spacing.lg};
+          overflow-y: auto;
+          max-width: 1200px;
+          margin: 0 auto;
+          width: 100%;
+          box-sizing: border-box;
+        `}
+      >
+        {children}
+      </main>
+
+      <footer
+        css={css`
+          ${neoDecorocoBase.panel};
+          height: ${layout.heights.footer || '60px'};
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0 ${layout.spacing.md};
+          font-size: 0.875rem;
+          color: ${colors.textMuted || 'rgba(255,255,255,0.6)'};
+          box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.3);
+        `}
+      >
+        © {new Date().getFullYear()} Instantory. All rights reserved.
+      </footer>
+    </div>
+  );
+};
+
+export default DefaultLayout;
+
 function App() {
   const { user, loading: authLoading } = useContext(AuthContext);
   const [inventory, setInventory] = useState([]);
@@ -103,6 +166,7 @@ function App() {
 
   return (
     <Router>
+
       <div css={css`
         background: ${colors.darkGradient};
         color: ${colors.textLight};
@@ -151,17 +215,20 @@ function App() {
 
           <Routes>
             {/* Public routes */}
+            <Route element={<DefaultLayout />} />
             <Route path="/" element={!user ? <LandingPage /> : <Navigate to="/dashboard" />} />
             <Route path="/about" element={<About />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/auth-callback" element={<AuthCallback />} />
-            
-            {/* Protected routes with consistent pattern */}
-            <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/" />} />
+
+            {/* Protected routes with consistent pattern*/}
+            <Route path="/" element={user ? <Dashboard /> : <Navigate to="/" />} />
+
+          {/*<Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/" />} />
             <Route path="/process" element={user ? <ProcessingHub /> : <Navigate to="/" />} />
             <Route path="/inventory" element={user ? <InventoryView /> : <Navigate to="/" />} />
             <Route path="/documents" element={user ? <DocumentsView /> : <Navigate to="/" />} />
-            <Route path="/kaboodles" element={user ? <Kaboodles /> : <Navigate to="/" />} />
+            <Route path="/kaboodles" element={user ? <Kaboodles /> : <Navigate to="/" />} /> */}
             
             {/* Media hub for focused file viewing/analysis */}
             <Route path="/media-hub" element={user ? <MediaHub /> : <Navigate to="/" />} />
