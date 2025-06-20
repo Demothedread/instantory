@@ -65,7 +65,7 @@ instance/
 
 # OS
 .DS_Store
-.DS_Store?
+.DS_Store?1
 ._*
 .Spotlight-V100
 .Trashes

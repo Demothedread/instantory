@@ -1,7 +1,5 @@
-import { AuthProvider } from '../contexts/auth';
-import React from 'react';
-import axios from 'axios';
 import { render } from '@testing-library/react';
+import { AuthProvider } from '../contexts/auth/index';
 
 // Mock axios
 jest.mock('axios');
@@ -61,15 +59,9 @@ const fillFormInput = (input, value) => {
 };
 
 export {
-  customRender as render,
-  mockApiSuccess,
-  mockApiError,
-  createMockUser,
-  createMockAuthContext,
-  waitForAsync,
-  createMockGoogleResponse,
-  fillFormInput,
+    createMockAuthContext, createMockGoogleResponse, createMockUser, fillFormInput, mockApiError, mockApiSuccess, customRender as render, waitForAsync
 };
 
 // Re-export everything from @testing-library/react
-export * from '@testing-library/react';
+    export * from '@testing-library/react';
+

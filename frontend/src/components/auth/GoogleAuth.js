@@ -1,7 +1,7 @@
-import React, { useContext } from 'react';
-import { GoogleLogin } from '@react-oauth/google';
-import { AuthContext } from '../../contexts/auth';
+import from '@react-oauth/google';
+import { useContext } from 'react';
 import config from '../../config';
+import { AuthContext } from '../../contexts/auth/index';
 
 /**
  * Google authentication component that provides a simple, reliable OAuth flow
