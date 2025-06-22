@@ -1,4 +1,7 @@
 
+import React from 'react';
+import AuthCallback from '../components/auth/authCallback';
+
 /**
  * AuthCallback Page - Handles OAuth callback redirects
  * This page is displayed when users return from Google OAuth login
