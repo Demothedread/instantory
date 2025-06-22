@@ -1,13 +1,9 @@
-
+import { default as AuthCallbackComponent } from '../components/auth/authCallback';
 import React from 'react';
-import AuthCallback from '../components/auth/authCallback';
+// AuthCallback.js
 
-/**
- * AuthCallback Page - Handles OAuth callback redirects
- * This page is displayed when users return from Google OAuth login
- */
-const AuthCallbackPage = () => {
-  return <AuthCallback />;
+const AuthCallback = () => {
+  return <AuthCallbackComponent />;
 };
 
-export default AuthCallbackPage;
+export default AuthCallback;
