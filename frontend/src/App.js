@@ -1,29 +1,30 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import './App.css';
 import { AuthContext, AuthProvider } from './contexts/auth/index';
-
-import About from './pages/About';
-import Kaboodles from './pages/Kaboodles';
-import MediaHub from './pages/MediaHub';
-import Resources from './pages/Resources';
-import Terms from './pages/Terms';
-
-import AuthCallback from './components/auth/authCallback';
-import HowToUseOverlay from './components/common/HowToUseOverlay';
-import Dashboard from './components/dashboard/Dashboard';
-import DocumentsView from './pages/DocumentsView';
-import InventoryView from './pages/InventoryView';
 // Page components
-import LandingPage from './components/landing/LandingPage';
+import About from './pages/About';
+import AuthCallback from './pages/AuthCallback';
+import Dashboard from './pages/Dashboard';
+import DocumentsView from './pages/DocumentsView';
+import Kaboodles from './pages/Kaboodles';
+import LandingPage from './pages/Landing';
+import MediaHub from './pages/MediaHub';
+import NotFound from './pages/NotFound';
+import ProcessingHub from './pages/ProcessingHub';
+import Resources from './pages/Resources';
+import Search from './pages/Search';
+import Terms from './pages/Terms';
+import Upload from './pages/Upload';
+import InventoryView from './pages/InventoryView';
 // Auth components
 import LoginOverlay from './components/auth/LoginOverlay';
+import HowToUseOverlay from './components/common/HowToUseOverlay';
 // Layout components
 import { css } from '@emotion/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import Navigation from './components/common/Navigation';
 import UserMenu from './components/common/UserMenu';
-import ProcessingHub from './components/upload/ProcessHub';
-import NotFound from './pages/404NotFound';
 import { colors } from './styles/theme/colors';
 // Services
 import dataApi from './services/api';
@@ -32,14 +33,16 @@ import layout from './styles/layouts/constraints';
 import { neoDecorocoBase } from './styles/components/neo-decoroco/base';
 import { typography } from './styles/theme/typography';
 
+
 function App() {
   const { user, loading: authLoading } = useContext(AuthContext);
-  const [inventory, setInventory] = useState([]); // Used in fetchData
-  const [documents, setDocuments] = useState([]); // Used in fetchData
+  const [inventory, setInventory] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [showHowTo, setShowHowTo] = useState(false);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false); // Used in fetchData
-  const [showRolodex, setShowRolodex] = useState(false); // Used in useEffect
+  const [loading, setLoading] = useState(false);
+  const [showRolodex, setShowRolodex] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
   
   const hasInitializedRef = useRef(false);
 
@@ -161,6 +164,8 @@ function App() {
             <Route path="/process" element={user ? <ProcessingHub /> : <Navigate to="/" />} />
             <Route path="/inventory" element={user ? <InventoryView /> : <Navigate to="/" />} />
             <Route path="/documents" element={user ? <DocumentsView /> : <Navigate to="/" />} />
+        <Route path="/search" element={user ? <Search /> : <Navigate to="/" />} />
+        <Route path="/upload" element={user ? <Upload /> : <Navigate to="/" />} />
             <Route path="/kaboodles" element={user ? <Kaboodles /> : <Navigate to="/" />} />
             <Route path="/media-hub" element={user ? <MediaHub /> : <Navigate to="/" />} />
             

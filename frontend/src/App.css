@@ -14,10 +14,10 @@
   --cyan: #00FFFF;
   --magenta-glow: rgba(218, 25, 218, 0.3);
   --cyan-glow: rgba(0, 255, 255, 0.3);
-  --cyan-glow-gradient: radial-gradient(circle, rgba(0, 255, 255, 0.969) 0%, rgba(78, 254, 239, 0.8) 35%, rgba(255,255,255,0.8) 55%, rgba(120, 255, 255, 0.538) 60%, rgba(72, 191, 191, 0.276) 85%);
+  --cyan-glow-gradient: radial-gradient(circle, rgba(0, 255, 255, 0.969) 0%, rgba(78, 254, 239, 0.8) 35%, rgba(255, 255, 255, 0.8) 55%, rgba(120, 255, 255, 0.538) 60%, rgba(72, 191, 191, 0.276) 85%);
   --gold-gradient: linear-gradient(45deg, var(--gold) 0%, #FFF5D4 50%, var(--gold) 100%);
   --jewel-gradient: linear-gradient(135deg, var(--emerald-light) 0%, var(--magenta) 50%, var(--cyan) 100%);
-  --rococo-shadow: 0 0 20px rgba(217, 177, 47, 0.464); 
+  --rococo-shadow: 0 0 20px rgba(217, 177, 47, 0.464);
 }
 
 /* Background Container */
@@ -27,7 +27,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: url('./assets/background_rococo.png') center/cover no-repeat;
+  background: url('./assets/background/background_rococo.png') center/cover no-repeat;
   opacity: 0.4;
   z-index: -1;
 }
@@ -38,7 +38,7 @@
   border-radius: 15px;
   padding: 1.5rem;
   border: 2px solid var(--gold);
-  box-shadow: 
+  box-shadow:
     0 0 30px var(--magenta-glow),
     0 0 30px var(--cyan-glow);
   transition: all 0.3s ease;
@@ -46,7 +46,7 @@
 
 .panel:hover {
   transform: translateY(-2px);
-  box-shadow: 
+  box-shadow:
     0 0 40px var(--magenta-glow),
     0 0 40px var(--cyan-glow);
 }
@@ -64,7 +64,7 @@
   overflow: visible;
   opacity: 1;
   transform: translateY(0);
-  box-shadow: 
+  box-shadow:
     0 0 30px var(--magenta-glow),
     0 0 30px var(--cyan-glow),
     0 0 50px var(--gold);
@@ -75,7 +75,7 @@
   overflow: hidden;
   opacity: 0.85;
   transform: translateY(-20px);
-  box-shadow: 
+  box-shadow:
     0 0 15px var(--magenta-glow),
     0 0 15px var(--cyan-glow);
 }
@@ -121,7 +121,7 @@
   position: relative;
   overflow: hidden;
   border-radius: 2rem;
-  box-shadow: 
+  box-shadow:
     0 5px 15px rgba(0, 0, 0, 0.3),
     0 0 20px var(--magenta-glow),
     0 0 20px var(--cyan-glow);
@@ -194,7 +194,7 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: url('./assets/background_rococo.png');
+  background-image: url('./assets/background/background_rococo.png');
   background-size: cover;
   background-attachment: fixed;
   background-position: center;
@@ -245,16 +245,17 @@ body::before {
   position: relative;
   width: 100px;
   height: 85px;
-  background-image: url('./assets/borders/ArtDeco/emeraldDecoll.png'); 
+  background-image: url('./assets/borders/ArtDeco/emeraldDecoll.png');
   background-size: contain;
   background-repeat: no-repeat;
 }
-.app-header:before{
+
+.app-header:before {
   top: -30px;
   transform: flipX(180deg);
 }
 
-.app-header:after{
+.app-header:after {
   bottom: -30px;
   width: 120px;
   height: 100px;
@@ -291,7 +292,7 @@ body::before {
   color: transparent;
   background: var(--jewel-gradient);
   background-clip: text;
-  text-shadow: 
+  text-shadow:
     0 0 10px var(--magenta-glow),
     0 0 20px var(--cyan-glow),
     0 0 30px var(--magenta-glow),
@@ -311,7 +312,7 @@ body::before {
   transform: translateX(-80%);
   width: 95%;
   background: var(--cherry-coke);
-  box-shadow: 
+  box-shadow:
     1px -1px 10px var(--magenta-glow),
     -1px 1px 20px var(--cyan-glow),
     0px 0px 30px var(--gold);
@@ -409,7 +410,7 @@ body::before {
   position: absolute;
   width: 100px;
   height: 85px;
-  background-image: url('./assets/borders/borderChckrbrd-side.jpg'); 
+  background-image: url('./assets/borders/borderChckrbrd-side.jpg');
   background-size: contain;
   background-repeat: no-repeat;
 }
@@ -433,12 +434,10 @@ body::before {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: linear-gradient(
-    45deg,
-    transparent,
-    rgba(255, 255, 255, 0.1),
-    transparent
-  );
+  background: linear-gradient(45deg,
+      transparent,
+      rgba(255, 255, 255, 0.1),
+      transparent);
   transform: rotate(45deg);
   animation: shimmer 3s infinite;
 }
@@ -514,7 +513,7 @@ body::before {
 .slider-link:hover,
 .slider-link.active {
   transform: translateY(-2px);
-  box-shadow: 
+  box-shadow:
     0 5px 15px rgba(0, 0, 0, 0.3),
     0 0 20px var(--magenta-glow),
     0 0 20px var(--cyan-glow);
@@ -535,14 +534,15 @@ body::before {
 
 @keyframes neonPulse {
   from {
-    text-shadow: 
+    text-shadow:
       0 0 5px var(--emerald),
       0 0 10px var(--emerald),
       0 0 20px var(--emerald-light),
       0 0 40px var(--emerald-light);
   }
+
   to {
-    text-shadow: 
+    text-shadow:
       0 0 10px var(--emerald),
       0 0 20px var(--emerald),
       0 0 40px var(--emerald-light),
@@ -554,6 +554,7 @@ body::before {
   0% {
     transform: translateX(-100%) rotate(45deg);
   }
+
   100% {
     transform: translateX(100%) rotate(45deg);
   }
@@ -563,26 +564,33 @@ body::before {
   .neon-title {
     font-size: 2.5rem;
   }
+
   .app-subtitle {
     font-size: 1.3rem;
   }
+
   .app-title {
     font-size: 1.5rem;
   }
+
   .body-text {
     font-size: 1rem;
     padding: 0.2rem;
   }
+
   .main-section {
     padding: 0.5rem;
   }
+
   .panel {
     padding: 1rem;
   }
+
   .slider-nav {
     flex-direction: column;
     align-items: stretch;
   }
+
   .slider-link {
     justify-content: center;
   }

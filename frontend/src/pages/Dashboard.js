@@ -1,9 +1,8 @@
-import from '@emotion/react';
+import { css } from '@emotion/react';
 import { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import HowToUseOverlay from '../../common/HowToUseOverlay';
+import HowToUseOverlay from '../components/common/HowToUseOverlay';
 import { AuthContext } from '../contexts/auth/index';
-import styles from './styles';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
@@ -112,7 +111,7 @@ const Dashboard = () => {
           </div>
         ) : (
           <div css={styles.activityList}>
-            {stats.recentActivity.map((activity, index) => (
+            {stats.recentActivity.map((_activity, index) => (
               <div key={index} css={styles.activityItem}>
                 {/* Activity content */}
               </div>
@@ -358,4 +357,4 @@ const styles = {
   `
 };
 
-export default Dashboard; 
+export default Dashboard;

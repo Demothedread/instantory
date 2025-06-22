@@ -1,5 +1,6 @@
 import from '@react-oauth/google';
 import { useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import config from '../../config';
 import { AuthContext } from '../../contexts/auth/index';
 
@@ -22,6 +23,7 @@ const GoogleAuth = ({
   size = 'large'
 }) => {
   const { loginWithGoogle } = useContext(AuthContext);
+  const navigate = useNavigate();
   const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || config.googleClientId;
   
   // Handle successful authentication
@@ -40,6 +42,11 @@ const GoogleAuth = ({
       // Call the success callback if provided
       if (result && onSuccess) {
         onSuccess(credentialResponse);
+      }
+      
+      // Navigate to dashboard on successful authentication
+      if (result) {
+        navigate('/dashboard');
       }
     } catch (error) {
       console.error('Google authentication error:', error);
