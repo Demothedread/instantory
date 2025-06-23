@@ -1,61 +1,10 @@
 {
-  "build": {
-    "env": {
-      "GENERATE_SOURCEMAP": "false",
-      "REACT_APP_BACKEND_URL": "https://bartleby-backend-mn96.onrender.com",
-      "REACT_APP_FRONTEND_URL": "https://hocomnia.com",
-      "REACT_APP_GOOGLE_CLIENT_ID": "@google_client_id",
-      "REACT_APP_GOOGLE_REDIRECT_URI": "https://hocomnia.com/api/auth/google/callback"
-    }
-  },
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "framework": "create-react-app",
   "buildCommand": "npm run build",
-  "cleanUrls": true,
-  "headers": [
-    {
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self' https://hocomnia.com https://www.hocomnia.com https://bartleby-backend-mn96.onrender.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://bartleby-backend-mn96.onrender.com https://hocomnia.com https://lh3.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://hocomnia.com https://bartleby-backend-mn96.onrender.com https://api.openai.com https://accounts.google.com https://vercel.live https://instantory.vercel.app; frame-src 'self' https://accounts.google.com; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=()"
-        }
-      ],
-      "source": "/(.*)"
-    },
-    {
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ],
-      "source": "/static/(.*)"
-    },
-    {
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400"
-        }
-      ],
-      "source": "/(.*\\.(js|css|png|jpg|jpeg|gif|ico|svg))$"
-    }
-  ],
   "outputDirectory": "build",
+  "cleanUrls": true,
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -66,11 +15,31 @@
       "destination": "/index.html"
     }
   ],
-  "trailingSlash": false,
-  "version": 2,
-  "functions": {
-    "app/api/**": {
-      "maxDuration": 30
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self' https://hocomnia.com https://bartleby-backend-mn96.onrender.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://bartleby-backend-mn96.onrender.com https://hocomnia.com https://lh3.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://hocomnia.com https://bartleby-backend-mn96.onrender.com https://api.openai.com https://accounts.google.com https://vercel.live https://instantory.vercel.app; frame-src 'self' https://accounts.google.com; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+        },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
+      ]
+    },
+    {
+      "source": "/static/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/(.*\\.(js|css|png|jpg|jpeg|gif|ico|svg))$",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400" }
+      ]
     }
-  }
+  ]
 }
