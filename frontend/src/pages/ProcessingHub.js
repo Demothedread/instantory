@@ -3,6 +3,7 @@ import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../contexts/auth/index';
 import { neoDecorocoBase } from '../styles/components/neo-decoroco/base';
 import layout from '../styles/layouts/constraints';
+import { fileProcessingService } from '../services/fileProcessingService';
 
 // Constants for file validation
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -34,21 +35,10 @@ const ProcessingHub = () => {
     };
   }, [files]);
 
-  // Validate individual file
+  // Validate individual file using the service
   const validateFile = useCallback((file) => {
-    const errors = [];
-    
-    // Check file size
-    if (file.size > MAX_FILE_SIZE) {
-      errors.push(`File "${file.name}" exceeds maximum size of 20MB`);
-    }
-    
-    // Check file type
-    if (!ACCEPTED_TYPES[file.type]) {
-      errors.push(`File "${file.name}" has unsupported type: ${file.type}`);
-    }
-    
-    return errors;
+    const validation = fileProcessingService.validateFile(file);
+    return validation.errors;
   }, []);
 
   // Enhanced file handling with validation and deduplication
@@ -135,7 +125,7 @@ const ProcessingHub = () => {
     e.target.value = '';
   }, [handleFiles]);
 
-  // Enhanced processing with proper state management and error handling
+  // Enhanced processing with actual API integration
   const processFiles = useCallback(async () => {
     if (files.length === 0) return;
 
@@ -145,55 +135,41 @@ const ProcessingHub = () => {
 
     try {
       const readyFiles = files.filter(f => f.status === 'ready');
-      const totalFiles = readyFiles.length;
+      
+      // Prepare files for batch processing
+      const fileItems = readyFiles.map(f => ({
+        id: f.id,
+        file: f.file,
+        instructions: '' // Could be extended to include user instructions
+      }));
 
-      for (let i = 0; i < readyFiles.length; i++) {
-        const fileItem = readyFiles[i];
-        
-        try {
-          // Update file status to processing
+      // Use the service to process files in batch
+      await fileProcessingService.processBatch(
+        fileItems,
+        // Overall progress callback
+        (progress) => {
+          setProcessingProgress(progress);
+        },
+        // Individual file completion callback
+        (fileId, status, result, error) => {
           setFiles(prev => prev.map(f => 
-            f.id === fileItem.id 
-              ? { ...f, status: 'processing', progress: 0 }
+            f.id === fileId 
+              ? { 
+                  ...f, 
+                  status, 
+                  progress: status === 'completed' ? 100 : f.progress,
+                  error: error || null,
+                  result: result || null
+                }
               : f
           ));
 
-          // TODO: Replace with actual API call
-          // const result = await processFileAPI(fileItem.file);
-          
-          // Simulate processing with progress updates
-          for (let progress = 0; progress <= 100; progress += 20) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-            setFiles(prev => prev.map(f => 
-              f.id === fileItem.id 
-                ? { ...f, progress }
-                : f
-            ));
+          // Add to errors if file failed
+          if (status === 'failed' && error) {
+            setErrors(prev => [...prev, error]);
           }
-
-          // Mark as completed
-          setFiles(prev => prev.map(f => 
-            f.id === fileItem.id 
-              ? { ...f, status: 'completed', progress: 100 }
-              : f
-          ));
-
-        } catch (fileError) {
-          console.error(`Failed to process file ${fileItem.name}:`, fileError);
-          
-          // Mark file as failed
-          setFiles(prev => prev.map(f => 
-            f.id === fileItem.id 
-              ? { ...f, status: 'failed', error: fileError.message }
-              : f
-          ));
-          
-          setErrors(prev => [...prev, `Failed to process "${fileItem.name}": ${fileError.message}`]);
         }
-
-        // Update overall progress
-        setProcessingProgress(((i + 1) / totalFiles) * 100);
-      }
+      );
 
     } catch (error) {
       console.error('Processing batch failed:', error);

@@ -15,7 +15,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self' https://hocomnia.com https://www.hocomnia.com https://bartleby-backend-mn96.onrender.com https://localhost:3000; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://bartleby-backend-mn96.onrender.com https://bartleby-backend.onrender.com https://hocomnia.com https://lh3.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://hocomnia.com https://bartleby-backend-mn96.onrender.com https://api.openai.com https://accounts.google.com https://vercel.live https://instantory.vercel.app; frame-src https://accounts.google.com; upgrade-insecure-requests"
+          "value": "default-src 'self' https://hocomnia.com https://www.hocomnia.com https://bartleby-backend-mn96.onrender.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://bartleby-backend-mn96.onrender.com https://hocomnia.com https://lh3.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://hocomnia.com https://bartleby-backend-mn96.onrender.com https://api.openai.com https://accounts.google.com https://vercel.live https://instantory.vercel.app; frame-src 'self' https://accounts.google.com; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
         },
         {
           "key": "X-Frame-Options",
@@ -44,19 +44,33 @@
         }
       ],
       "source": "/static/(.*)"
+    },
+    {
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
+      ],
+      "source": "/(.*\\.(js|css|png|jpg|jpeg|gif|ico|svg))$"
     }
   ],
   "outputDirectory": "build",
   "rewrites": [
     {
-      "destination": "https://bartleby-backend-mn96.onrender.com/api/$1",
-      "source": "/api/(.*)"
+      "source": "/api/(.*)",
+      "destination": "https://bartleby-backend-mn96.onrender.com/api/$1"
     },
     {
-      "destination": "/index.html",
-      "source": "/(.*)"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "trailingSlash": false,
-  "version": 2
+  "version": 2,
+  "functions": {
+    "app/api/**": {
+      "maxDuration": 30
+    }
+  }
 }
