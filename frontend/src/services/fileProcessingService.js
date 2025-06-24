@@ -1,12 +1,10 @@
-import { API_BASE_URL } from '../config';
-
 /**
  * Service for handling file processing operations with the backend API
  */
 class FileProcessingService {
   constructor() {
-    this.baseURL = API_BASE_URL || '/api';
-  }
+    this.baseURL = process.env.API_BASE_URL || '/api';
+  }         
 
   /**
    * Upload and process a single file
