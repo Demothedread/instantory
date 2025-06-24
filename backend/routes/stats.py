@@ -3,10 +3,10 @@
 import logging
 from datetime import datetime, timedelta
 
+from auth_routes import verify_token
 from quart import Blueprint, jsonify, request
 
 from backend.config.database import get_metadata_pool
-from backend.middleware.security import verify_token
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -19,8 +19,20 @@ stats_bp = Blueprint("stats", __name__)
 async def get_dashboard_stats():
     """Get dashboard statistics for the current user"""
     try:
+        # Extract access token from request
+        access_token = request.cookies.get("access_token")
+        if not access_token:
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                access_token = auth_header.split(" ")[1]
+            else:
+                access_token = request.args.get("access_token")
+
+        if not access_token:
+            return jsonify({"error": "Unauthorized"}), 401
+
         # Verify authentication
-        current_user = await verify_token()
+        current_user = verify_token(access_token, "access")
         if not current_user:
             return jsonify({"error": "Unauthorized"}), 401
 
@@ -99,8 +111,20 @@ async def get_dashboard_stats():
 async def get_inventory_by_category():
     """Get inventory distribution by category"""
     try:
+        # Extract access token from request
+        access_token = request.cookies.get("access_token")
+        if not access_token:
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                access_token = auth_header.split(" ")[1]
+            else:
+                access_token = request.args.get("access_token")
+
+        if not access_token:
+            return jsonify({"error": "Unauthorized"}), 401
+
         # Verify authentication
-        current_user = await verify_token()
+        current_user = verify_token(access_token, "access")
         if not current_user:
             return jsonify({"error": "Unauthorized"}), 401
 
@@ -141,8 +165,20 @@ async def get_inventory_by_category():
 async def get_activity_stats():
     """Get activity statistics over time"""
     try:
+        # Extract access token from request
+        access_token = request.cookies.get("access_token")
+        if not access_token:
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                access_token = auth_header.split(" ")[1]
+            else:
+                access_token = request.args.get("access_token")
+
+        if not access_token:
+            return jsonify({"error": "Unauthorized"}), 401
+
         # Verify authentication
-        current_user = await verify_token()
+        current_user = verify_token(access_token, "access")
         if not current_user:
             return jsonify({"error": "Unauthorized"}), 401
 
