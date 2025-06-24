@@ -1,25 +1,26 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "build",
   "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://bartleby-backend-mn96.onrender.com/api/:path*"
+    { 
+      "source": "/api/(.*)", 
+      "destination": "https://bartleby-backend-mn96.onrender.com/api/$1" 
     },
-    {
-      "source": "/:path*",
-      "destination": "/index.html"
+    { 
+      "source": "/(.*)", 
+      "destination": "/index.html" 
     }
   ],
+  "cleanUrls": true,
+  "trailingSlash": false,
   "headers": [
     {
-      "source": "/:path*",
+      "source": "/(.*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self' https://hocomnia.com https://bartleby-backend-mn96.onrender.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://bartleby-backend-mn96.onrender.com https://hocomnia.com https://lh3.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://hocomnia.com https://bartleby-backend-mn96.onrender.com https://api.openai.com https://accounts.google.com https://vercel.live https://instantory.vercel.app; frame-src 'self' https://accounts.google.com; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+          "value": "default-src 'self' https://hocomnia.com https://bartleby-backend-mn96.onrender.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://vercel.live; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://bartleby-backend-mn96.onrender.com https://hocomnia.com https://lh3.googleusercontent.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://hocomnia.com https://bartleby-backend-mn96.onrender.com https://api.openai.com https://accounts.google.com https://vercel.live; frame-src https://accounts.google.com; upgrade-insecure-requests;"
         },
         {
           "key": "X-Frame-Options",
@@ -40,22 +41,35 @@
       ]
     },
     {
-      "source": "/static/:path*",
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://hocomnia.com,https://www.hocomnia.com,https://localhost:3000,https://accounts.google.com,https://vercel.live,https://bartleby.vercel.app"
+        },
+        {
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, Accept, Origin, X-Requested-With"
+        }
+      ]
+    },
+    {
+      "source": "/static/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
         }
       ]
-    },
-    {
-      "source": "/:file(\\.(js|css|png|jpg|jpeg|gif|ico|svg))$",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=86400"
-        }
-      ]
     }
   ]
 }
+// Environment variables are configured in Vercel dashboard and will be automatically injected during build
