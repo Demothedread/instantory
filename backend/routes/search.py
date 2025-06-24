@@ -5,7 +5,7 @@ import logging
 from quart import Blueprint, jsonify, request
 
 from backend.config.database import get_metadata_pool
-from backend.middleware.security import verify_token
+from .auth_routes import verify_token
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -18,14 +18,24 @@ search_bp = Blueprint("search", __name__)
 async def search_inventory():
     """Search inventory items and documents using keyword search"""
     try:
-        # Verify authentication
-        current_user = await verify_token()
-        if not current_user:
+        # Get the access token from cookies or Authorization header
+        access_token = request.cookies.get("access_token")
+        if not access_token:
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                access_token = auth_header.split(" ")[1]
+        
+        if not access_token:
             return jsonify({"error": "Unauthorized"}), 401
 
-        user_id = current_user.get("sub")
-        if not user_id:
-            return jsonify({"error": "Invalid user"}), 401
+        # Verify authentication
+        try:
+            current_user = verify_token(access_token, "access")
+            user_id = current_user.get("id")
+            if not user_id:
+                return jsonify({"error": "Invalid user"}), 401
+        except Exception:
+            return jsonify({"error": "Unauthorized"}), 401
 
         # Get search parameters
         data = await request.get_json()
@@ -164,14 +174,24 @@ async def search_inventory():
 async def get_search_categories():
     """Get available categories for filtering search results"""
     try:
-        # Verify authentication
-        current_user = await verify_token()
-        if not current_user:
+        # Get the access token from cookies or Authorization header
+        access_token = request.cookies.get("access_token")
+        if not access_token:
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                access_token = auth_header.split(" ")[1]
+        
+        if not access_token:
             return jsonify({"error": "Unauthorized"}), 401
 
-        user_id = current_user.get("sub")
-        if not user_id:
-            return jsonify({"error": "Invalid user"}), 401
+        # Verify authentication
+        try:
+            current_user = verify_token(access_token, "access")
+            user_id = current_user.get("id")
+            if not user_id:
+                return jsonify({"error": "Invalid user"}), 401
+        except Exception:
+            return jsonify({"error": "Unauthorized"}), 401
 
         # Get database connection
         metadata_pool = await get_metadata_pool()
@@ -202,14 +222,24 @@ async def get_search_categories():
 async def get_search_suggestions():
     """Get search suggestions based on query prefix"""
     try:
-        # Verify authentication
-        current_user = await verify_token()
-        if not current_user:
+        # Get the access token from cookies or Authorization header
+        access_token = request.cookies.get("access_token")
+        if not access_token:
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                access_token = auth_header.split(" ")[1]
+        
+        if not access_token:
             return jsonify({"error": "Unauthorized"}), 401
 
-        user_id = current_user.get("sub")
-        if not user_id:
-            return jsonify({"error": "Invalid user"}), 401
+        # Verify authentication
+        try:
+            current_user = verify_token(access_token, "access")
+            user_id = current_user.get("id")
+            if not user_id:
+                return jsonify({"error": "Invalid user"}), 401
+        except Exception:
+            return jsonify({"error": "Unauthorized"}), 401
 
         # Get query prefix
         prefix = request.args.get("q", "").strip()
