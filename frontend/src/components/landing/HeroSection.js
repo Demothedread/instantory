@@ -198,9 +198,11 @@ const styles = {
   `,
 
   mainTitle: css`
-    ${typography.heading.h1}
+    font-size: ${typography.styles.h1.fontSize};
+    font-weight: ${typography.styles.h1.fontWeight};
+    line-height: ${typography.styles.h1.lineHeight};
+    font-family: ${typography.styles.h1.fontFamily};
     margin-bottom: ${layout.spacing.lg};
-    line-height: 1.1;
   `,
 
   titlePrimary: css`
@@ -248,7 +250,9 @@ const styles = {
   `,
 
   subtitle: css`
-    ${typography.body.large}
+    font-size: ${typography.sizes.lg};
+    font-weight: ${typography.weights.normal};
+    line-height: ${typography.lineHeights.relaxed};
     color: ${colors.lightGray};
     line-height: 1.6;
     max-width: 800px;
@@ -404,7 +408,9 @@ const styles = {
   `,
 
   statusText: css`
-    ${typography.body.small}
+    font-size: ${typography.sizes.sm};
+    font-weight: ${typography.weights.medium};
+    line-height: ${typography.lineHeights.normal};
     color: ${colors.lightGray};
     font-weight: 500;
   `,
