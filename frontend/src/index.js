@@ -3,7 +3,7 @@ import './index.css';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App';
+import AppWrapper from './App';
 import config from './config';
 import reportWebVitals from './reportWebVitals';
 
@@ -16,7 +16,7 @@ const root = createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
     <GoogleOAuthProvider clientId={config.googleClientId}>
-      <App />
+      <AppWrapper />
     </GoogleOAuthProvider>
   </React.StrictMode>
 );

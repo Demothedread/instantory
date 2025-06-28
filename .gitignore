@@ -33,13 +33,20 @@ yarn-error.log*
 
 # Environment
 .env
+.env.example
+.env.development
+.env.production
 .env.local
+.env.test.local
 .venv
 env/
 venv/
 ENV/
 myvenv/
 .env.test
+backend/.env.example
+backend/.env
+backend/.env.test.local
 
 # Django
 *.log

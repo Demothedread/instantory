@@ -1,22 +1,19 @@
 {
-  "version": 2,
   "buildCommand": "npm run build",
-  "outputDirectory": "build",
-  "rewrites": [
-    { 
-      "source": "/api/(.*)", 
-      "destination": "https://bartleby-backend-mn96.onrender.com/api/$1" 
-    },
-    { 
-      "source": "/(.*)", 
-      "destination": "/index.html" 
-    }
-  ],
   "cleanUrls": true,
-  "trailingSlash": false,
+  "env": {
+    "REACT_APP_BACKEND_URL": "https://bartleby-backend-mn96.onrender.com",
+    "REACT_APP_FRONTEND_URL": "https://hocomnia.com",
+    "REACT_APP_GOOGLE_CLIENT_ID": "700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com",
+    "REACT_APP_PRODUCTION_DOMAIN": "hocomnia.com"
+  },
+  "functions": {
+    "build/static/js/*.js": {
+      "maxDuration": 30
+    }
+  },
   "headers": [
     {
-      "source": "/(.*)",
       "headers": [
         {
           "key": "Content-Security-Policy",
@@ -37,15 +34,10 @@
         {
           "key": "Permissions-Policy",
           "value": "camera=(), microphone=(), geolocation=()"
-        }
-      ]
-    },
-    {
-      "source": "/api/(.*)",
-      "headers": [
+        },
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "https://hocomnia.com,https://www.hocomnia.com,https://localhost:3000,https://accounts.google.com,https://vercel.live,https://bartleby.vercel.app"
+          "value": "*"
         },
         {
           "key": "Access-Control-Allow-Credentials",
@@ -53,22 +45,32 @@
         },
         {
           "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
+          "value": "GET, POST, PUT, DELETE, OPTIONS, PATCH"
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, Accept, Origin, X-Requested-With"
+          "value": "Content-Type, Authorization, Accept, Origin, X-Requested-With, google-oauth-token, google-client-id"
         }
-      ]
+      ],
+      "source": "/(.*)"
     },
     {
-      "source": "/static/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "public, max-age=31536000, immutable"
         }
-      ]
+      ],
+      "source": "/static/(.*)"
     }
-  ]
+  ],
+  "outputDirectory": "build",
+  "rewrites": [
+    {
+      "destination": "/index.html",
+      "source": "/(.*)"
+    }
+  ],
+  "trailingSlash": false,
+  "version": 2
 }
