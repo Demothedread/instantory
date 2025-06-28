@@ -1,6 +1,19 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { css } from '@emotion/react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './Search.css';
+import { neoDecorocoBase } from '../styles/components/neo-decoroco/base';
+import layout from '../styles/layouts/constraints';
+import { colors } from '../styles/theme/colors';
+import { typography } from '../styles/theme/typography';
+
+// Debounce utility function
+const debounce = (func, delay) => {
+  let timeoutId;
+  return (...args) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(null, args), delay);
+  };
+};
 
 const Search = () => {
   const [query, setQuery] = useState('');
@@ -59,7 +72,7 @@ const Search = () => {
         setLoading(false);
       }
     }, 300),
-    []
+    [setResults, setLoading, setError]
   );
 
   // Handle search form submission
@@ -115,13 +128,13 @@ const Search = () => {
   ], []);
 
   return (
-    <div className="inventory-page">
-      <div className="inventory-header">
-        <div className="header-content">
-          <h1>AI-Powered Search</h1>
+    <div css={styles.inventoryPage}>
+      <div css={styles.inventoryHeader}>
+        <div css={styles.headerContent}>
+          <h1 css={styles.title}>🔍 AI-Powered Search</h1>
           <button 
             onClick={() => navigate('/dashboard')} 
-            className="back-btn"
+            css={styles.backBtn}
             type="button"
           >
             ← Back to Dashboard
@@ -129,20 +142,20 @@ const Search = () => {
         </div>
       </div>
 
-      <div className="search-container">
-        <form onSubmit={handleSearch} className="search-form">
-          <div className="search-input-container">
+      <div css={styles.searchContainer}>
+        <form onSubmit={handleSearch} css={styles.searchForm}>
+          <div css={styles.searchInputContainer}>
             <input
               type="text"
               value={query}
               onChange={handleQueryChange}
               placeholder="Search your inventory... (e.g., 'red electronic devices' or 'items in storage room A')"
-              className="search-input"
+              css={styles.searchInput}
               disabled={loading}
             />
             <button 
               type="submit" 
-              className="search-btn" 
+              css={[styles.searchBtn, (!query.trim() || loading) && styles.searchBtnDisabled]} 
               disabled={loading || !query.trim()}
             >
               {loading ? '⏳' : '🔍'}
@@ -296,13 +309,149 @@ const Search = () => {
   );
 };
 
-// Debounce utility function
-const debounce = (func, delay) => {
-  let timeoutId;
-  return (...args) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func.apply(null, args), delay);
-  };
+
+// Neo-Deco-Rococo styles for Search page
+const styles = {
+  inventoryPage: css`
+    ${neoDecorocoBase.container}
+    min-height: 100vh;
+    background: linear-gradient(
+      135deg,
+      ${colors.richPurple} 0%,
+      ${colors.deepNavy} 30%,
+      ${colors.charcoal} 70%,
+      ${colors.richPurple} 100%
+    );
+    padding: ${layout.spacing.lg};
+  `,
+
+  inventoryHeader: css`
+    background: linear-gradient(145deg, ${colors.richPurple}60 0%, ${colors.deepNavy}40 100%);
+    border: 1px solid ${colors.neonTeal}40;
+    border-radius: ${layout.borderRadius.xl};
+    padding: ${layout.spacing.xl};
+    margin-bottom: ${layout.spacing['2xl']};
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 25px ${colors.charcoal}40;
+  `,
+
+  headerContent: css`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    
+    ${layout.media.mobile} {
+      flex-direction: column;
+      gap: ${layout.spacing.lg};
+    }
+  `,
+
+  title: css`
+    font-family: ${typography.fonts.decorative};
+    font-size: ${typography.sizes['3xl']};
+    background: linear-gradient(135deg, ${colors.neonGold} 0%, ${colors.neonTeal} 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    margin: 0;
+    text-shadow: 0 0 30px ${colors.neonGold}40;
+  `,
+
+  backBtn: css`
+    ${neoDecorocoBase.button}
+    padding: ${layout.spacing.md} ${layout.spacing.lg};
+    background: linear-gradient(135deg, ${colors.neonTeal}20 0%, ${colors.neonBlue}20 100%);
+    border: 1px solid ${colors.neonTeal}60;
+    color: ${colors.neonTeal};
+    border-radius: ${layout.borderRadius.lg};
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: linear-gradient(135deg, ${colors.neonTeal}30 0%, ${colors.neonBlue}30 100%);
+      border-color: ${colors.neonTeal}80;
+      transform: translateY(-2px);
+    }
+  `,
+
+  searchContainer: css`
+    max-width: 1000px;
+    margin: 0 auto;
+  `,
+
+  searchForm: css`
+    background: linear-gradient(145deg, ${colors.richPurple}50 0%, ${colors.deepNavy}30 100%);
+    border: 2px solid ${colors.neonGold}40;
+    border-radius: ${layout.borderRadius.xl};
+    padding: ${layout.spacing['2xl']};
+    margin-bottom: ${layout.spacing['2xl']};
+    backdrop-filter: blur(15px);
+    box-shadow: 0 15px 35px ${colors.charcoal}60;
+  `,
+
+  searchInputContainer: css`
+    display: flex;
+    gap: ${layout.spacing.md};
+    margin-bottom: ${layout.spacing.lg};
+    
+    ${layout.media.mobile} {
+      flex-direction: column;
+    }
+  `,
+
+  searchInput: css`
+    flex: 1;
+    padding: ${layout.spacing.lg};
+    background: ${colors.charcoal}60;
+    border: 1px solid ${colors.neonTeal}30;
+    border-radius: ${layout.borderRadius.lg};
+    color: ${colors.textLight};
+    font-size: ${typography.sizes.md};
+    backdrop-filter: blur(5px);
+    
+    &::placeholder {
+      color: ${colors.textMuted};
+      font-style: italic;
+    }
+    
+    &:focus {
+      outline: none;
+      border-color: ${colors.neonTeal}80;
+      box-shadow: 0 0 20px ${colors.neonTeal}30;
+    }
+    
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  `,
+
+  searchBtn: css`
+    ${neoDecorocoBase.button}
+    padding: ${layout.spacing.lg} ${layout.spacing.xl};
+    background: linear-gradient(135deg, ${colors.neonGold} 0%, ${colors.neonTeal} 100%);
+    color: ${colors.charcoal};
+    border: none;
+    border-radius: ${layout.borderRadius.lg};
+    font-weight: ${typography.weights.bold};
+    transition: all 0.3s ease;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px ${colors.neonGold}40;
+    }
+  `,
+
+  searchBtnDisabled: css`
+    opacity: 0.5;
+    cursor: not-allowed;
+    
+    &:hover {
+      transform: none;
+      box-shadow: none;
+    }
+  `,
 };
 
 export default Search;

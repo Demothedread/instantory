@@ -316,7 +316,9 @@
     });
     
     // Service Worker Registration for PWA capabilities
-    if ('serviceWorker' in navigator) {
+    // Note: Service Worker temporarily disabled to resolve 404 error
+    // TODO: Implement proper service worker for offline functionality
+    if ('serviceWorker' in navigator && false) {
       window.addEventListener('load', function() {
         navigator.serviceWorker.register('/sw.js')
           .then(function(registration) {

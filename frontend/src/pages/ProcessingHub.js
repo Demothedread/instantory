@@ -1,20 +1,11 @@
 import { css } from '@emotion/react';
-import React, { useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../contexts/auth/index';
+import { fileProcessingService } from '../services/fileProcessingService';
 import { neoDecorocoBase } from '../styles/components/neo-decoroco/base';
 import layout from '../styles/layouts/constraints';
-import { fileProcessingService } from '../services/fileProcessingService';
 
 // Constants for file validation
-const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
-const ACCEPTED_TYPES = {
-  'application/pdf': '.pdf',
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'text/plain': '.txt',
-  'application/msword': '.doc',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx'
-};
 
 const ProcessingHub = () => {
   const { user } = useContext(AuthContext);
@@ -389,62 +380,128 @@ const ProcessingHub = () => {
 
 const styles = {
   container: css`
+    ${neoDecorocoBase.container}
     min-height: 100vh;
-    background: linear-gradient(135deg, #1a1a1a 0%, #2c1f3e 100%);
-    padding: 2rem 1rem;
+    position: relative;
+    background: linear-gradient(
+      135deg,
+      #0c0c0c 0%,
+      #1a1a2e 30%,
+      #16213e 70%,
+      #0f3460 100%
+    );
+    padding: ${layout.spacing['2xl']} ${layout.spacing.lg};
+    
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: 
+        radial-gradient(circle at 20% 80%, rgba(0, 255, 255, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 215, 0, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+    }
   `,
   
   content: css`
-    max-width: 800px;
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
     margin: 0 auto;
   `,
   
   title: css`
     text-align: center;
-    margin-bottom: 1rem;
-    color: #ffffff;
-    font-size: 2.5rem;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    margin-bottom: ${layout.spacing.lg};
+    background: linear-gradient(135deg, #ffd700 0%, #00ffff 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    font-size: 3rem;
+    font-weight: 900;
+    text-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
+    animation: titleGlow 3s ease-in-out infinite alternate;
+    
+    @keyframes titleGlow {
+      0% { filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.4)); }
+      100% { filter: drop-shadow(0 0 40px rgba(0, 255, 255, 0.6)); }
+    }
+    
+    ${layout.media.mobile} {
+      font-size: 2.5rem;
+    }
   `,
   
   subtitle: css`
     text-align: center;
-    color: #cccccc;
-    margin-bottom: 3rem;
-    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.8);
+    margin-bottom: ${layout.spacing['3xl']};
+    font-size: 1.25rem;
+    font-style: italic;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
   `,
 
-  // Error handling styles
+  // Error handling styles with Neo-Deco-Rococo design
   errorContainer: css`
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid #ef4444;
-    border-radius: 8px;
-    margin-bottom: 2rem;
+    ${neoDecorocoBase.panel}
+    background: linear-gradient(145deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
+    border: 2px solid #ef4444;
+    border-radius: ${layout.borderRadius.xl};
+    margin-bottom: ${layout.spacing['2xl']};
     overflow: hidden;
+    box-shadow: 
+      0 8px 25px rgba(239, 68, 68, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   `,
 
   errorHeader: css`
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem;
-    background: rgba(239, 68, 68, 0.2);
-    border-bottom: 1px solid #ef4444;
+    padding: ${layout.spacing.lg} ${layout.spacing.xl};
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.2) 100%);
+    border-bottom: 1px solid rgba(239, 68, 68, 0.4);
     color: #ffffff;
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 1.1rem;
   `,
 
   errorList: css`
-    padding: 1rem;
-    max-height: 200px;
+    padding: ${layout.spacing.xl};
+    max-height: 250px;
     overflow-y: auto;
+    
+    /* Custom scrollbar */
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: rgba(239, 68, 68, 0.1);
+      border-radius: 3px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: rgba(239, 68, 68, 0.6);
+      border-radius: 3px;
+      
+      &:hover {
+        background: rgba(239, 68, 68, 0.8);
+      }
+    }
   `,
 
   errorItem: css`
     color: #fecaca;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-    line-height: 1.4;
+    margin-bottom: ${layout.spacing.md};
+    font-size: 0.95rem;
+    line-height: 1.5;
+    padding: ${layout.spacing.sm};
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: ${layout.borderRadius.md};
+    border-left: 3px solid #ef4444;
 
     &:last-child {
       margin-bottom: 0;
