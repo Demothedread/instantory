@@ -1,4 +1,4 @@
-{-
+{
   "version": 2,
   "name": "hocomnia",
   "buildCommand": "npm run build",
