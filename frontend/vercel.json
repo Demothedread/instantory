@@ -1,4 +1,6 @@
-{
+{-
+  "version": 2,
+  "name": "hocomnia",
   "buildCommand": "npm run build",
   "cleanUrls": true,
   "env": {
@@ -34,10 +36,15 @@
         {
           "key": "Permissions-Policy",
           "value": "camera=(), microphone=(), geolocation=()"
-        },
+        }
+      ],
+      "source": "/(.*)"
+    },
+    {
+      "headers": [
         {
           "key": "Access-Control-Allow-Origin",
-          "value": "*"
+          "value": "https://hocomnia.com"
         },
         {
           "key": "Access-Control-Allow-Credentials",
@@ -52,7 +59,7 @@
           "value": "Content-Type, Authorization, Accept, Origin, X-Requested-With, google-oauth-token, google-client-id"
         }
       ],
-      "source": "/(.*)"
+      "source": "/api/(.*)"
     },
     {
       "headers": [
@@ -67,10 +74,13 @@
   "outputDirectory": "build",
   "rewrites": [
     {
+      "destination": "https://bartleby-backend-mn96.onrender.com/api/$1",
+      "source": "/api/(.*)"
+    },
+    {
       "destination": "/index.html",
       "source": "/(.*)"
     }
   ],
-  "trailingSlash": false,
-  "version": 2
+  "trailingSlash": false
 }
