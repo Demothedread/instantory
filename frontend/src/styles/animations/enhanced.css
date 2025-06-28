@@ -1,0 +1,142 @@
+/* Enhanced CSS animations for Neo-Deco-Rococo design system */
+/* This file provides additional animation utilities for the design system */
+
+/* Keyframe definitions for component animations */
+@keyframes neoGlow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px currentColor;
+    }
+
+    50% {
+        box-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+    }
+}
+
+@keyframes rococo-flourish {
+    0% {
+        transform: scale(1) rotate(0deg);
+        opacity: 0.7;
+    }
+
+    50% {
+        transform: scale(1.1) rotate(180deg);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1) rotate(360deg);
+        opacity: 0.7;
+    }
+}
+
+@keyframes art-deco-shine {
+    0% {
+        background-position: -100% 0;
+    }
+
+    100% {
+        background-position: 100% 0;
+    }
+}
+
+@keyframes depth-float {
+
+    0%,
+    100% {
+        transform: translateZ(0) translateY(0);
+    }
+
+    50% {
+        transform: translateZ(20px) translateY(-10px);
+    }
+}
+
+@keyframes metallic-gleam {
+    0% {
+        background-position: -200% center;
+    }
+
+    100% {
+        background-position: 200% center;
+    }
+}
+
+@keyframes portal-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+        filter: brightness(1.2);
+    }
+}
+
+/* Utility classes for common animations */
+.neo-glow {
+    animation: neoGlow 2s ease-in-out infinite;
+}
+
+.rococo-flourish {
+    animation: rococo-flourish 4s ease-in-out infinite;
+}
+
+.art-deco-shine {
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: art-deco-shine 3s linear infinite;
+}
+
+.depth-float {
+    animation: depth-float 6s ease-in-out infinite;
+}
+
+.metallic-gleam {
+    background: linear-gradient(90deg,
+            var(--base-color, #ffd700) 0%,
+            rgba(255, 255, 255, 0.8) 30%,
+            var(--base-color, #ffd700) 60%,
+            rgba(255, 255, 255, 0.8) 90%,
+            var(--base-color, #ffd700) 100%);
+    background-size: 300% 100%;
+    animation: metallic-gleam 2s linear infinite;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.portal-pulse {
+    animation: portal-pulse 3s ease-in-out infinite;
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+
+    .neo-glow,
+    .rococo-flourish,
+    .art-deco-shine,
+    .depth-float,
+    .metallic-gleam,
+    .portal-pulse {
+        animation: none;
+    }
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+    .art-deco-shine {
+        background: none;
+    }
+
+    .metallic-gleam {
+        background: currentColor;
+        -webkit-background-clip: initial;
+        -webkit-text-fill-color: initial;
+        background-clip: initial;
+    }
+}

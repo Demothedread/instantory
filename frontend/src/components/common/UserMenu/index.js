@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
-
+/** @jsxImportSource @emotion/react */
+import { css } from '@emotion/react';
+import { useState } from 'react';
 import config from '../../../config';
-import styles from './styles';
+import layout from '../../../styles/layouts/constraints';
+import { colors } from '../../../styles/theme/colors';
+import { typography } from '../../../styles/theme/typography';
+
 
 function UserMenu({ user }) {
   const [showDropdown, setShowDropdown] = useState(false);

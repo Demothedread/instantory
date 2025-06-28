@@ -7,8 +7,10 @@ import About from './pages/About';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import DocumentsView from './pages/DocumentsView';
+import EnhancedHomePage from './pages/EnhancedHome';
+import EnhancedLandingPage from './pages/EnhancedLanding';
+import InventoryView from './pages/InventoryView';
 import Kaboodles from './pages/Kaboodles';
-import LandingPage from './pages/Landing';
 import MediaHub from './pages/MediaHub';
 import NotFound from './pages/NotFound';
 import ProcessingHub from './pages/ProcessingHub';
@@ -16,7 +18,6 @@ import Resources from './pages/Resources';
 import Search from './pages/Search';
 import Terms from './pages/Terms';
 import Upload from './pages/Upload';
-import InventoryView from './pages/InventoryView';
 // Auth components
 import LoginOverlay from './components/auth/LoginOverlay';
 import HowToUseOverlay from './components/common/HowToUseOverlay';
@@ -153,7 +154,8 @@ function App() {
 
           <Routes>
             {/* Public routes */}
-            <Route path="/" element={!user ? <LandingPage /> : <Navigate to="/dashboard" />} />
+            <Route path="/" element={!user ? <EnhancedLandingPage /> : <Navigate to="/home" />} />
+            <Route path="/home" element={user ? <EnhancedHomePage /> : <Navigate to="/" />} />
             <Route path="/about" element={<About />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/auth-callback" element={<AuthCallback />} />
