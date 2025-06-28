@@ -9,11 +9,6 @@
     "REACT_APP_GOOGLE_CLIENT_ID": "700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com",
     "REACT_APP_PRODUCTION_DOMAIN": "hocomnia.com"
   },
-  "functions": {
-    "build/static/js/*.js": {
-      "maxDuration": 30
-    }
-  },
   "headers": [
     {
       "headers": [
