@@ -5,7 +5,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python -c "import os; os.environ['RENDER'] = 'true'; import backend.server; backend.server.main()"
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 60 --worker-class=uvicorn.workers.UvicornWorker backend.server:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0

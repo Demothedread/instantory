@@ -4,6 +4,39 @@ import { authConfig, googleClientId, googleClientSecret } from './auth';
 const environment = process.env.NODE_ENV || 'production';
 const apiUrl = process.env.REACT_APP_BACKEND_URL || 'https://bartleby-backend-mn96.onrender.com';
 
+// Dynamic domain configuration from environment variables
+const productionDomain = process.env.REACT_APP_PRODUCTION_DOMAIN || 'hocomnia.com';
+const frontendUrl = process.env.REACT_APP_FRONTEND_URL || 'https://hocomnia.com';
+const backendUrl = process.env.REACT_APP_BACKEND_URL || 'https://bartleby-backend-mn96.onrender.com';
+
+// Build allowed origins dynamically from environment variables
+const buildAllowedOrigins = () => {
+  const baseOrigins = [
+    'http://localhost:3000', // Always allow localhost for development
+    'http://localhost:5001'  // Test environment
+  ];
+
+  // Add production domains from environment variables
+  if (productionDomain) {
+    baseOrigins.push(`https://${productionDomain}`);
+    baseOrigins.push(`https://www.${productionDomain}`);
+  }
+
+  // Add frontend and backend URLs if provided
+  if (frontendUrl) baseOrigins.push(frontendUrl);
+  if (backendUrl) baseOrigins.push(backendUrl);
+
+  // Add any additional origins from environment variable (comma-separated)
+  const additionalOrigins = process.env.REACT_APP_ADDITIONAL_ORIGINS;
+  if (additionalOrigins) {
+    const extraOrigins = additionalOrigins.split(',').map(origin => origin.trim());
+    baseOrigins.push(...extraOrigins);
+  }
+
+  // Remove duplicates and filter out empty strings
+  return [...new Set(baseOrigins.filter(Boolean))];
+};
+
 // Environment-specific settings
 const environments = {
   development: {
@@ -54,26 +87,24 @@ const config = {
     }
   },
   
-  // Domain configuration
+  // Domain configuration - now dynamic
   domains: {
-    main: 'hocomnia.com',
-    allowedOrigins: [
-      'https://hocomnia.com',
-      'https://www.hocomnia.com',
-      'https://bartleby-backend-mn96.onrender.com',
-      'https://bartleby-frontend.onrender.com',
-      'http://localhost:3000'
-    ]
+    main: productionDomain,
+    frontend: frontendUrl,
+    backend: backendUrl,
+    allowedOrigins: buildAllowedOrigins()
   },
   
-  // Google Sign-In configuration
+  // Google Sign-In configuration with dynamic redirect URI
   googleSignIn: {
     enabled: true,
     clientId: googleClientId,
     cookiePolicy: 'single_host_origin',
     fetchBasicProfile: true,
-    uxMode: 'redirect', // Changed to redirect for consistent cross-origin behavior
-    accessType: 'offline'
+    uxMode: 'redirect',
+    accessType: 'offline',
+    // Dynamic redirect URI based on environment
+    redirectUri: process.env.REACT_APP_GOOGLE_REDIRECT_URI || `${frontendUrl}/auth/callback`
   },
   
   // Storage configuration
@@ -86,6 +117,8 @@ const config = {
 if (!config.isProduction) {
   console.log(`Running in ${environment} mode with API URL: ${config.apiUrl}`);
   console.log(`Using Google Client ID: ${googleClientId}`);
+  console.log(`Allowed CORS origins:`, config.domains.allowedOrigins);
+  console.log(`Google redirect URI: ${config.googleSignIn.redirectUri}`);
 }
 
 export default config;
