@@ -1,6 +1,6 @@
 import { css, keyframes } from '@emotion/react';
 import { GoogleLogin } from '@react-oauth/google';
-import { useContext, useEffect, useState, useRef, Suspense } from 'react';
+import { Suspense, useContext, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../contexts/auth/index';
 import { colors } from '../styles/theme/colors';
@@ -771,28 +771,32 @@ const styles = {
       cursor: not-allowed;
     }
   `,
+};
 
-  // 📱 RESPONSIVE ADAPTATIONS
-  '@container (max-width: 1200px)': css`
-    ${styles.capabilityGrid} {
+// 📱 RESPONSIVE STYLES - Separate to avoid circular references
+const responsiveStyles = {
+  capabilityGridLarge: css`
+    @container (max-width: 1200px) {
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 2rem;
     }
   `,
-
-  '@container (max-width: 768px)': css`
-    ${styles.heroSanctum} {
-      padding: 2rem 0;
-    }
-    
-    ${styles.actionPortals} {
-      flex-direction: column;
-      align-items: center;
-    }
-    
-    ${styles.capabilityGrid} {
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
+  
+  mobileAdaptations: css`
+    @container (max-width: 768px) {
+      &.hero-sanctum {
+        padding: 2rem 0;
+      }
+      
+      &.action-portals {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      &.capability-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
     }
   `,
 };
@@ -846,7 +850,7 @@ const useIntersectionObserver = (options = {}) => {
     }
 
     return () => observer.disconnect();
-  }, []);
+  }, [options]);
 
   return [targetRef, isIntersecting];
 };
@@ -983,7 +987,7 @@ const UltimateNeoDecoLanding = () => {
         <div css={styles.contentStage}>
           
           {/* 👑 Hero Sanctum */}
-          <section css={styles.heroSanctum}>
+          <section css={[styles.heroSanctum, responsiveStyles.mobileAdaptations]} className="hero-sanctum">
             <div>
               {/* 🖼️ Mascot Reliquary */}
               <div css={styles.mascotReliquary}>
@@ -1011,7 +1015,7 @@ const UltimateNeoDecoLanding = () => {
               </div>
 
               {/* 🚀 Action Portals */}
-              <div css={styles.actionPortals}>
+              <div css={[styles.actionPortals, responsiveStyles.mobileAdaptations]} className="action-portals">
                 <Link 
                   to={user ? "/home" : "#auth"} 
                   css={[styles.portalButton, styles.primaryPortal]}
@@ -1034,7 +1038,7 @@ const UltimateNeoDecoLanding = () => {
               Intelligence Capabilities
             </h2>
             
-            <div css={styles.capabilityGrid}>
+            <div css={[styles.capabilityGrid, responsiveStyles.capabilityGridLarge, responsiveStyles.mobileAdaptations]} className="capability-grid">
               {capabilities.map((capability, index) => (
                 <CapabilityCard 
                   key={index}
