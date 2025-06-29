@@ -15,7 +15,7 @@ from tenacity import retry, wait_random_exponential, stop_after_attempt
 from .base_processor import BaseProcessor
 from backend.config.logging import log_config
 from backend.config.storage import get_storage_config
-from ..storage.config import storage_config
+
 
 logger = log_config.get_logger(__name__)
 storage = get_storage_config()
@@ -85,13 +85,11 @@ class ImageProcessor(BaseProcessor):
                 img.thumbnail(self.MAX_SIZE, Image.Resampling.LANCZOS)
                 
                 # Generate new filename with timestamp
-                new_filename = "f{timestamp}_{source_path.stem}.jpg"
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                new_filename = f"{timestamp}_{source_path.stem}.jpg"
                 
                 # Get the base directory path for inventory images
-                # Assuming storage_config provides a way to get the directory path,
-                # e.g., via a method like get_directory or direct access like paths['...']
-                # Using get_directory as a placeholder for the correct method/access pattern.
-                inventory_dir = storage_config.get_path('INVENTORY_IMAGES_DIR')
+                inventory_dir = get_storage_config().paths['INVENTORY_IMAGES_DIR']
                 # Combine the directory path with the new filename
                 dest_path = inventory_dir / new_filename
                 
@@ -117,7 +115,7 @@ class ImageProcessor(BaseProcessor):
     async def _check_image_exists(self, conn: asyncpg.Connection, image_path: Path) -> bool:
         """Check if image already exists in database."""
         try:
-            result = await conn.fetch.val(
+            result = await conn.fetchval(
                 "SELECT EXISTS(SELECT 1 FROM products WHERE image_url = $1)",
                 str(image_path)
             )

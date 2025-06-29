@@ -30,14 +30,23 @@ def is_origin_allowed(origin: str, allowed_origins: List[str]) -> bool:
             # Extract the domain part after the asterisk
             domain_suffix = allowed_origin.replace("https://*.", "")
             # Check if the origin ends with this domain suffix
-            if origin.startswith("https://") and origin.endswith(domain_suffix):
+            if origin.startswith("https://") and origin.endswith(f".{domain_suffix}"):
                 return True
             
-    # Special case for hocomnia.com with subdomains
-    if origin.endswith("hocomnia.com") and origin.startswith("https://"):
+    # Enhanced hocomnia.com support - allow all subdomains and the main domain
+    if origin.startswith("https://") and (
+        origin == "https://hocomnia.com" or
+        origin == "https://www.hocomnia.com" or
+        origin.endswith(".hocomnia.com")
+    ):
         return True
 
-    if origin.startswith("https://hocomnia.com"):
+    # Support for Vercel preview deployments
+    if origin.startswith("https://") and ".vercel.app" in origin:
+        return True
+
+    # Support for localhost development
+    if origin.startswith("http://localhost") or origin.startswith("https://localhost"):
         return True
 
     return False

@@ -13,7 +13,7 @@ try:
     # Try relative imports first
     from backend.config.database import get_metadata_pool, get_vector_pool
 
-    from ...config.storage import StorageType, storage_config
+ 
     from ...services.vector.qdrant_service import get_qdrant_service
     from .s3 import s3_service
     from .vercel_blob import vercel_blob_service

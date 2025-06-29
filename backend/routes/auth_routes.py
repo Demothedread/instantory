@@ -594,9 +594,30 @@ async def google_login():
         return jsonify({"error": "Authentication failed", "details": str(e)}), 500
 
 
-@auth_bp.route("/google/callback", methods=["GET"])
+@auth_bp.route("/google/callback", methods=["GET", "OPTIONS"])
 async def google_callback():
     """Handle Google OAuth callback."""
+    # Handle preflight OPTIONS request
+    if request.method == "OPTIONS":
+        origin = request.headers.get("Origin")
+        if origin and (
+            origin == "https://hocomnia.com" or
+            origin == "https://www.hocomnia.com" or
+            origin.endswith(".hocomnia.com") or
+            "vercel.app" in origin or
+            "localhost" in origin
+        ):
+            headers = {
+                "Access-Control-Allow-Origin": origin,
+                "Access-Control-Allow-Methods": "GET, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin, X-Requested-With",
+                "Access-Control-Allow-Credentials": "true",
+                "Access-Control-Max-Age": "3600",
+            }
+            return "", 204, headers
+        else:
+            return "", 403
+
     try:
         # Get the code parameter
         code = request.args.get("code")
