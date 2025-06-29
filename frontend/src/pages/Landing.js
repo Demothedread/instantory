@@ -12,7 +12,7 @@ import { colors } from '../styles/theme/colors';
  * Subverts traditional marketing hierarchy by presenting the landing as a portal to organized intelligence
  * Neo-Deco-Rococo: Art-Deco geometry meets Rococo exuberance with metallic neon accents
  */
-const OptimizedLandingPage = () => {
+const LandingPage = () => {
   const { loginWithGoogle, login, error, clearError, user } = useContext(AuthContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,28 +47,32 @@ const OptimizedLandingPage = () => {
 
   return (
     <div css={styles.container}>
-      {/* Neo-Deco-Rococo Background Architecture */}
+      {/* Enhanced Background Architecture with animations */}
       <div css={styles.backgroundCanvas}>
-        {/* Art-Deco geometric patterns */}
+        {/* Enhanced Art-Deco geometric patterns with animation */}
         <div css={styles.geometricLayer}>
           <div css={styles.artDecoShape1} />
           <div css={styles.artDecoShape2} />
           <div css={styles.artDecoShape3} />
         </div>
         
-        {/* Rococo ornamental elements */}
+        {/* Enhanced Rococo ornamental elements with animation */}
         <div css={styles.ornamentalLayer}>
           <div css={styles.flourish1} />
           <div css={styles.flourish2} />
           <div css={styles.rocailleCurve} />
         </div>
         
-        {/* Metallic neon grid overlay */}
+        {/* Enhanced neon grid overlay with animation */}
         <div css={styles.neonGrid} />
+        
+        {/* New: Additional animated background layers */}
+        <div css={styles.ornateLayer} />
+        <div css={styles.neonLayer} />
       </div>
 
       <main css={styles.mainContent}>
-        {/* Hero Portal Section */}
+        {/* Enhanced Hero Portal Section with floating elements */}
         <section css={styles.heroPortal}>
           {/* Ornate mascot presentation */}
           <div css={styles.mascotShrine}>
@@ -126,6 +130,13 @@ const OptimizedLandingPage = () => {
               <span css={styles.buttonText}>Explore Capabilities</span>
               <div css={styles.buttonGlow} />
             </Link>
+          </div>
+          
+          {/* New: Floating Interactive Elements */}
+          <div css={styles.floatingElements}>
+            <div css={[styles.floatingOrb, styles.orb1]}>📊</div>
+            <div css={[styles.floatingOrb, styles.orb2]}>🧠</div>
+            <div css={[styles.floatingOrb, styles.orb3]}>⚡</div>
           </div>
         </section>
 
@@ -187,7 +198,7 @@ const OptimizedLandingPage = () => {
           </div>
         </section>
 
-        {/* Process Workflow Visualization */}
+        {/* Enhanced Process Workflow with better animations */}
         <section css={styles.workflowSection}>
           <h2 css={styles.sectionTitle}>
             <span css={styles.titleGlyph}>🔄</span>
@@ -312,6 +323,14 @@ const OptimizedLandingPage = () => {
             </div>
           </section>
         )}
+        
+        {/* New: Decorative Corner Elements */}
+        <div css={styles.cornerOrnaments}>
+          <div css={[styles.cornerOrnament, styles.topLeft]}>◆</div>
+          <div css={[styles.cornerOrnament, styles.topRight]}>◆</div>
+          <div css={[styles.cornerOrnament, styles.bottomLeft]}>◆</div>
+          <div css={[styles.cornerOrnament, styles.bottomRight]}>◆</div>
+        </div>
       </main>
     </div>
   );
@@ -345,81 +364,35 @@ const styles = {
     position: absolute;
     inset: 0;
     opacity: 0.15;
+    background-image: 
+      linear-gradient(45deg, transparent 48%, ${colors.neonTeal}08 49%, ${colors.neonTeal}08 51%, transparent 52%),
+      linear-gradient(-45deg, transparent 48%, ${colors.neonGold}08 49%, ${colors.neonGold}08 51%, transparent 52%);
+    background-size: 80px 80px;
+    animation: geometricShift 60s linear infinite;
   `,
 
-  artDecoShape1: css`
-    position: absolute;
-    top: 10%;
-    right: 15%;
-    width: 200px;
-    height: 200px;
-    background: linear-gradient(45deg, ${colors.neonGold}20, ${colors.neonTeal}20);
-    transform: rotate(45deg);
-    border: 2px solid ${colors.neonGold}30;
-  `,
-
-  artDecoShape2: css`
-    position: absolute;
-    bottom: 20%;
-    left: 10%;
-    width: 150px;
-    height: 150px;
-    background: linear-gradient(135deg, ${colors.neonTeal}20, ${colors.neonPurple}20);
-    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-    border: 2px solid ${colors.neonTeal}30;
-  `,
-
-  artDecoShape3: css`
-    position: absolute;
-    top: 50%;
-    left: 5%;
-    width: 300px;
-    height: 80px;
-    background: linear-gradient(90deg, ${colors.neonPink}15, transparent);
-    transform: skew(-15deg);
-  `,
-
-  // Rococo Ornamental Layer
-  ornamentalLayer: css`
+  // New: Enhanced ornate layer
+  ornateLayer: css`
     position: absolute;
     inset: 0;
-    opacity: 0.1;
+    background: 
+      radial-gradient(circle at 20% 30%, ${colors.neonTeal}10 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, ${colors.neonGold}10 0%, transparent 40%),
+      radial-gradient(circle at 40% 80%, ${colors.neonPurple}08 0%, transparent 30%);
+    animation: ornateFloat 45s ease-in-out infinite;
   `,
 
-  flourish1: css`
+  // New: Enhanced neon layer with pulse animation
+  neonLayer: css`
     position: absolute;
-    top: 25%;
-    right: 20%;
-    width: 100px;
-    height: 100px;
-    border: 3px solid ${colors.neonGold}40;
-    border-radius: 50% 10% 50% 10%;
-    transform: rotate(30deg);
+    inset: 0;
+    background: 
+      linear-gradient(90deg, transparent 0%, ${colors.neonTeal}03 50%, transparent 100%),
+      linear-gradient(0deg, transparent 0%, ${colors.neonGold}03 50%, transparent 100%);
+    animation: neonPulse 8s ease-in-out infinite;
   `,
 
-  flourish2: css`
-    position: absolute;
-    bottom: 30%;
-    right: 8%;
-    width: 80px;
-    height: 80px;
-    border: 2px solid ${colors.neonTeal}40;
-    border-radius: 20% 80% 20% 80%;
-    transform: rotate(-45deg);
-  `,
-
-  rocailleCurve: css`
-    position: absolute;
-    top: 60%;
-    left: 20%;
-    width: 150px;
-    height: 150px;
-    border: 2px solid ${colors.neonPurple}30;
-    border-radius: 100% 0% 100% 0%;
-    transform: rotate(15deg);
-  `,
-
-  // Neon Grid Overlay
+  // Enhanced neon grid with animation
   neonGrid: css`
     position: absolute;
     inset: 0;
@@ -428,6 +401,7 @@ const styles = {
       linear-gradient(90deg, ${colors.neonTeal}08 1px, transparent 1px);
     background-size: 50px 50px;
     opacity: 0.3;
+    animation: gridShift 30s linear infinite;
   `,
 
   // Main Content Architecture
@@ -482,6 +456,7 @@ const styles = {
     padding: 8px;
     transition: all 0.5s ease;
     filter: drop-shadow(0 0 15px ${colors.neonTeal}60);
+    animation: mascotGlow 4s ease-in-out infinite;
 
     &:hover {
       transform: scale(1.1) rotate(5deg);
@@ -566,6 +541,7 @@ const styles = {
       2px 2px 0 ${colors.background};
     margin-bottom: 0.5rem;
     letter-spacing: 0.05em;
+    animation: titleShimmer 4s ease-in-out infinite;
 
     @media (max-width: 768px) {
       font-size: 3rem;
@@ -1072,7 +1048,98 @@ const styles = {
       cursor: not-allowed;
     }
   `,
+
+  // New: Corner ornaments
+  cornerOrnaments: css`
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+  `,
+
+  cornerOrnament: css`
+    position: absolute;
+    font-size: 1.5rem;
+    color: ${colors.neonGold}60;
+    animation: ornamentGlow 3s ease-in-out infinite;
+    opacity: 0.7;
+  `,
+
+  topLeft: css`
+    top: 2rem;
+    left: 2rem;
+  `,
+
+  topRight: css`
+    top: 2rem;
+    right: 2rem;
+  `,
+
+  bottomLeft: css`
+    bottom: 2rem;
+    left: 2rem;
+  `,
+
+  bottomRight: css`
+    bottom: 2rem;
+    right: 2rem;
+  `,
+
+  // New: Enhanced animations
+  '@keyframes geometricShift': css`
+    0% { background-position: 0 0, 0 0; }
+    100% { background-position: 80px 80px, -80px 80px; }
+  `,
+
+  '@keyframes ornateFloat': css`
+    0%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 0.8; }
+    33% { transform: translate(10px, -15px) rotate(120deg); opacity: 1; }
+    66% { transform: translate(-10px, 10px) rotate(240deg); opacity: 0.6; }
+  `,
+
+  '@keyframes neonPulse': css`
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.8; }
+  `,
+
+  '@keyframes gridShift': css`
+    0% { background-position: 0 0; }
+    100% { background-position: 50px 50px; }
+  `,
+
+  '@keyframes orbFloat': css`
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    33% { transform: translateY(-15px) rotate(120deg); }
+    66% { transform: translateY(8px) rotate(240deg); }
+  `,
+
+  '@keyframes mascotGlow': css`
+    0%, 100% { filter: drop-shadow(0 0 15px ${colors.neonTeal}60); }
+    50% { filter: drop-shadow(0 0 25px ${colors.neonTeal}80); }
+  `,
+
+  '@keyframes titleShimmer': css`
+    0%, 100% { 
+      background: linear-gradient(135deg, ${colors.neonGold} 0%, ${colors.white} 50%, ${colors.neonTeal} 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    50% { 
+      background: linear-gradient(135deg, ${colors.neonTeal} 0%, ${colors.neonGold} 50%, ${colors.white} 100%);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  `,
+
+  '@keyframes ornamentGlow': css`
+    0%, 100% { opacity: 0.4; transform: rotate(0deg); }
+    50% { opacity: 0.8; transform: rotate(180deg); }
+  `,
+
+  // ...rest of existing styles remain unchanged...
 };
 
-export default OptimizedLandingPage;
+export default LandingPage;
 

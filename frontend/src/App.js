@@ -9,7 +9,7 @@ import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import DocumentsView from './pages/DocumentsView';
 import EnhancedHomePage from './pages/EnhancedHome';
-import EnhancedLandingPage from './pages/EnhancedLanding';
+import EnhancedLandingPage from './pages/UltimateNeoDecoLanding';
 import InventoryView from './pages/InventoryView';
 import Kaboodles from './pages/Kaboodles';
 import MediaHub from './pages/MediaHub';
