@@ -44,8 +44,8 @@ class CORSConfig:
             "Content-Type",
             "Authorization",
             "Accept",
-            "Origin",
-            "Options",
+            # Note: Do not include "Origin" - browsers set this automatically
+            # and including it can cause CORS issues
             "X-Requested-With",
             "Content-Length",
             "Accept-Encoding",
@@ -184,9 +184,11 @@ class SecurityConfig:
             "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
             "Referrer-Policy": "strict-origin-when-cross-origin",
             "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=()",
-            "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' accounts.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' accounts.google.com *.googleapis.com; frame-src accounts.google.com",
+            # Updated CSP to allow Google's GSI styles and improve OAuth compatibility
+            "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' accounts.google.com *.googleapis.com; style-src 'self' 'unsafe-inline' accounts.google.com *.googleapis.com https://fonts.googleapis.com; img-src 'self' data: https:; connect-src 'self' accounts.google.com *.googleapis.com; frame-src accounts.google.com; font-src 'self' https://fonts.gstatic.com",
             "Cross-Origin-Embedder-Policy": "credentialless",
-            "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+            # Adjusted COOP to allow Google OAuth popups and postMessage
+            "Cross-Origin-Opener-Policy": "unsafe-none",
             "Cross-Origin-Resource-Policy": "cross-origin",
         }
 

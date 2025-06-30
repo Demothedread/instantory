@@ -2,7 +2,35 @@
 
 ## Issues Identified and Fixed
 
-### 1. Origin Validation Logic Enhancement
+### 1. Manual Origin Header Setting (NEW FIX)
+**File:** `frontend/src/config/index.js`
+
+**Problem:** The frontend was manually setting the `Origin` header in API requests, which browsers reject and causes "Refused to set unsafe header 'Origin'" errors.
+
+**Fix Applied:**
+- Removed `'Origin': window.location.origin` from the default API headers
+- Added comment explaining that browsers set the Origin header automatically
+
+### 2. Content Security Policy for Google OAuth (NEW FIX)
+**File:** `backend/config/security.py`
+
+**Problem:** The CSP was blocking Google's stylesheets and the Cross-Origin-Opener-Policy was blocking OAuth postMessage calls.
+
+**Fix Applied:**
+- Updated CSP to allow `accounts.google.com *.googleapis.com` for styles
+- Added support for Google Fonts (`https://fonts.googleapis.com`, `https://fonts.gstatic.com`)
+- Changed Cross-Origin-Opener-Policy from `same-origin-allow-popups` to `unsafe-none` to allow OAuth flows
+
+### 3. Origin Header in CORS Configuration (NEW FIX)
+**Files:** `backend/middleware/cors.py` and `backend/config/security.py`
+
+**Problem:** The CORS configuration was including "Origin" in the allowed headers list, which can cause issues since browsers set this automatically.
+
+**Fix Applied:**
+- Removed "Origin" from the allowed headers list in both CORS middleware and security config
+- Added comments explaining why Origin should not be manually specified
+
+### 4. Origin Validation Logic Enhancement
 **File:** `backend/middleware/cors.py` and `backend/config/security.py`
 
 **Problem:** The original origin validation was too restrictive and didn't properly handle:
@@ -17,7 +45,7 @@
   - Vercel preview deployments with `.vercel.app` domain
   - Localhost development (`http://localhost` and `https://localhost`)
 
-### 2. Google OAuth Callback CORS Headers
+### 5. Google OAuth Callback CORS Headers
 **File:** `backend/routes/auth_routes.py`
 
 **Problem:** The Google OAuth callback endpoint didn't properly handle CORS preflight requests (OPTIONS method).
@@ -27,7 +55,7 @@
 - Added custom CORS header handling for preflight requests
 - Enhanced origin validation specifically for OAuth flows
 
-### 3. Cross-Origin Cookie Settings
+### 6. Cross-Origin Cookie Settings
 **File:** `backend/routes/auth_routes.py`
 
 **Problem:** Authentication cookies weren't properly configured for cross-origin use.
@@ -38,7 +66,7 @@
   - `samesite="None"` (allows cross-origin while being secure)
   - `httponly=True` (security best practice)
 
-### 4. Wildcard Domain Support
+### 7. Wildcard Domain Support
 **File:** `backend/middleware/cors.py` and `backend/config/security.py`
 
 **Problem:** Wildcard domain matching was inconsistent.

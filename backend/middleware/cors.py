@@ -114,7 +114,7 @@ def setup_cors(app: Quart) -> Quart:
                                     "Content-Type",
                                     "Authorization",
                                     "Accept",
-                                    "Origin",
+                                    # Note: Do not include "Origin" - browsers set this automatically
                                     "X-Requested-With",
                                     "Content-Length",
                                     "Accept-Encoding",
@@ -159,7 +159,7 @@ def setup_cors(app: Quart) -> Quart:
                     "Content-Type",
                     "Authorization",
                     "Accept",
-                    "Origin",
+                    # Note: Do not include "Origin" - browsers set this automatically
                     "X-Requested-With",
                     "Content-Length",
                     "Accept-Encoding",
@@ -186,7 +186,7 @@ def setup_cors(app: Quart) -> Quart:
                     "Content-Type",
                     "Authorization",
                     "Accept",
-                    "Origin",
+                    # Note: Do not include "Origin" - browsers set this automatically
                     "X-Requested-With",
                     "Content-Length",
                     "Accept-Encoding",

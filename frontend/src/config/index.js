@@ -76,8 +76,9 @@ const config = {
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
-      'Origin': window.location.origin,
       'X-Requested-With': 'XMLHttpRequest'
+      // Note: Do NOT manually set Origin header - browsers set this automatically
+      // and will reject requests that try to override it
     },
     // Common fetch options when not using axios
     fetchOptions: {
