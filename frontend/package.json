@@ -1,8 +1,16 @@
 {
-  "name": "bartleby",
-  "version": "0.2.0",
-  "private": true,
-  "homepage": "/",
+  "browserslist": {
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ],
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ]
+  },
   "dependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "@emotion/react": "^11.11.3",
@@ -23,21 +31,13 @@
     "web-vitals": "^2.1.4"
   },
   "devDependencies": {
-    "@craco/craco": "^7.1.0",
     "@emotion/babel-plugin": "^11.11.0",
     "eslint": "^8.56.0",
     "eslint-config-react-app": "^7.0.1",
     "prettier": "^3.2.5"
   },
-  "scripts": {
-    "dev": "craco start",
-    "start": "craco start",
-    "build": "GENERATE_SOURCEMAP=false craco build",
-    "test": "craco test",
-    "eject": "react-scripts eject",
-    "lint": "eslint src/**/*.{js,jsx}",
-    "format": "prettier --write src/**/*.{js,jsx,css,json}",
-    "vercel-build": "npm run build"
+  "engines": {
+    "node": ">=18.0.0"
   },
   "eslintConfig": {
     "extends": [
@@ -49,19 +49,18 @@
       "neondatabase": "readonly"
     }
   },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  "homepage": "/",
+  "name": "bartleby",
+  "private": true,
+  "scripts": {
+    "build": "GENERATE_SOURCEMAP=false react-scripts build",
+    "dev": "react-scripts start",
+    "eject": "react-scripts eject",
+    "format": "prettier --write src/**/*.{js,jsx,css,json}",
+    "lint": "eslint src/**/*.{js,jsx}",
+    "start": "react-scripts start",
+    "test": "react-scripts test",
+    "vercel-build": "npm run build"
   },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+  "version": "0.2.0"
 }
