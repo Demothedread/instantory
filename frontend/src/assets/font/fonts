@@ -8,9 +8,11 @@
     font-style: normal;
   }
 
- <link rel="stylesheet" href="https://use.typekit.net/fxe1mpz.css">
+<link rel="preconnect" href="https://use.typekit.net">
+<link rel="preconnect" href="https://p.typekit.net" crossorigin>
+<link rel="stylesheet" href="https://use.typekit.net/fxe1mpz.css">
 
- .am-udin {
+.am-udin {
     font-family: "am-udine";
     font-weight: 400;
     font-style: normal;

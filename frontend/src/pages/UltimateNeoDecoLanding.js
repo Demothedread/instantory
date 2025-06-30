@@ -12,28 +12,101 @@ import { colors } from '../styles/theme/colors';
  * Component Genealogy: Classical Pantheon → Art Deco Skyscraper → Digital Metaverse Portal
  * 
  * Design Philosophy:
- * "What if the Library of Alexandria had been designed by Frank Lloyd Wright 
- * and powered by quantum AI in a cyberpunk reality?"
+ * "What if the Library of Alexandria had been designed by Frank Lloyd Wright,
+ * decorated by the court of Versailles, and powered by quantum AI in a cyberpunk reality?"
  * 
- * This component subverts traditional landing page hierarchies by presenting
- * the interface as a living, breathing architectural space where data becomes art.
+ * This component embodies true Neo-Deco-Rococo aesthetics:
+ * - Art Deco: Geometric precision, metallic hues, width-varying lines
+ * - Rococo: Ornamental excess, gaiety, eccentric decorative elements  
+ * - Modern: Depth, transparency, lighting, neon accents
+ * - Foucauldian: Function-first design that subverts web expectations
  * 
  * Key Innovations:
- * - Single-file modular architecture (no file redundancy)
- * - Pure CSS 3D transformations and animations
- * - Intersection Observer-driven reveals
- * - Container query responsive design
- * - Advanced neo-deco-rococo aesthetic implementation
+ * - Mechanical gear loading system with Art Deco styling
+ * - Circle transition animation revealing the main experience
+ * - Clickout overlays for immersive content exploration
+ * - Hidden easter eggs and whimsical interactions
+ * - Cutting-edge web technologies for smooth 60fps performance
  */
 
-// 🎭 ANIMATION KEYFRAMES - The heartbeat of our digital palace
-const pulseGlow = keyframes`
+// 🎭 ANIMATION KEYFRAMES - The mechanical heartbeat of our digital palace
+
+// Art Deco Mechanical Gears Animation
+const mechanicalGears = keyframes`
+  0% { transform: rotate(0deg) scale(1); }
+  100% { transform: rotate(360deg) scale(1); }
+`;
+
+const mechanicalGearsReverse = keyframes`
+  0% { transform: rotate(0deg) scale(1); }
+  100% { transform: rotate(-360deg) scale(1); }
+`;
+
+// Circle Transition (mimicking circlematteline.mp4)
+
+// Enhanced Neo-Deco Pulse with metallic sheen
+const neodecopulse = keyframes`
   0%, 100% { 
-    filter: drop-shadow(0 0 20px currentColor) brightness(1);
+    filter: 
+      drop-shadow(0 0 20px var(--neon-copper)) 
+      brightness(1)
+      hue-rotate(0deg);
     transform: scale(1);
   }
   50% { 
-    filter: drop-shadow(0 0 40px currentColor) brightness(1.2);
+    filter: 
+      drop-shadow(0 0 40px var(--neon-copper)) 
+      brightness(1.3)
+      hue-rotate(15deg);
+    transform: scale(1.02);
+  }
+`;
+
+// Rococo Ornamental Float
+
+// Art Deco Geometric Dance
+
+// Metallic Flow Animation
+
+// 🎨 NEO-DECO-ROCOCO COLOR PALETTE
+const neoDecoColors = {
+  // Art Deco Metallics
+  oxidizedCopper: '#588B8B',
+  darkCopper: '#4A7C7C',
+  coolTitanium: '#B0C4DE', 
+  deepTitanium: '#8FA8CD',
+  platinum: '#E5E4E2',
+  darkPlatinum: '#D3D3D3',
+  
+  // Rococo Base
+  dullBrown: '#8B7355',
+  richBrown: '#A0896B',
+  warmBrown: '#B8956A',
+  
+  // Neon Accents for Contrast
+  neonCopper: '#7FCDCD',
+  neonTitanium: '#C7D9F1',
+  neonGold: '#FFD700',
+  
+  // Modern Enhancement
+  deepCharcoal: '#1a1a1a',
+  softBlack: '#0a0a0a',
+  glassWhite: 'rgba(255, 255, 255, 0.1)',
+  
+  // Transparency Layers
+  copperGlass: 'rgba(88, 139, 139, 0.2)',
+  titaniumGlass: 'rgba(176, 196, 222, 0.2)',
+  brownGlass: 'rgba(139, 115, 85, 0.3)',
+};
+
+// Enhanced animations using new color palette
+const pulseGlow = keyframes`
+  0%, 100% { 
+    filter: drop-shadow(0 0 20px ${neoDecoColors.neonCopper}) brightness(1);
+    transform: scale(1);
+  }
+  50% { 
+    filter: drop-shadow(0 0 40px ${neoDecoColors.neonCopper}) brightness(1.2);
     transform: scale(1.05);
   }
 `;
@@ -76,6 +149,26 @@ const ornateFloat = keyframes`
   }
 `;
 
+// Metallic Flow Animation for Neo-Deco patterns
+const metallicFlow = keyframes`
+  0% { 
+    background-position: 0% 50%;
+    filter: brightness(1) contrast(1) hue-rotate(0deg);
+  }
+  33% { 
+    background-position: 50% 25%;
+    filter: brightness(1.1) contrast(1.05) hue-rotate(30deg);
+  }
+  66% { 
+    background-position: 100% 75%;
+    filter: brightness(1.2) contrast(1.1) hue-rotate(60deg);
+  }
+  100% { 
+    background-position: 0% 50%;
+    filter: brightness(1) contrast(1) hue-rotate(0deg);
+  }
+`;
+
 const dataStreamFlow = keyframes`
   0% { 
     transform: translateX(-100%) scaleY(1);
@@ -111,19 +204,228 @@ const morphicShift = keyframes`
 `;
 
 // 🎨 ADVANCED STYLES - Neo-Deco-Rococo Digital Palace
+
+// 🔧 LOADING GEAR SYSTEM COMPONENT
+const LoadingGearsSystem = () => {
+  return (
+    <div css={loadingStyles.loadingOverlay}>
+      <div css={loadingStyles.gearContainer}>
+        <div css={loadingStyles.mainGear}>
+          <div css={loadingStyles.gearTeeth}></div>
+          <div css={loadingStyles.gearCenter}>
+            <span css={loadingStyles.gearText}>BARTLEBY</span>
+          </div>
+        </div>
+        <div css={loadingStyles.secondaryGear1}>
+          <div css={loadingStyles.gearTeeth}></div>
+        </div>
+        <div css={loadingStyles.secondaryGear2}>
+          <div css={loadingStyles.gearTeeth}></div>
+        </div>
+        <div css={loadingStyles.secondaryGear3}>
+          <div css={loadingStyles.gearTeeth}></div>
+        </div>
+      </div>
+      <div css={loadingStyles.loadingText}>
+        Initializing Intelligence Systems...
+      </div>
+    </div>
+  );
+};
+
+// 🌀 CIRCLE TRANSITION COMPONENT
+const CircleTransition = ({ isVisible, onComplete }) => {
+  useEffect(() => {
+    if (isVisible) {
+      const timer = setTimeout(onComplete, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isVisible, onComplete]);
+
+  return (
+    <div 
+      css={[
+        transitionStyles.circleOverlay,
+        isVisible && transitionStyles.circleAnimating
+      ]}
+    />
+  );
+};
+
+// 🎭 ENHANCED LOADING PALACE
+const LoadingPalace = () => (
+  <div css={css`
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(135deg, ${neoDecoColors.dullBrown}, ${neoDecoColors.richBrown});
+    color: ${neoDecoColors.platinum};
+  `}>
+    <LoadingGearsSystem />
+  </div>
+);
+
+const loadingStyles = {
+  loadingOverlay: css`
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, 
+      ${neoDecoColors.dullBrown} 0%, 
+      ${neoDecoColors.richBrown} 50%, 
+      ${neoDecoColors.warmBrown} 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+  `,
+
+  gearContainer: css`
+    position: relative;
+    width: 300px;
+    height: 300px;
+    margin-bottom: 2rem;
+  `,
+
+  mainGear: css`
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 120px;
+    height: 120px;
+    transform: translate(-50%, -50%);
+    animation: ${mechanicalGears} 3s linear infinite;
+    z-index: 4;
+  `,
+
+  secondaryGear1: css`
+    position: absolute;
+    top: 20%;
+    left: 20%;
+    width: 80px;
+    height: 80px;
+    animation: ${mechanicalGearsReverse} 2s linear infinite;
+    z-index: 3;
+  `,
+
+  secondaryGear2: css`
+    position: absolute;
+    top: 20%;
+    right: 20%;
+    width: 60px;
+    height: 60px;
+    animation: ${mechanicalGears} 4s linear infinite;
+    z-index: 2;
+  `,
+
+  secondaryGear3: css`
+    position: absolute;
+    bottom: 20%;
+    left: 30%;
+    width: 70px;
+    height: 70px;
+    animation: ${mechanicalGearsReverse} 2.5s linear infinite;
+    z-index: 2;
+  `,
+
+  gearTeeth: css`
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 4px solid ${neoDecoColors.oxidizedCopper};
+    background: linear-gradient(135deg, 
+      ${neoDecoColors.platinum} 0%,
+      ${neoDecoColors.darkPlatinum} 50%,
+      ${neoDecoColors.oxidizedCopper} 100%);
+    position: relative;
+    box-shadow: 
+      inset 0 0 20px rgba(0,0,0,0.3),
+      0 0 30px ${neoDecoColors.neonCopper}40;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 15%;
+      border-radius: 50%;
+      border: 2px solid ${neoDecoColors.darkCopper};
+      background: ${neoDecoColors.dullBrown};
+    }
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 35%;
+      border-radius: 50%;
+      background: ${neoDecoColors.oxidizedCopper};
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    }
+  `,
+
+  gearCenter: css`
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+  `,
+
+  gearText: css`
+    font-family: 'Farray', 'Georgia', serif;
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: ${neoDecoColors.dullBrown};
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    letter-spacing: 0.1em;
+  `,
+
+  loadingText: css`
+    font-family: 'Farray', 'Georgia', serif;
+    font-size: 1.2rem;
+    color: ${neoDecoColors.platinum};
+    text-align: center;
+    letter-spacing: 0.05em;
+    opacity: 0.9;
+    animation: ${neodecopulse} 2s ease-in-out infinite;
+  `
+};
+
+const transitionStyles = {
+  circleOverlay: css`
+    position: fixed;
+    inset: 0;
+    background: ${neoDecoColors.dullBrown};
+    z-index: 9999;
+    clip-path: circle(150% at 50% 50%);
+    transition: clip-path 1s cubic-bezier(0.4, 0, 0.2, 1);
+  `,
+
+  circleAnimating: css`
+    clip-path: circle(0% at 50% 50%);
+  `
+};
 const styles = {
   // 🏛️ ARCHITECTURAL FOUNDATION
   palazzo: css`
     position: relative;
     min-height: 100vh;
     background: 
-      radial-gradient(ellipse at top, ${colors.neonPurple}20 0%, transparent 50%),
-      radial-gradient(ellipse at bottom left, ${colors.neonTeal}15 0%, transparent 50%),
-      radial-gradient(ellipse at bottom right, ${colors.neonGold}15 0%, transparent 50%),
-      linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 25%, #16213e 50%, #0f1419 75%, #000000 100%);
+      /* Art Deco Metallic Gradients */
+      radial-gradient(ellipse at top, ${neoDecoColors.neonCopper}15 0%, transparent 40%),
+      radial-gradient(ellipse at bottom left, ${neoDecoColors.oxidizedCopper}20 0%, transparent 50%),
+      radial-gradient(ellipse at bottom right, ${neoDecoColors.neonTitanium}10 0%, transparent 50%),
+      /* Rococo Flowing Foundation */
+      linear-gradient(135deg, 
+        ${neoDecoColors.dullBrown} 0%, 
+        ${neoDecoColors.richBrown} 15%, 
+        ${neoDecoColors.deepCharcoal} 35%, 
+        ${neoDecoColors.softBlack} 50%, 
+        ${neoDecoColors.deepCharcoal} 65%,
+        ${neoDecoColors.richBrown} 85%,
+        ${neoDecoColors.warmBrown} 100%);
     overflow-x: hidden;
-    font-family: 'Playfair Display', serif;
-    color: ${colors.textLight};
+    font-family: 'Farray', 'Georgia', serif;
+    color: ${neoDecoColors.platinum};
     
     /* Advanced scroll behavior */
     scroll-behavior: smooth;
@@ -132,17 +434,34 @@ const styles = {
     /* CSS Container Queries Support */
     container-type: inline-size;
     
+    /* Neo-Deco Pattern Overlay inspired by dallesidemotif1.png and side-diamondpattern-blgr.png */
     &::before {
       content: '';
       position: fixed;
       inset: 0;
       background: 
-        linear-gradient(45deg, transparent 49%, ${colors.neonTeal}02 49.5%, ${colors.neonTeal}02 50.5%, transparent 51%),
-        linear-gradient(-45deg, transparent 49%, ${colors.neonGold}02 49.5%, ${colors.neonGold}02 50.5%, transparent 51%);
-      background-size: 80px 80px;
-      animation: ${geometricDance} 120s linear infinite;
+        /* Art Deco Diamond Patterns */
+        linear-gradient(45deg, transparent 48%, ${neoDecoColors.oxidizedCopper}08 48.5%, ${neoDecoColors.oxidizedCopper}08 51.5%, transparent 52%),
+        linear-gradient(-45deg, transparent 48%, ${neoDecoColors.coolTitanium}06 48.5%, ${neoDecoColors.coolTitanium}06 51.5%, transparent 52%),
+        /* Rococo Ornamental Lines */
+        repeating-linear-gradient(90deg, transparent, transparent 60px, ${neoDecoColors.neonGold}02 60px, ${neoDecoColors.neoGold}02 62px);
+      background-size: 120px 120px, 80px 80px, 200px 4px;
+      animation: ${metallicFlow} 120s linear infinite;
       pointer-events: none;
       z-index: 1;
+    }
+    
+    /* Depth and Layering Effect */
+    &::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: 
+        radial-gradient(circle at 25% 25%, ${neoDecoColors.copperGlass} 0%, transparent 50%),
+        radial-gradient(circle at 75% 75%, ${neoDecoColors.titaniumGlass} 0%, transparent 50%);
+      backdrop-filter: blur(0.5px);
+      pointer-events: none;
+      z-index: 2;
     }
   `,
 
@@ -320,7 +639,7 @@ const styles = {
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    animation: ${dataStreamFlow} 8s ease-in-out infinite;
+    animation: ${dataStreamFlow} 20s ease-in-out infinite;
     text-shadow: 0 0 60px ${colors.neonGold}40;
     position: relative;
     
@@ -802,39 +1121,7 @@ const responsiveStyles = {
   `,
 };
 
-// 🧩 LOADING COMPONENT - Suspense fallback
-const LoadingPalace = () => (
-  <div css={css`
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background: ${colors.darkGradient};
-  `}>
-    <div css={css`
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2rem;
-    `}>
-      <div css={css`
-        width: 100px;
-        height: 100px;
-        border: 3px solid ${colors.border};
-        border-top-color: ${colors.neonTeal};
-        border-radius: 50%;
-        animation: ${geometricDance} 2s linear infinite;
-      `} />
-      <p css={css`
-        color: ${colors.neonTeal};
-        font-size: 1.2rem;
-        animation: ${pulseGlow} 2s ease-in-out infinite;
-      `}>
-        Initializing Digital Palace...
-      </p>
-    </div>
-  </div>
-);
+
 
 // 🎯 INTERSECTION OBSERVER HOOK - Scroll-driven animations
 const useIntersectionObserver = (options = {}) => {
@@ -916,6 +1203,30 @@ const UltimateNeoDecoLanding = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // 🎭 Loading and Transition State Management
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [showTransition, setShowTransition] = useState(false);
+  const [showMainContent, setShowMainContent] = useState(false);
+
+  // 🚀 Initialize the app with Neo-Deco loading sequence
+  useEffect(() => {
+    const initializeApp = async () => {
+      // Simulate resource loading and gear animation
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      setIsInitialLoading(false);
+      setShowTransition(true);
+    };
+    
+    initializeApp();
+  }, []);
+
+  // 🌀 Handle transition completion
+  const handleTransitionComplete = () => {
+    setShowTransition(false);
+    setShowMainContent(true);
+  };
 
   // 🎭 Authentication handlers
   const handleEmailLogin = async (e) => {
@@ -974,15 +1285,29 @@ const UltimateNeoDecoLanding = () => {
   ];
 
   return (
-    <Suspense fallback={<LoadingPalace />}>
-      <div css={styles.palazzo}>
-        {/* 🌟 Floating Geometric Elements */}
-        <div css={styles.cosmicGeometry}>
-          <div css={styles.geometricOrb} />
-          <div css={styles.geometricOrb} />
-          <div css={styles.geometricOrb} />
-          <div css={styles.geometricOrb} />
-        </div>
+    <>
+      {/* 🎭 INITIAL LOADING SEQUENCE - Art Deco Gear System */}
+      {isInitialLoading && <LoadingPalace />}
+      
+      {/* 🌀 CIRCLE TRANSITION - Circlematteline.mp4 style reveal */}
+      {showTransition && (
+        <CircleTransition 
+          isVisible={showTransition} 
+          onComplete={handleTransitionComplete}
+        />
+      )}
+      
+      {/* 🏛️ MAIN NEO-DECO-ROCOCO EXPERIENCE */}
+      {(showMainContent || !isInitialLoading) && (
+        <Suspense fallback={<LoadingPalace />}>
+          <div css={styles.palazzo}>
+            {/* 🌟 Floating Geometric Elements */}
+            <div css={styles.cosmicGeometry}>
+              <div css={styles.geometricOrb} />
+              <div css={styles.geometricOrb} />
+              <div css={styles.geometricOrb} />
+              <div css={styles.geometricOrb} />
+            </div>
 
         {/* 🎭 Main Content Stage */}
         <div css={styles.contentStage}>
@@ -994,11 +1319,11 @@ const UltimateNeoDecoLanding = () => {
               <div css={styles.mascotReliquary}>
                 <div css={styles.mascotAvatar}>
                   <img 
-                    src="/assets/1216BartMascotNoBkg/1216BartMascotNoBkg.png"
-                    alt="Bartleby - AI Document Intelligence"
+                    src="/assets/NeonBartlebebyGreen.png"
+                    alt="Bartleby - AI Document Intelligence - Neo-Deco Mascot"
                     onError={(e) => {
                       e.target.style.display = 'none';
-                      e.target.parentNode.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;font-size:3rem;">🏛️</div>';
+                      e.target.parentNode.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;font-size:3rem;color:#7FCDCD;">🏛️</div>';
                     }}
                   />
                 </div>
@@ -1163,6 +1488,8 @@ const UltimateNeoDecoLanding = () => {
         </div>
       </div>
     </Suspense>
+      )}
+    </>
   );
 };
 
