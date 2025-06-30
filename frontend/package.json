@@ -23,15 +23,17 @@
     "web-vitals": "^2.1.4"
   },
   "devDependencies": {
+    "@craco/craco": "^7.1.0",
+    "@emotion/babel-plugin": "^11.11.0",
     "eslint": "^8.56.0",
     "eslint-config-react-app": "^7.0.1",
     "prettier": "^3.2.5"
   },
   "scripts": {
-    "dev": "react-scripts start",
-    "start": "react-scripts start",
-    "build": "GENERATE_SOURCEMAP=false react-scripts build",
-    "test": "react-scripts test",
+    "dev": "craco start",
+    "start": "craco start",
+    "build": "GENERATE_SOURCEMAP=false craco build",
+    "test": "craco test",
     "eject": "react-scripts eject",
     "lint": "eslint src/**/*.{js,jsx}",
     "format": "prettier --write src/**/*.{js,jsx,css,json}",

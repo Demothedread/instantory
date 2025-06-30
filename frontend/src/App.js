@@ -1,3 +1,4 @@
+/** @jsxImportSource @emotion/react */
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import './App.css';
@@ -9,7 +10,6 @@ import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import DocumentsView from './pages/DocumentsView';
 import EnhancedHomePage from './pages/EnhancedHome';
-import EnhancedLandingPage from './pages/UltimateNeoDecoLanding';
 import InventoryView from './pages/InventoryView';
 import Kaboodles from './pages/Kaboodles';
 import MediaHub from './pages/MediaHub';
@@ -18,19 +18,20 @@ import ProcessingHub from './pages/ProcessingHub';
 import Resources from './pages/Resources';
 import Search from './pages/Search';
 import Terms from './pages/Terms';
+import EnhancedLandingPage from './pages/UltimateNeoDecoLanding';
 import Upload from './pages/Upload';
 
 // Layout components
-import PublicLayout from './components/layouts/PublicLayout';
 import AuthenticatedLayout from './components/layouts/AuthenticatedLayout';
+import PublicLayout from './components/layouts/PublicLayout';
 import ProtectedRoute from './components/routing/ProtectedRoute';
 
 // Other components
-import LoginOverlay from './components/auth/LoginOverlay';
 import { css } from '@emotion/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
-import { colors } from './styles/theme/colors';
+import LoginOverlay from './components/auth/LoginOverlay';
 import { neoDecorocoBase } from './styles/components/neo-decoroco/base';
+import { colors } from './styles/theme/colors';
 
 // Services
 import dataApi from './services/api';
