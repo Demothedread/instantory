@@ -1,6 +1,4 @@
 {
-  "version": 2,
-  "name": "hocomnia",
   "buildCommand": "npm run build",
   "cleanUrls": true,
   "env": {
@@ -18,7 +16,8 @@
         },
         {
           "key": "X-Frame-Options",
-          "value": "DENY"
+          "value": "SAMEORIGIN"
+          // If you use Google OAuth in iframes/popups, consider "SAMEORIGIN" instead of "DENY"
         },
         {
           "key": "X-Content-Type-Options",
@@ -40,6 +39,7 @@
         {
           "key": "Access-Control-Allow-Origin",
           "value": "https://hocomnia.com"
+          // Add "http://localhost:3000" for local dev if needed
         },
         {
           "key": "Access-Control-Allow-Credentials",
@@ -66,6 +66,7 @@
       "source": "/static/(.*)"
     }
   ],
+  "name": "hocomnia",
   "outputDirectory": "build",
   "rewrites": [
     {
@@ -77,5 +78,6 @@
       "source": "/(.*)"
     }
   ],
-  "trailingSlash": false
+  "trailingSlash": false,
+  "version": 2
 }

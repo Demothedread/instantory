@@ -50,6 +50,9 @@ BEGIN
     END IF;
 END $$;
 
+-- Ensure pgcrypto extension is enabled for password hashing
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- Create or update an admin user for testing (optional)
 -- Uncomment and modify this section if you want to create an admin user
 
@@ -65,6 +68,8 @@ BEGIN
     ELSE
         -- Insert will fail if the users table has additional required fields
         -- Modify as needed for your schema
+        -- crypt(password, gen_salt('bf')) hashes the password using bcrypt (Blowfish)
+        -- 'bf' = Blowfish, a secure password hashing algorithm
         INSERT INTO users (email, name, password_hash, is_admin, is_verified, auth_provider)
         VALUES ('admin@example.com', 'Admin User', crypt(admin_password, gen_salt('bf')), TRUE, TRUE, 'admin_override');
         RAISE NOTICE 'Created admin user admin@example.com';

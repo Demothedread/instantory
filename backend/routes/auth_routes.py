@@ -1,6 +1,5 @@
 """Authentication routes and utilities."""
 
-import os
 import logging
 from datetime import datetime, timedelta, timezone
 import jwt
@@ -11,7 +10,6 @@ from functools import wraps
 from typing import Dict, Any
 import urllib.parse
 import aiohttp
-import quart_auth
 from quart import redirect, current_app, Blueprint, request, jsonify
 from quart_auth import (
     QuartAuth,
@@ -30,7 +28,7 @@ try:
     logger.info("Imported GoogleOAuthConfig from security module")
 except ImportError:
     try:
-        from ..config.oauth import GoogleOAuthConfig
+        from backend.config.oauth import GoogleOAuthConfig
         logger = logging.getLogger(__name__)
         logger.info("Imported GoogleOAuthConfig from oauth module")
     except ImportError:
@@ -156,7 +154,7 @@ def verify_token(token: str, expected_type: str) -> dict:
             raise jwt.InvalidTokenError("Invalid token type")
         return payload
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
-        logger.warning(f"Token verification failed: {e}")
+        logger.warning("Token verification failed: %s", e)
         raise
 
 
@@ -209,22 +207,7 @@ def require_auth():
                 request.is_admin = payload.get("is_admin", False)
 
                 return await f(*args, **kwargs)
-            except jwt.ExpiredSignatureError:
-                logger.info("Authentication failed: Token expired")
-                return jsonify({"error": "Token expired", "code": "token_expired"}), 401
-            except jwt.DecodeError:
-                logger.warning("Authentication failed: Token decode error")
-                return (
-                    jsonify({"error": "Invalid token format", "code": "decode_error"}),
-                    401,
-                )
-            except jwt.InvalidTokenError as e:
-                error_type = "invalid_token"
-                if "Invalid token type" in str(e):
-                    error_type = "invalid_token_type"
-                logger.info("Authentication failed: %s - %s", error_type, e)
-                return jsonify({"error": str(e), "code": error_type}), 401
-            except Exception as e:  # pylint: disable=broad-except
+            except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, ValueError) as e:
                 logger.warning("Authentication middleware error: %s", e)
                 return (
                     jsonify({"error": "Authentication failed", "code": "auth_error"}),
@@ -253,6 +236,9 @@ def require_admin():
                     return jsonify({"error": "Admin privileges required"}), 403
 
                 return await f(*args, **kwargs)
+            except (jwt.ExpiredSignatureError, jwt.InvalidTokenError, ValueError) as e:
+                logger.warning("Admin middleware error: %s", e)
+                return jsonify({"error": "Admin privileges required"}), 403
             except Exception as e:
                 logger.warning(f"Admin middleware error: {e}")
                 return jsonify({"error": "Admin privileges required"}), 403
@@ -323,7 +309,7 @@ async def upsert_user(
     google_id: str = None,
     is_verified: bool = False,
 ):
-    """Create or update a user based on email or google_id."""
+    """Create or update a user based on email or google_id. Returns user dict and is_new_user flag."""
     pool = await get_db_pool()
     async with pool.acquire() as conn:
         # Check if user exists
@@ -360,14 +346,15 @@ async def upsert_user(
             )
 
             # Fetch updated user
-            return await conn.fetchrow(
+            updated_user = await conn.fetchrow(
                 "SELECT id, email, name, auth_provider, is_verified, is_admin FROM users WHERE id = $1",
                 user["id"],
             )
+            return dict(updated_user), False  # is_new_user = False
 
         else:
             # Create new user
-            return await create_user(
+            new_user = await create_user(
                 email=email,
                 name=name or email.split("@")[0],
                 password_hash=password_hash,
@@ -375,6 +362,7 @@ async def upsert_user(
                 google_id=google_id,
                 is_verified=is_verified,
             )
+            return dict(new_user), True  # is_new_user = True
 
 
 async def log_user_login(user_id: int, login_method: str):
@@ -402,9 +390,9 @@ async def log_user_login(user_id: int, login_method: str):
                     user_id, login_method
                 )
 
-    except Exception as e:
+    except (ConnectionError, TimeoutError) as e:
         # Non-critical error, just log it and continue
-        logger.warning(f"Failed to log user login: {e}")
+        logger.warning("Failed to log user login: %s", e)
 
 
 async def get_user_data(user_id: int):
@@ -444,8 +432,8 @@ async def get_user_data(user_id: int):
                     last_login["login_timestamp"].isoformat() if last_login else None
                 ),
             }
-    except Exception as e:
-        logger.warning(f"Error fetching user data: {e}")
+    except (ConnectionError, TimeoutError) as e:
+        logger.warning("Error fetching user data: %s", e)
         return {
             "settings": {
                 "theme": "light",
@@ -476,7 +464,7 @@ async def verify_google_token(token: str) -> Dict[str, Any]:
                     "accounts.google.com",
                     "https://accounts.google.com",
                 ]:
-                    logger.warning(f"Invalid issuer: {id_info['iss']}")
+                    logger.warning("Invalid issuer: %s", id_info['iss'])
                     raise ValueError("Invalid token issuer")
 
                 logger.info(
@@ -486,15 +474,15 @@ async def verify_google_token(token: str) -> Dict[str, Any]:
 
             except ValueError as e:
                 # This client ID didn't work, try the next one if available
-                logger.debug(f"Client ID {client_id} verification failed: {e}")
+                logger.debug("Client ID %s verification failed: %s", client_id, e)
                 continue
 
         # If we get here, no client ID worked
         logger.warning("Google token verification failed with all client IDs")
         return None
 
-    except Exception as e:
-        logger.exception(f"Google token verification error: {e}")
+    except (ConnectionError, TimeoutError, ValueError) as e:
+        logger.exception("Google token verification error: %s", e)
         return None
 
 
@@ -523,13 +511,14 @@ async def google_login():
         picture = id_info.get("picture")
 
         # Create or update user
-        user = await upsert_user(
+        user, is_new_user = await upsert_user(
             email=email,
             name=name,
             google_id=google_id,
             auth_provider="google",
             is_verified=True,
         )
+        is_new_user = user.get("created", False)  # You may need to modify upsert_user to return this
 
         # Log login
         await log_user_login(user["id"], "google")
@@ -567,7 +556,7 @@ async def google_login():
         # Optimize cookie settings for cross-origin usage
         # Always secure=True for cross-origin cookies - required by browsers
         # SameSite=None allows cross-origin use while being secure
-        response = jsonify({"authenticated": True, "user": user, "data": user_data})
+        response = jsonify({"authenticated": True, "user": user, "data": user_data, "is_new_user": is_new_user})
 
         # Set cookies with cross-origin compatible settings
         response.set_cookie(
@@ -590,7 +579,7 @@ async def google_login():
         return response
 
     except Exception as e:
-        logger.exception(f"Google login failed: {e}")
+        logger.exception("Google login failed: %s", e)
         return jsonify({"error": "Authentication failed", "details": str(e)}), 500
 
 
@@ -623,12 +612,12 @@ async def google_callback():
         code = request.args.get("code")
         state = request.args.get("state", "")
         
-        logger.info(f"Google callback received: code present: {bool(code)}, state: {state}")
-        logger.info(f"Request headers: {dict(request.headers)}")
+        logger.info("Google callback received: code present: %s, state: %s", bool(code), state)
+        logger.info("Request headers: %s", dict(request.headers))
         
         if not code:
             error = request.args.get("error", "Invalid or missing code")
-            logger.warning(f"Google callback error: {error}")
+            logger.warning("Google callback error: %s", error)
             return redirect(f"{FRONTEND_URL}/login?error={urllib.parse.quote(error)}")
 
         # Exchange the code for tokens
@@ -638,7 +627,7 @@ async def google_callback():
         
         # Fix the redirect_uri to match what's registered with Google
         redirect_uri = GoogleOAuthConfig.get_redirect_uri()
-        logger.info(f"Using redirect URI: {redirect_uri}")
+        logger.info("Using redirect URI: %s", redirect_uri)
         
         async with aiohttp.ClientSession() as session:
             try:
@@ -649,23 +638,23 @@ async def google_callback():
                     "redirect_uri": redirect_uri,
                     "grant_type": "authorization_code",
                 }
-                logger.info(f"Token exchange request data: {token_request_data}")
+                logger.info("Token exchange request data: %s", token_request_data)
                 
                 async with session.post(
                     "https://oauth2.googleapis.com/token",
                     data=token_request_data,
                 ) as response:
                     token_data = await response.json()
-                    logger.info(f"Token exchange response status: {response.status}")
+                    logger.info("Token exchange response status: %s", response.status)
                     
                     if response.status != 200:
-                        logger.error(f"Token exchange error response: {token_data}")
-            except Exception as e:
-                logger.exception(f"Error during token exchange request: {e}")
+                        logger.error("Token exchange error response: %s", token_data)
+            except (aiohttp.ClientError, TimeoutError) as e:
+                logger.exception("Error during token exchange request: %s", e)
                 return redirect(f"{FRONTEND_URL}/login?error=token_exchange_error&details={urllib.parse.quote(str(e))}")
 
         if "error" in token_data:
-            logger.warning(f"Token exchange error: {token_data['error']}")
+            logger.warning("Token exchange error: %s", token_data['error'])
             return redirect(
                 f"{FRONTEND_URL}/login?error={urllib.parse.quote(token_data.get('error'))}&details={urllib.parse.quote(token_data.get('error_description', ''))}"
             )
@@ -687,20 +676,20 @@ async def google_callback():
         google_id = id_info.get("sub")
         picture = id_info.get("picture")
         
-        logger.info(f"User info from Google: email={email}, name={name}, picture={bool(picture)}")
+        logger.info("User info from Google: email=%s, name=%s, picture=%s", email, name, bool(picture))
 
         # Create or update user
         try:
-            user = await upsert_user(
+            user, is_new_user = await upsert_user(
                 email=email,
                 name=name,
                 google_id=google_id,
                 auth_provider="google",
                 is_verified=True,
             )
-            logger.info(f"User created/updated: {user['id']}")
-        except Exception as e:
-            logger.exception(f"Error creating/updating user: {e}")
+            logger.info("User created/updated: %s", user['id'])
+        except (ConnectionError, ValueError) as e:
+            logger.exception("Error creating/updating user: %s", e)
             return redirect(f"{FRONTEND_URL}/login?error=user_creation_failed&details={urllib.parse.quote(str(e))}")
 
         # Create tokens with appropriate expiry
@@ -714,9 +703,9 @@ async def google_callback():
                 "access",
             )
             refresh_token = await create_token({"user_id": user["id"]}, "refresh")
-            logger.info(f"Tokens created for user {user['id']}")
-        except Exception as e:
-            logger.exception(f"Error creating tokens: {e}")
+            logger.info("Tokens created for user %s", user['id'])
+        except (jwt.InvalidTokenError, ValueError) as e:
+            logger.exception("Error creating tokens: %s", e)
             return redirect(f"{FRONTEND_URL}/login?error=token_creation_failed&details={urllib.parse.quote(str(e))}")
 
         # Redirect to frontend with tokens
@@ -728,20 +717,21 @@ async def google_callback():
         # Encode tokens for URL
         encoded_access = urllib.parse.quote(access_token)
         encoded_refresh = urllib.parse.quote(refresh_token)
-        
-        final_redirect_url = f"{FRONTEND_URL}{redirect_path}?access_token={encoded_access}&refresh_token={encoded_refresh}&auth_success=true"
-        logger.info(f"Redirecting to frontend: {FRONTEND_URL}{redirect_path} with tokens")
+        # Add is_new_user to the redirect URL
+        is_new_user_str = "true" if is_new_user else "false"
+        final_redirect_url = f"{FRONTEND_URL}{redirect_path}?access_token={encoded_access}&refresh_token={encoded_refresh}&auth_success=true&is_new_user={is_new_user_str}"
+        logger.info("Redirecting to frontend: %s%s with tokens", FRONTEND_URL, redirect_path)
         
         return redirect(final_redirect_url)
 
-    except Exception as e:
-        logger.exception(f"Google callback error: {e}")
+    except (ConnectionError, ValueError, aiohttp.ClientError) as e:
+        logger.exception("Google callback error: %s", e)
         return redirect(f"{FRONTEND_URL}/login?error={urllib.parse.quote(str(e))}")
 
 
 @auth_bp.route("/refresh", methods=["POST"])
 async def refresh_token_route():
-    """Refresh an expired access token using a valid refresh token."""
+    """Refresh an expired access token using a valid refresh token.""
     try:
         # Check for refresh token in cookies or request body
         refresh_token = request.cookies.get("refresh_token")
@@ -809,12 +799,12 @@ async def refresh_token_route():
         )
 
         return response
-    except jwt.ExpiredSignatureError:
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError) as e:
         return jsonify({"error": "Refresh token expired", "code": "token_expired"}), 401
     except jwt.InvalidTokenError as e:
         return jsonify({"error": str(e), "code": "invalid_token"}), 401
     except Exception as e:
-        logger.exception(f"Token refresh failed: {e}")
+        logger.exception("Token refresh failed: %s", e)
         return jsonify({"error": "Authentication failed", "code": "auth_error"}), 500
 
 
@@ -850,7 +840,7 @@ async def logout():
 
         return response
     except Exception as e:
-        logger.exception(f"Logout failed: {e}")
+        logger.exception("Logout failed: %s", e)
         return jsonify({"error": "Logout failed", "details": str(e)}), 500
 
 
@@ -940,7 +930,7 @@ async def register():
             return response
 
     except Exception as e:
-        logger.exception(f"Registration failed: {e}")
+        logger.exception("Registration failed: %s", e)
         return jsonify({"error": "Registration failed", "details": str(e)}), 500
 
 
@@ -1016,7 +1006,7 @@ async def login():
         return response
 
     except Exception as e:
-        logger.exception(f"Login failed: {e}")
+        logger.exception("Login failed: %s", e)
         return jsonify({"error": "Authentication failed", "details": str(e)}), 500
 
 
@@ -1074,8 +1064,17 @@ async def check_session():
         logger.exception(f"Session check failed: {e}")
         return jsonify({"authenticated": False, "error": str(e)}), 500
 
+
 @auth_bp.route("/sessions", methods=["GET"])
 async def check_sessions():
     """Check if the user has a valid session (plural endpoint for compatibility)."""
     # This is just an alias for the /session endpoint to handle both /session and /sessions
     return await check_session()
+            "user": dict(user),
+            "data": user_data
+        })
+
+    except Exception as e:
+        logger.exception(f"Session check failed: {e}")
+        return jsonify({"authenticated": False, "error": str(e)}), 500
+
