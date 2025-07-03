@@ -1,7 +1,9 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run vercel-build",
   "cleanUrls": true,
   "env": {
+    "GENERATE_SOURCEMAP": "false",
+    "DISABLE_ESLINT_PLUGIN": "true",
     "REACT_APP_BACKEND_URL": "https://bartleby-backend-mn96.onrender.com",
     "REACT_APP_FRONTEND_URL": "https://hocomnia.com",
     "REACT_APP_GOOGLE_CLIENT_ID": "700638306537-27jsc5c64hrjq6153mc5fll6prmgef4o.apps.googleusercontent.com",
@@ -17,7 +19,6 @@
         {
           "key": "X-Frame-Options",
           "value": "SAMEORIGIN"
-          // If you use Google OAuth in iframes/popups, consider "SAMEORIGIN" instead of "DENY"
         },
         {
           "key": "X-Content-Type-Options",
@@ -33,28 +34,6 @@
         }
       ],
       "source": "/(.*)"
-    },
-    {
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "https://hocomnia.com"
-          // Add "http://localhost:3000" for local dev if needed
-        },
-        {
-          "key": "Access-Control-Allow-Credentials",
-          "value": "true"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, Accept, Origin, X-Requested-With, google-oauth-token, google-client-id"
-        }
-      ],
-      "source": "/api/(.*)"
     },
     {
       "headers": [

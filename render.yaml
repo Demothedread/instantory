@@ -77,6 +77,12 @@ services:
         value: "true"
       - key: PYTHONPATH
         value: "."
+      - key: BACKEND_URL
+        value: "https://bartleby-backend-mn96.onrender.com"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: NODE_ENV
+        value: "production"
 
 # Free Postgres database
 databases:

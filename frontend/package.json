@@ -53,14 +53,14 @@
   "name": "bartleby",
   "private": true,
   "scripts": {
-    "build": "GENERATE_SOURCEMAP=false react-scripts build",
+    "build": "GENERATE_SOURCEMAP=false DISABLE_ESLINT_PLUGIN=true react-scripts build",
     "dev": "react-scripts start",
     "eject": "react-scripts eject",
     "format": "prettier --write src/**/*.{js,jsx,css,json}",
     "lint": "eslint src/**/*.{js,jsx}",
     "start": "react-scripts start",
     "test": "react-scripts test",
-    "vercel-build": "npm run build"
+    "vercel-build": "GENERATE_SOURCEMAP=false DISABLE_ESLINT_PLUGIN=true npm run build"
   },
   "version": "0.2.0"
 }

@@ -82,12 +82,35 @@ export const dataApi = {
 
 // Enhanced error handling interceptor - improve debugging of authentication errors
 api.interceptors.response.use(
-  response => response,
+  response => {
+    // Log successful responses in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`API Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`);
+    }
+    return response;
+  },
   error => {
+    // Detailed error logging for debugging
+    console.group('🚨 API Error Details');
+    console.error('Error:', error.message);
+    console.error('Status:', error.response?.status);
+    console.error('URL:', error.config?.url);
+    console.error('Method:', error.config?.method?.toUpperCase());
+    console.error('Request Origin:', window.location.origin);
+    console.error('API Base URL:', config.apiUrl);
+    
+    if (error.response?.data) {
+      console.error('Response Data:', error.response.data);
+    }
+    
+    if (error.config?.headers) {
+      console.error('Request Headers:', error.config.headers);
+    }
+    console.groupEnd();
+
     // Authentication errors
     if (error.response?.status === 401) {
-      // Could be handled with a central auth state manager to trigger re-login
-      console.warn('Authentication error: User session may have expired');
+      console.warn('🔒 Authentication error: User session may have expired');
       
       // Emit custom event for auth error (can be handled by auth context)
       const authErrorEvent = new CustomEvent('auth:error', { 
@@ -98,13 +121,30 @@ api.interceptors.response.use(
     
     // Handle CORS errors specially since they're common in cross-origin auth
     if (error.message && error.message.includes('Network Error')) {
-      console.error('CORS error detected - verify CORS configuration on both frontend and backend');
+      console.error('🌐 CORS error detected - verify CORS configuration');
       console.error(`Frontend origin: ${window.location.origin}`);
       console.error(`API URL: ${config.apiUrl}`);
-      console.error('Request details:', error.config);
+      console.error(`Expected CORS origin: https://hocomnia.com`);
       
-      // Make the error message more user-friendly
-      error.userMessage = 'Unable to connect to the server. This may be due to CORS restrictions or network issues.';
+      // Check if this might be a source map issue masking the real error
+      if (error.config?.url?.includes('.map')) {
+        console.warn('⚠️ This error may be related to source map loading, not the actual API call');
+        error.userMessage = 'Source map loading error (this may not affect functionality)';
+      } else {
+        error.userMessage = 'Unable to connect to the server. Please check your connection and try again.';
+      }
+    }
+    
+    // Handle specific authentication flow errors
+    if (error.response?.status === 403) {
+      console.warn('🚫 Access forbidden - insufficient permissions');
+      error.userMessage = 'Access denied. You may not have permission for this action.';
+    }
+    
+    // Handle server errors
+    if (error.response?.status >= 500) {
+      console.error('🔥 Server error detected');
+      error.userMessage = 'Server error. Please try again later.';
     }
     
     return Promise.reject(error);
