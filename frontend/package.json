@@ -62,7 +62,7 @@
     "lint": "eslint src/**/*.{js,jsx}",
     "start": "craco start",
     "test": "craco test",
-    "vercel-build": "GENERATE_SOURCEMAP=false DISABLE_ESLINT_PLUGIN=true npm run build"
+    "vercel-build": "GENERATE_SOURCEMAP=false DISABLE_ESLINT_PLUGIN=true craco build"
   },
   "version": "0.2.0"
 }
