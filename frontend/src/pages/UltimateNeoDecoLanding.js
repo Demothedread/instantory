@@ -1494,4 +1494,3 @@ const UltimateNeoDecoLanding = () => {
 };
 
 export default UltimateNeoDecoLanding;
-export default UltimateNeoDecoLanding;
