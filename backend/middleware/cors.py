@@ -105,9 +105,11 @@ def setup_cors(app: Quart) -> Quart:
             """Handle preflight CORS requests properly for authenticated requests"""
             if request.method == "OPTIONS":
                 origin = request.headers.get("Origin")
+                app.logger.info(f"🔍 CORS Preflight - Origin: {origin}")
 
                 # Only process if we have an origin header
                 if origin and is_origin_allowed(origin, clean_origins):
+                    app.logger.info(f"✅ CORS Preflight - Origin allowed: {origin}")
                     headers = {
                         "Access-Control-Allow-Origin": origin,
                         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
@@ -139,17 +141,41 @@ def setup_cors(app: Quart) -> Quart:
                         "Vary": "Origin",
                     }
                     return "", 204, headers
+                else:
+                    app.logger.warning(
+                        f"❌ CORS Preflight - Origin not allowed: {origin}"
+                    )
 
         @app.after_request
         async def add_cors_headers(response):
             """Add CORS headers to all responses"""
             origin = request.headers.get("Origin")
 
+            # Always log the origin for debugging
+            app.logger.info(
+                f"🔍 CORS Response - Origin: {origin}, Path: {request.path}"
+            )
+
             if origin and is_origin_allowed(origin, clean_origins):
+                app.logger.info(
+                    f"✅ CORS Response - Setting headers for origin: {origin}"
+                )
                 response.headers.set("Access-Control-Allow-Origin", origin)
                 if allow_credentials:
                     response.headers.set("Access-Control-Allow-Credentials", "true")
                 response.headers.set("Vary", "Origin")
+            elif origin:
+                app.logger.warning(f"❌ CORS Response - Origin not allowed: {origin}")
+            else:
+                # For requests without Origin header, still set basic headers
+                app.logger.debug(
+                    "🔍 CORS Response - No Origin header, setting basic headers"
+                )
+                response.headers.set("Access-Control-Allow-Origin", "*")
+                response.headers.set(
+                    "Access-Control-Allow-Methods",
+                    "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+                )
 
             return response
 
