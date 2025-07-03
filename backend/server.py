@@ -10,7 +10,8 @@ from datetime import datetime
 from quart import Quart, jsonify
 
 # Import centralized configuration manager
-from backend.config.manager import config_manager
+from config.manager import config_manager
+
 
 # Configure logging using config manager
 server_config = config_manager.get_server_config()

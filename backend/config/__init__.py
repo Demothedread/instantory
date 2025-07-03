@@ -1,6 +1,6 @@
 """Configuration module for the backend application."""
 
-from .settings import Settings
+from .manager import config_manager
 from .database import db_config as db
 from .storage import storage_config as storage
 from .security import SecurityConfig as Security
@@ -10,7 +10,7 @@ class Config:
     """Central configuration hub."""
     
     def __init__(self):
-        self.settings = Settings()
+        self.manager = config_manager  # Use config_manager instead of Settings
         self.db = db
         self.storage = storage
         self.security = Security()
@@ -20,6 +20,7 @@ class Config:
         """Initialize all configuration components."""
         # No initialization needed as components are already initialized
         # when imported as global instances
+        pass
 
     async def cleanup(self):
         """Cleanup all configuration components."""
@@ -34,4 +35,4 @@ class Config:
 # Global instance
 config = Config()
 
-__all__ = ['config', 'settings']
+__all__ = ['config', 'config_manager']

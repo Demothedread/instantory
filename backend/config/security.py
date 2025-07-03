@@ -5,7 +5,6 @@ import urllib.parse  # Import for URL encoding in GoogleOAuthConfig
 from typing import List, Dict, Optional
 from .manager import config_manager
 
-
 class CORSConfig:
     """CORS configuration settings."""
 
@@ -127,7 +126,6 @@ class CORSConfig:
 
         return False
 
-
 class SecurityConfig:
     """Security configuration settings."""
 
@@ -173,16 +171,13 @@ class SecurityConfig:
             "Cross-Origin-Resource-Policy": "cross-origin",
         }
 
-
 def get_security_config() -> SecurityConfig:
     """Get security configuration instance."""
     return SecurityConfig()
 
-
 def get_cors_config() -> CORSConfig:
     """Get CORS configuration instance."""
     return CORSConfig()
-
 
 class GoogleOAuthConfig:
     """Google OAuth configuration settings."""
@@ -265,22 +260,6 @@ class GoogleOAuthConfig:
 
         query_string = urllib.parse.urlencode(params)
         return f"https://accounts.google.com/o/oauth2/v2/auth?{query_string}"
-
-
-def get_google_oauth_config() -> GoogleOAuthConfig:
-    """Get Google OAuth configuration instance."""
-    return GoogleOAuthConfig()
-            "scope": "email profile",
-            "access_type": "offline",
-            "prompt": "select_account",
-        }
-
-        if state:
-            params["state"] = state
-
-        query_string = urllib.parse.urlencode(params)
-        return f"https://accounts.google.com/o/oauth2/v2/auth?{query_string}"
-
 
 def get_google_oauth_config() -> GoogleOAuthConfig:
     """Get Google OAuth configuration instance."""
