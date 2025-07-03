@@ -1,4 +1,4 @@
-@jsxImportSource @emotion/react 
+ /** @jsxImportSource @emotion/react */
 import { css, keyframes } from '@emotion/react';
 import { GoogleLogin } from '@react-oauth/google';
 import { Suspense, useContext, useEffect, useRef, useState } from 'react';
@@ -1493,4 +1493,5 @@ const UltimateNeoDecoLanding = () => {
   );
 };
 
+export default UltimateNeoDecoLanding;
 export default UltimateNeoDecoLanding;
