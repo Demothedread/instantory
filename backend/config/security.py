@@ -3,6 +3,7 @@
 import os
 import urllib.parse  # Import for URL encoding in GoogleOAuthConfig
 from typing import List, Dict, Optional
+from .manager import config_manager
 
 
 class CORSConfig:
@@ -11,14 +12,8 @@ class CORSConfig:
     @staticmethod
     def get_origins() -> List[str]:
         """Get allowed origins from environment or default to development origins."""
-        cors_origin = os.getenv("CORS_ORIGIN", "")
-        if cors_origin:
-            # Clean and normalize origins
-            origins = [origin.strip() for origin in cors_origin.split(",") if origin.strip()]
-            return origins if origins else CORSConfig.get_default_origins()
-        else:
-            # If no CORS_ORIGIN is set, use default origins
-            return CORSConfig.get_default_origins()
+        # Use ConfigManager for consistency
+        return config_manager.get_api_config()['cors_origins']
 
     @staticmethod
     def get_default_origins() -> List[str]:
@@ -44,22 +39,21 @@ class CORSConfig:
             "Content-Type",
             "Authorization",
             "Accept",
-            # Note: Do not include "Origin" - browsers set this automatically
-            # and including it can cause CORS issues
             "X-Requested-With",
             "Content-Length",
             "Accept-Encoding",
             "X-CSRF-Token",
-            "google-oauth-token",
-            "google-client_id",
-            "g_csrf_token",
-            "X-Google-OAuth-Token",
-            "X-Google-Client-ID",
-            "Access-Control-Allow-Origin",
-            "Access-Control-Allow-Credentials",
             "Cache-Control",
             "X-API-Key",
             "X-Auth-Token",
+            "X-Google-OAuth-Token",
+            "X-Google-Client-ID",
+            "User-Agent",
+            "Referer",
+            "Accept-Language",
+            "DNT",
+            "Connection",
+            "Upgrade-Insecure-Requests"
         ]
 
     @staticmethod
@@ -91,16 +85,13 @@ class CORSConfig:
         if not origin:
             return False
 
-        # Get the allowed origins from environment and defaults
-        env_origins = os.getenv("ALLOWED_ORIGINS", "")
-        allowed_origins = []
+        # Use ConfigManager for allowed origins
+        allowed_origins = config_manager.get_api_config()['cors_origins']
         
-        # Parse environment origins
+        # Also check ALLOWED_ORIGINS environment variable for additional origins
+        env_origins = os.getenv("ALLOWED_ORIGINS", "")
         if env_origins:
             allowed_origins.extend([o.strip() for o in env_origins.split(",") if o.strip()])
-        
-        # Add default origins
-        allowed_origins.extend(CORSConfig.get_origins())
         
         # Remove duplicates while preserving order
         allowed_origins = list(dict.fromkeys(allowed_origins))
@@ -142,36 +133,26 @@ class SecurityConfig:
 
     @staticmethod
     def get_jwt_secret() -> str:
-        """Get JWT secret key from environment.
-        
-        Returns:
-            The JWT secret key for token signing and verification
-            
-        Raises:
-            ValueError: If JWT_SECRET environment variable is not set
-        """
-        secret = os.getenv("JWT_SECRET", "").strip()
-        if not secret:
-            raise ValueError("JWT_SECRET environment variable is required")
+        """Get JWT secret key from environment."""
+        # Use ConfigManager for consistency
+        auth_config = config_manager.get_auth_config()
+        secret = auth_config['jwt_secret']
+        if not secret or secret == 'dev-secret-key':
+            raise ValueError("JWT_SECRET environment variable is required for production")
         if len(secret) < 32:
             raise ValueError("JWT_SECRET must be at least 32 characters long")
         return secret
 
     @staticmethod
     def get_cookie_secret() -> str:
-        """Get cookie secret key from environment.
-        
-        Returns:
-            The cookie secret key for session cookie encryption
-            
-        Raises:
-            ValueError: If COOKIE_SECRET environment variable is not set
-        """
-        secret = os.getenv("COOKIE_SECRET", "").strip()
+        """Get cookie secret key from environment."""
+        # Use ConfigManager for consistency
+        auth_config = config_manager.get_auth_config()
+        secret = auth_config['session_secret']
         if not secret:
-            raise ValueError("COOKIE_SECRET environment variable is required")
+            raise ValueError("SESSION_SECRET environment variable is required")
         if len(secret) < 32:
-            raise ValueError("COOKIE_SECRET must be at least 32 characters long")
+            raise ValueError("SESSION_SECRET must be at least 32 characters long")
         return secret
 
     @staticmethod
@@ -209,7 +190,9 @@ class GoogleOAuthConfig:
     @staticmethod
     def get_client_id() -> str:
         """Get Google OAuth client ID from environment."""
-        client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+        # Use ConfigManager for consistency
+        auth_config = config_manager.get_auth_config()
+        client_id = auth_config['google_client_id']
         if not client_id:
             raise ValueError("GOOGLE_CLIENT_ID environment variable is required")
         return client_id
@@ -234,7 +217,9 @@ class GoogleOAuthConfig:
     @staticmethod
     def get_client_secret() -> str:
         """Get Google OAuth client secret from environment."""
-        client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+        # Use ConfigManager for consistency
+        auth_config = config_manager.get_auth_config()
+        client_secret = auth_config['google_client_secret']
         if not client_secret:
             raise ValueError("GOOGLE_CLIENT_SECRET environment variable is required")
         return client_secret
@@ -270,6 +255,21 @@ class GoogleOAuthConfig:
             "client_id": client_id,
             "redirect_uri": redirect_uri,
             "response_type": "code",
+            "scope": "email profile",
+            "access_type": "offline",
+            "prompt": "select_account",
+        }
+
+        if state:
+            params["state"] = state
+
+        query_string = urllib.parse.urlencode(params)
+        return f"https://accounts.google.com/o/oauth2/v2/auth?{query_string}"
+
+
+def get_google_oauth_config() -> GoogleOAuthConfig:
+    """Get Google OAuth configuration instance."""
+    return GoogleOAuthConfig()
             "scope": "email profile",
             "access_type": "offline",
             "prompt": "select_account",
