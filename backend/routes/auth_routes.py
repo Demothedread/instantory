@@ -1073,3 +1073,9 @@ async def check_session():
     except Exception as e:
         logger.exception(f"Session check failed: {e}")
         return jsonify({"authenticated": False, "error": str(e)}), 500
+
+@auth_bp.route("/sessions", methods=["GET"])
+async def check_sessions():
+    """Check if the user has a valid session (plural endpoint for compatibility)."""
+    # This is just an alias for the /session endpoint to handle both /session and /sessions
+    return await check_session()
