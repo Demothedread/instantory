@@ -3,12 +3,14 @@
 ## 🔍 Quick Diagnosis Checklist
 
 ### Frontend Issues
+
 - [ ] Check browser console for CORS errors
 - [ ] Verify no manual `Origin` header is being set
 - [ ] Confirm `withCredentials: true` is set in API calls
 - [ ] Test with browser dev tools Network tab
 
 ### Backend Issues
+
 - [ ] Check server logs for CORS configuration output
 - [ ] Verify environment variables are properly set
 - [ ] Test preflight OPTIONS requests
@@ -23,6 +25,7 @@
 **Cause:** Frontend code is manually setting the `Origin` header.
 
 **Solution:**
+
 ```javascript
 // ❌ WRONG - Don't set Origin manually
 axios.defaults.headers.common['Origin'] = window.location.origin;
@@ -32,6 +35,7 @@ axios.defaults.headers.common['Origin'] = window.location.origin;
 ```
 
 **Files to check:**
+
 - `frontend/src/services/api.js`
 - `frontend/src/config/api.js`
 
@@ -42,7 +46,9 @@ axios.defaults.headers.common['Origin'] = window.location.origin;
 **Cause:** Backend is not properly configured to handle cross-origin requests.
 
 **Solution:**
+
 1. Check backend environment variables:
+
 ```bash
 CORS_ORIGINS=https://hocomnia.com,https://www.hocomnia.com
 CORS_ENABLED=true
@@ -50,6 +56,7 @@ ALLOW_CREDENTIALS=true
 ```
 
 2. Verify backend logs show CORS configuration:
+
 ```
 🌐 CORS Configuration:
   - Origins: ['https://hocomnia.com', 'https://www.hocomnia.com']
@@ -65,6 +72,7 @@ ALLOW_CREDENTIALS=true
 
 **Solution:**
 In `frontend/public/index.html`, ensure:
+
 ```html
 <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups" />
 ```
@@ -76,7 +84,9 @@ In `frontend/public/index.html`, ensure:
 **Cause:** Cross-origin cookies are not properly configured.
 
 **Solution:**
+
 1. Frontend must set `withCredentials: true`:
+
 ```javascript
 const api = axios.create({
   withCredentials: true, // Essential for cross-origin cookies
@@ -85,6 +95,7 @@ const api = axios.create({
 ```
 
 2. Backend must set proper cookie attributes:
+
 ```python
 response.set_cookie(
     "access_token",
@@ -104,6 +115,7 @@ response.set_cookie(
 
 **Solution:**
 Check that the backend middleware handles OPTIONS requests:
+
 ```python
 @app.before_request
 async def handle_preflight():
@@ -142,6 +154,7 @@ async def handle_preflight():
 ### Backend Logging
 
 Enable debug logging in the backend to see:
+
 ```python
 # In middleware/cors.py
 app.logger.info(f"🌐 CORS Configuration:")
@@ -153,6 +166,7 @@ app.logger.info(f"  - Allow credentials: {allow_credentials}")
 ### Test Commands
 
 1. **Test preflight request:**
+
 ```bash
 curl -X OPTIONS \
   -H "Origin: https://hocomnia.com" \
@@ -162,6 +176,7 @@ curl -X OPTIONS \
 ```
 
 2. **Test actual request:**
+
 ```bash
 curl -X POST \
   -H "Origin: https://hocomnia.com" \
@@ -175,6 +190,7 @@ curl -X POST \
 ### Production (Render + Vercel)
 
 **Backend Environment Variables:**
+
 ```bash
 CORS_ORIGINS=https://hocomnia.com,https://www.hocomnia.com
 FRONTEND_URL=https://hocomnia.com
@@ -182,6 +198,7 @@ BACKEND_URL=https://bartleby-backend-mn96.onrender.com
 ```
 
 **Frontend Environment Variables:**
+
 ```bash
 REACT_APP_BACKEND_URL=https://bartleby-backend-mn96.onrender.com
 REACT_APP_FRONTEND_URL=https://hocomnia.com
@@ -190,6 +207,7 @@ REACT_APP_FRONTEND_URL=https://hocomnia.com
 ### Development (Local)
 
 **Backend Environment Variables:**
+
 ```bash
 CORS_ORIGINS=http://localhost:3000,http://localhost:3001
 FRONTEND_URL=http://localhost:3000
@@ -197,6 +215,7 @@ BACKEND_URL=http://localhost:8080
 ```
 
 **Frontend Environment Variables:**
+
 ```bash
 REACT_APP_BACKEND_URL=http://localhost:8080
 REACT_APP_FRONTEND_URL=http://localhost:3000
@@ -207,6 +226,7 @@ REACT_APP_FRONTEND_URL=http://localhost:3000
 ### Content Security Policy (CSP)
 
 Ensure CSP allows necessary origins:
+
 ```html
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
@@ -219,6 +239,7 @@ Ensure CSP allows necessary origins:
 ### Cookie Security
 
 For production, ensure cookies are secure:
+
 ```python
 # Backend cookie settings
 secure=True,          # HTTPS only
@@ -242,6 +263,7 @@ After implementing fixes, verify:
 If all else fails, temporary workarounds:
 
 1. **Disable CORS temporarily for testing:**
+
 ```python
 # In backend - TEMPORARY ONLY
 @app.after_request
@@ -253,6 +275,7 @@ async def after_request(response):
 ```
 
 2. **Test with browser security disabled:**
+
 ```bash
 # Chrome with security disabled - TESTING ONLY
 google-chrome --disable-web-security --disable-features=VizDisplayCompositor --user-data-dir=/tmp/chrome_dev_test
@@ -263,9 +286,103 @@ google-chrome --disable-web-security --disable-features=VizDisplayCompositor --u
 ## 📞 Support
 
 If issues persist, check:
+
 1. Backend logs for CORS configuration output
 2. Browser network tab for failed requests
 3. Environment variables are correctly set
 4. DNS and SSL certificates are properly configured
 
 Remember: CORS is a browser security feature. The backend must explicitly allow cross-origin requests for them to work.
+
+## 🔧 RESOLVED: Conflicting CORS Implementations (July 2025)
+
+### Issue Identified: Conflicting CORS Implementations
+
+#### Problem Description
+
+The backend had **two conflicting CORS implementations**:
+
+1. **quart_cors** applied directly in `server.py`
+2. **Custom CORS middleware** in `middleware/cors.py` that wasn't being used
+
+This caused CORS policy failures when the frontend (<https://hocomnia.com>) tried to access the backend (<https://bartleby-backend-mn96.onrender.com>).
+
+#### Root Cause Analysis
+
+**1. Conflicting CORS Setup**
+
+- `server.py` was using `quart_cors` with basic configuration
+- `middleware/cors.py` had sophisticated CORS handling but wasn't being called
+- The two implementations were fighting over header management
+
+**2. Origin Validation Issues**
+
+- Frontend: `https://hocomnia.com`
+- Backend CORS_ORIGINS: `"https://hocomnia.com,https://www.hocomnia.com,http://localhost:3000,https://accounts.google.com,https://bartleby.vercel.app"`
+- The origins were correctly configured but the middleware wasn't being used
+
+**3. Missing Middleware Integration**
+
+- `server.py` wasn't calling `setup_middleware()`
+- Custom CORS logic with credential support wasn't being applied
+
+#### Solution Implemented
+
+**1. Fixed CORS Implementation**
+
+```python
+# Removed from server.py:
+from quart_cors import cors
+app = cors(app, allow_origin=origins, ...)
+
+# Added to server.py:
+from backend.middleware.setup import setup_middleware
+setup_middleware(app, settings)
+```
+
+**2. Proper Middleware Chain**
+
+```python
+# In middleware/setup.py - Order matters:
+1. setup_cors(app)           # CORS must be first for preflight
+2. setup_security(app, ...)  # Security headers
+3. setup_error_handlers(app) # Error handling
+4. setup_request_logging(app)# Request logging
+```
+
+**3. Enhanced CORS Configuration**
+The middleware now properly handles:
+
+- ✅ Dynamic origin validation
+- ✅ Preflight OPTIONS requests
+- ✅ Credential support for authentication
+- ✅ Wildcard domain support (*.hocomnia.com)
+- ✅ Google OAuth integration
+
+#### Verification Test
+
+```javascript
+// Test from hocomnia.com console:
+fetch('https://bartleby-backend-mn96.onrender.com/health', {
+  method: 'GET',
+  mode: 'cors',
+  credentials: 'include',
+  headers: {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+  }
+})
+.then(response => console.log('✅ CORS working:', response.status))
+.catch(error => console.error('❌ CORS failed:', error));
+```
+
+Expected response headers:
+
+```
+Access-Control-Allow-Origin: https://hocomnia.com
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH
+Access-Control-Allow-Headers: Content-Type, Authorization, Accept, X-Requested-With, ...
+```
+
+---

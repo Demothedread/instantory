@@ -8,7 +8,6 @@ import os
 from datetime import datetime
 
 from quart import Quart, jsonify
-from quart_cors import cors
 
 # Import centralized configuration manager
 from backend.config.manager import config_manager
@@ -44,26 +43,28 @@ def create_app():
         }
     )
 
-    # Configure CORS using config manager
-    origins = api_config["cors_origins"]
+    # Set up middleware (including CORS)
     try:
-        app = cors(
-            app,
-            allow_origin=origins,
-            allow_credentials=api_config["allow_credentials"],
-            allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            allow_headers=[
-                "Content-Type",
-                "Authorization",
-                "Accept",
-                "Origin",
-                "X-Requested-With",
-            ],
-        )
-        logger.info("CORS configured with origins: %s", origins)
+        from backend.middleware.setup import setup_middleware
+
+        # Create a settings-like object from config_manager
+        class ConfigSettings:
+            def __init__(self, config_mgr):
+                self.config_mgr = config_mgr
+                self.debug = config_mgr.get_server_config()["debug"]
+
+            def get_env(self, key, default=None):
+                return self.config_mgr.get(key, default)
+
+            def get_max_content_length(self):
+                return self.config_mgr.get_server_config()["max_content_length"]
+
+        settings = ConfigSettings(config_manager)
+        setup_middleware(app, settings)
+        logger.info("Middleware configured successfully")
     except Exception as e:
-        logger.error("Error configuring CORS: %s", str(e))
-        # Fallback CORS configuration
+        logger.error("Error configuring middleware: %s", str(e))
+        # Fallback CORS configuration if middleware fails
         try:
             from quart_cors import cors as simple_cors
 
