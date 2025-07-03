@@ -31,13 +31,15 @@
     "web-vitals": "^2.1.4"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-decorators": "^7.28.0",
+    "@craco/craco": "^7.1.0",
     "@emotion/babel-plugin": "^11.11.0",
     "eslint": "^8.56.0",
     "eslint-config-react-app": "^7.0.1",
     "prettier": "^3.2.5"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=24.0.0"
   },
   "eslintConfig": {
     "extends": [
@@ -53,13 +55,13 @@
   "name": "bartleby",
   "private": true,
   "scripts": {
-    "build": "GENERATE_SOURCEMAP=false DISABLE_ESLINT_PLUGIN=true react-scripts build",
-    "dev": "react-scripts start",
-    "eject": "react-scripts eject",
+    "build": "craco build",
+    "dev": "craco start",
+    "eject": "craco eject",
     "format": "prettier --write src/**/*.{js,jsx,css,json}",
     "lint": "eslint src/**/*.{js,jsx}",
-    "start": "react-scripts start",
-    "test": "react-scripts test",
+    "start": "craco start",
+    "test": "craco test",
     "vercel-build": "GENERATE_SOURCEMAP=false DISABLE_ESLINT_PLUGIN=true npm run build"
   },
   "version": "0.2.0"
