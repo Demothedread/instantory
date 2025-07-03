@@ -1,9 +1,9 @@
 """CORS middleware for the backend application."""
 
 import os
-from typing import List, Optional
+from typing import List
+
 from quart import Quart, request
-from quart_cors import cors
 
 
 def is_origin_allowed(origin: str, allowed_origins: List[str]) -> bool:
@@ -32,12 +32,12 @@ def is_origin_allowed(origin: str, allowed_origins: List[str]) -> bool:
             # Check if the origin ends with this domain suffix
             if origin.startswith("https://") and origin.endswith(f".{domain_suffix}"):
                 return True
-            
+
     # Enhanced hocomnia.com support - allow all subdomains and the main domain
     if origin.startswith("https://") and (
-        origin == "https://hocomnia.com" or
-        origin == "https://www.hocomnia.com" or
-        origin.endswith(".hocomnia.com")
+        origin == "https://hocomnia.com"
+        or origin == "https://www.hocomnia.com"
+        or origin.endswith(".hocomnia.com")
     ):
         return True
 
@@ -89,7 +89,7 @@ def setup_cors(app: Quart) -> Quart:
             clean_origins.append(domain)
 
     # Log CORS configuration with environment details
-    app.logger.info(f"🌐 CORS Configuration:")
+    app.logger.info("🌐 CORS Configuration:")
     app.logger.info(f"  - Origins: {clean_origins}")
     app.logger.info(f"  - Enabled: {cors_enabled}")
     app.logger.info(f"  - Allow credentials: {allow_credentials}")
@@ -99,112 +99,62 @@ def setup_cors(app: Quart) -> Quart:
 
     # Apply CORS if enabled
     if cors_enabled:
-        # When credentials are allowed, we must handle Origin dynamically
-        if allow_credentials:
-
-            @app.before_request
-            async def handle_preflight():
-                """Handle preflight CORS requests properly for authenticated requests"""
-                if request.method == "OPTIONS":
-                    origin = request.headers.get("Origin")
-
-                    # Only process if we have an origin header
-                    if origin and is_origin_allowed(origin, clean_origins):
-                        headers = {
-                            "Access-Control-Allow-Origin": origin,
-                            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-                            "Access-Control-Allow-Headers": ", ".join(
-                                [
-                                    "Content-Type",
-                                    "Authorization",
-                                    "Accept",
-                                    # Note: Do not include "Origin" - browsers set this automatically
-                                    "X-Requested-With",
-                                    "Content-Length",
-                                    "Accept-Encoding",
-                                    "X-CSRF-Token",
-                                    "google-oauth-token",
-                                    "google-client-id",
-                                    "g-csrf-token",
-                                    "X-Google-OAuth-Token",
-                                    "X-Google-Client-ID",
-                                    "Accept-Language",
-                                    "Cache-Control",
-                                    "X-API-Key",
-                                    "X-Auth-Token",
-                                ]
-                            ),
-                            "Access-Control-Allow-Credentials": "true",
-                            "Access-Control-Max-Age": "3600",
-                            "Vary": "Origin",
-                        }
-                        return "", 204, headers
-
-            @app.after_request
-            async def add_cors_headers(response):
-                """Add CORS headers to all responses"""
+        # Custom CORS implementation without quart_cors dependency
+        @app.before_request
+        async def handle_preflight():
+            """Handle preflight CORS requests properly for authenticated requests"""
+            if request.method == "OPTIONS":
                 origin = request.headers.get("Origin")
 
+                # Only process if we have an origin header
                 if origin and is_origin_allowed(origin, clean_origins):
-                    response.headers.set("Access-Control-Allow-Origin", origin)
+                    headers = {
+                        "Access-Control-Allow-Origin": origin,
+                        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+                        "Access-Control-Allow-Headers": ", ".join(
+                            [
+                                "Content-Type",
+                                "Authorization",
+                                "Accept",
+                                # Note: Do not include "Origin" - browsers set this automatically
+                                "X-Requested-With",
+                                "Content-Length",
+                                "Accept-Encoding",
+                                "X-CSRF-Token",
+                                "google-oauth-token",
+                                "google-client-id",
+                                "g-csrf-token",
+                                "X-Google-OAuth-Token",
+                                "X-Google-Client-ID",
+                                "Accept-Language",
+                                "Cache-Control",
+                                "X-API-Key",
+                                "X-Auth-Token",
+                            ]
+                        ),
+                        "Access-Control-Allow-Credentials": (
+                            "true" if allow_credentials else "false"
+                        ),
+                        "Access-Control-Max-Age": "3600",
+                        "Vary": "Origin",
+                    }
+                    return "", 204, headers
+
+        @app.after_request
+        async def add_cors_headers(response):
+            """Add CORS headers to all responses"""
+            origin = request.headers.get("Origin")
+
+            if origin and is_origin_allowed(origin, clean_origins):
+                response.headers.set("Access-Control-Allow-Origin", origin)
+                if allow_credentials:
                     response.headers.set("Access-Control-Allow-Credentials", "true")
-                    response.headers.set("Vary", "Origin")
+                response.headers.set("Vary", "Origin")
 
-                return response
+            return response
 
-            # Apply basic CORS for non-credentialed requests
-            # This still helps with simple requests
-            return cors(
-                app,
-                allow_origin=clean_origins,
-                allow_credentials=allow_credentials,
-                allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-                allow_headers=[
-                    "Content-Type",
-                    "Authorization",
-                    "Accept",
-                    # Note: Do not include "Origin" - browsers set this automatically
-                    "X-Requested-With",
-                    "Content-Length",
-                    "Accept-Encoding",
-                    "X-CSRF-Token",
-                    "google-oauth-token",
-                    "google-client-id",
-                    "g-csrf-token",
-                    "X-Google-OAuth-Token",
-                    "X-Google-Client-ID",
-                    "Accept-Language",
-                    "Cache-Control",
-                    "X-API-Key",
-                    "X-Auth-Token",
-                ],
-            )
-        else:
-            # For non-credentialed requests, standard CORS is fine
-            return cors(
-                app,
-                allow_origin=clean_origins,
-                allow_credentials=allow_credentials,
-                allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-                allow_headers=[
-                    "Content-Type",
-                    "Authorization",
-                    "Accept",
-                    # Note: Do not include "Origin" - browsers set this automatically
-                    "X-Requested-With",
-                    "Content-Length",
-                    "Accept-Encoding",
-                    "X-CSRF-Token",
-                    "google-oauth-token",
-                    "google-client-id",
-                    "g-csrf-token",
-                    "X-Google-OAuth-Token",
-                    "X-Google-Client-ID",
-                    "Accept-Language",
-                    "Cache-Control",
-                    "X-API-Key",
-                    "X-Auth-Token",
-                ],
-            )
+        app.logger.info("✅ Custom CORS middleware enabled (quart_cors removed)")
+    else:
+        app.logger.info("⚠️ CORS is disabled")
 
     return app

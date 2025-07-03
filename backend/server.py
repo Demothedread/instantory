@@ -64,14 +64,9 @@ def create_app():
         logger.info("Middleware configured successfully")
     except Exception as e:
         logger.error("Error configuring middleware: %s", str(e))
-        # Fallback CORS configuration if middleware fails
-        try:
-            from quart_cors import cors as simple_cors
-
-            app = simple_cors(app)
-            logger.info("Fallback CORS configuration applied")
-        except Exception as cors_e:
-            logger.error("Failed to configure fallback CORS: %s", str(cors_e))
+        # If middleware setup fails, the app will continue without CORS
+        # This is better than having conflicting CORS implementations
+        logger.warning("Application will continue without CORS middleware")
 
     # Register blueprints with individual isolation to prevent test imports
     try:
