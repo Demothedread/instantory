@@ -518,7 +518,6 @@ async def google_login():
             auth_provider="google",
             is_verified=True,
         )
-        is_new_user = user.get("created", False)  # You may need to modify upsert_user to return this
 
         # Log login
         await log_user_login(user["id"], "google")
@@ -731,7 +730,7 @@ async def google_callback():
 
 @auth_bp.route("/refresh", methods=["POST"])
 async def refresh_token_route():
-    """Refresh an expired access token using a valid refresh token.""
+    """Refresh an expired access token using a valid refresh token."""
     try:
         # Check for refresh token in cookies or request body
         refresh_token = request.cookies.get("refresh_token")
@@ -810,7 +809,10 @@ async def refresh_token_route():
 
 @auth_bp.route("/logout", methods=["POST"])
 async def logout():
-    """Log out the user by invalidating tokens."""
+    """
+    Log out the user by invalidating tokens.
+    
+    """
     try:
         # Logout using Quart-Auth
         logout_user()
@@ -1070,11 +1072,4 @@ async def check_sessions():
     """Check if the user has a valid session (plural endpoint for compatibility)."""
     # This is just an alias for the /session endpoint to handle both /session and /sessions
     return await check_session()
-            "user": dict(user),
-            "data": user_data
-        })
-
-    except Exception as e:
-        logger.exception(f"Session check failed: {e}")
-        return jsonify({"authenticated": False, "error": str(e)}), 500
 
