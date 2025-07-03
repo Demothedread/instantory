@@ -1,7 +1,7 @@
 export const typography = {
   fonts: {
-    primary: '"Inter", "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif',
-    heading: '"Cinzel Decorative", "Playfair Display", serif',
+    primary: '"Metropolis","Inter", "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif',
+    heading: '"Farray", "Cinzel Decorative", "Playfair Display", serif',
     mono: '"Fira Code", "Monaco", "Consolas", "Liberation Mono", monospace',
     decorative: '"Cinzel Decorative", serif'
   },

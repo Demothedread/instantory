@@ -7,6 +7,26 @@
   <meta name="theme-color" content="#1a1a1a" />
   <meta name="color-scheme" content="dark light" />
   
+  <!-- Security Headers -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com;
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
+    img-src 'self' data: https: blob:;
+    connect-src 'self' https://bartleby-backend-mn96.onrender.com https://accounts.google.com https://apis.google.com;
+    frame-src https://accounts.google.com;
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+    upgrade-insecure-requests;
+  " />
+  <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups" />
+  <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp" />
+  <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+  <meta http-equiv="X-Frame-Options" content="DENY" />
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+  
   <!-- SEO and Social Meta -->
   <title>Bartleby AI Document Assistant | Intelligent Document Processing</title>
   <meta name="description" content="Transform documents and inventory into organized, searchable intelligence with Bartleby AI. Smart analysis, vector search, and intuitive workflow management." />
@@ -40,6 +60,163 @@
   <!-- Neo-Deco-Rococo Typography -->
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Source+Sans+Pro:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&family=Fira+Code:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   
+  <!-- Local Font Declarations -->
+  <style>
+    /* FARRAY Font Face */
+    @font-face {
+      font-family: 'FARRAY';
+      src: url('/src/assets/font/FARRAY.otf') format('opentype');
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap; /* Optimized loading for performance */
+    }
+    
+    /* Metropolis Font Family */
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-Thin.otf') format('opentype');
+      font-weight: 100;
+      font-style: normal;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-ThinItalic.otf') format('opentype');
+      font-weight: 100;
+      font-style: italic;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-ExtraLight.otf') format('opentype');
+      font-weight: 200;
+      font-style: normal;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-ExtraLightItalic.otf') format('opentype');
+      font-weight: 200;
+      font-style: italic;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-Light.otf') format('opentype');
+      font-weight: 300;
+      font-style: normal;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-LightItalic.otf') format('opentype');
+      font-weight: 300;
+      font-style: italic;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-Regular.otf') format('opentype');
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-RegularItalic.otf') format('opentype');
+      font-weight: 400;
+      font-style: italic;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-Medium.otf') format('opentype');
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-MediumItalic.otf') format('opentype');
+      font-weight: 500;
+      font-style: italic;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-SemiBold.otf') format('opentype');
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-SemiBoldItalic.otf') format('opentype');
+      font-weight: 600;
+      font-style: italic;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-Bold.otf') format('opentype');
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-BoldItalic.otf') format('opentype');
+      font-weight: 700;
+      font-style: italic;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-ExtraBold.otf') format('opentype');
+      font-weight: 800;
+      font-style: normal;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-ExtraBoldItalic.otf') format('opentype');
+      font-weight: 800;
+      font-style: italic;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-Black.otf') format('opentype');
+      font-weight: 900;
+      font-style: normal;
+      font-display: swap;
+    }
+    
+    @font-face {
+      font-family: 'Metropolis';
+      src: url('/src/assets/metropolis/Metropolis-BlackItalic.otf') format('opentype');
+      font-weight: 900;
+      font-style: italic;
+      font-display: swap;
+    }
+  </style>
+  
   <!-- CSS Variables for Neo-Deco-Rococo Theme -->
   <style>
     :root {
@@ -52,10 +229,12 @@
       --soft-ivory: #f8f6f0;
       --pearl-white: #fefefe;
       
-      /* Typography Hierarchy */
-      --font-display: 'Playfair Display', serif;
-      --font-body: 'Source Sans Pro', sans-serif;
+      /* Enhanced Typography Hierarchy with Local Fonts */
+      --font-display: 'FARRAY', 'Playfair Display', serif; /* FARRAY as primary display font */
+      --font-body: 'Metropolis', 'Source Sans Pro', sans-serif; /* Metropolis as primary body font */
       --font-mono: 'Fira Code', monospace;
+      --font-accent: 'FARRAY', cursive; /* FARRAY for special accent text */
+      --font-ui: 'Metropolis', system-ui, sans-serif; /* Metropolis for UI elements */
       
       /* Geometric Proportions (Golden Ratio Based) */
       --ratio-phi: 1.618;
@@ -104,14 +283,19 @@
       color: var(--primary-gold);
     }
     
+    /* Fixed loading ornament using flexbox instead of explicit dimensions */
     .loading-ornament {
-      width: 120px;
-      height: 120px;
+      /* Use min-width/min-height with flex for better box model compliance */
+      min-width: 120px;
+      min-height: 120px;
+      aspect-ratio: 1;
       border: var(--border-width-standard) solid var(--primary-gold);
       border-radius: 50%;
       position: relative;
       animation: rotate 2s linear infinite;
       margin-bottom: var(--spacing-xl);
+      /* Alternative: Use padding-based approach for consistent dimensions */
+      box-sizing: border-box;
     }
     
     .loading-ornament::before {
@@ -120,11 +304,14 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 80px;
-      height: 80px;
+      /* Use min-width/min-height with aspect-ratio for consistent sizing */
+      min-width: 80px;
+      min-height: 80px;
+      aspect-ratio: 1;
       border: var(--border-width-fine) solid var(--accent-copper);
       border-radius: 50%;
       animation: rotate 1.5s linear infinite reverse;
+      box-sizing: border-box;
     }
     
     .loading-ornament::after {
@@ -133,6 +320,7 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
+      /* Use fixed dimensions for ::after pseudo-element (no border conflicts) */
       width: 40px;
       height: 40px;
       background: var(--primary-gold);
@@ -191,10 +379,10 @@
     
     /* Accessibility Enhancements */
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+      html *, html *::before, html *::after {
+        animation-duration: 0.01ms;
+        animation-iteration-count: 1;
+        transition-duration: 0.01ms;
       }
     }
     
@@ -249,7 +437,7 @@
     <div class="app-loading" id="initial-loader">
       <div class="loading-ornament"></div>
       <h1 class="loading-text">BARTLEBY</h1>
-      <p class="loading-subtitle">AI Document Assistant</p>
+      <p class="loading-subtitle">Amazing awAIts</p>
     </div>
   </div>
   
@@ -259,6 +447,8 @@
       position: fixed;
       top: 0;
       left: 0;
+      /* Use box-sizing: content-box for explicit viewport dimensions with padding */
+      box-sizing: content-box;
       width: 100vw;
       height: 100vh;
       background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);

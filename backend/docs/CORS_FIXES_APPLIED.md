@@ -1,25 +1,38 @@
-# CORS Policy Fixes Applied
+# CORS & CSP Fixes Applied - COMPREHENSIVE SOLUTION ✅
 
-## Issues Identified and Fixed
+## 🔥 Critical Issues Resolved
 
-### 1. Manual Origin Header Setting (NEW FIX)
-**File:** `frontend/src/config/index.js`
-
-**Problem:** The frontend was manually setting the `Origin` header in API requests, which browsers reject and causes "Refused to set unsafe header 'Origin'" errors.
+### 1. ✅ Frontend API Configuration (services/api.js)
+**Problem:** Manual `Origin` header setting causing "Refused to set unsafe header" error
 
 **Fix Applied:**
-- Removed `'Origin': window.location.origin` from the default API headers
-- Added comment explaining that browsers set the Origin header automatically
+- ❌ **REMOVED**: Manual `Origin` header setting that was causing browser rejection
+- ✅ **ENHANCED**: Request interceptor with proper debugging and no forbidden headers
+- ✅ **IMPROVED**: Better error handling with user-friendly CORS error messages
 
-### 2. Content Security Policy for Google OAuth (NEW FIX)
-**File:** `backend/config/security.py`
-
-**Problem:** The CSP was blocking Google's stylesheets and the Cross-Origin-Opener-Policy was blocking OAuth postMessage calls.
+### 2. ✅ Content Security Policy & COOP Headers (public/index.html)
+**Problem:** CSP blocking Google OAuth and Cross-Origin-Opener-Policy preventing popup communication
 
 **Fix Applied:**
-- Updated CSP to allow `accounts.google.com *.googleapis.com` for styles
-- Added support for Google Fonts (`https://fonts.googleapis.com`, `https://fonts.gstatic.com`)
-- Changed Cross-Origin-Opener-Policy from `same-origin-allow-popups` to `unsafe-none` to allow OAuth flows
+- ✅ **ADDED**: Comprehensive CSP meta tag allowing Google OAuth domains
+- ✅ **FIXED**: Cross-Origin-Opener-Policy set to "same-origin-allow-popups" for Google Sign-In
+- ✅ **CONFIGURED**: Proper security headers for authentication flows
+
+### 3. ✅ Vercel Deployment Configuration (vercel.json)
+**Problem:** Missing CORS headers and API rewrites for backend communication
+
+**Fix Applied:**
+- ✅ **CREATED**: Complete Vercel configuration with proper CORS headers
+- ✅ **ADDED**: API rewrites for backend communication
+- ✅ **CONFIGURED**: Environment variables and build settings
+
+### 4. ✅ Backend CORS Enhancement (middleware/cors.py)
+**Problem:** Insufficient CORS debugging and origin validation
+
+**Fix Applied:**
+- ✅ **ENHANCED**: Detailed CORS debugging with comprehensive logging
+- ✅ **IMPROVED**: Origin validation with better error reporting
+- ✅ **ADDED**: Environment variable logging for troubleshooting
 
 ### 3. Origin Header in CORS Configuration (NEW FIX)
 **Files:** `backend/middleware/cors.py` and `backend/config/security.py`
@@ -81,7 +94,7 @@
 ### Enhanced Origin Validation
 ```python
 # Enhanced hocomnia.com support - allow all subdomains and the main domain
-if origin.startswith("https://") and (
+if origin.startswith("https://") and (                                      
     origin == "https://hocomnia.com" or
     origin == "https://www.hocomnia.com" or
     origin.endswith(".hocomnia.com")

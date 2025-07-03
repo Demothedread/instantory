@@ -43,12 +43,15 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${authToken}`;
     }
     
-    // Add origin header for CORS requests
-    config.headers.Origin = window.location.origin;
+    // DO NOT manually set Origin header - browsers set this automatically
+    // and will reject requests that try to override it
+    // Removed: config.headers.Origin = window.location.origin;
     
     // Development logging
     if (process.env.NODE_ENV === 'development') {
       console.log(`API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+      console.log('Request headers:', config.headers);
+      console.log('Request origin (automatic):', window.location.origin);
     }
     
     return config;

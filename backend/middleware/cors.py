@@ -88,10 +88,14 @@ def setup_cors(app: Quart) -> Quart:
         if domain not in clean_origins:
             clean_origins.append(domain)
 
-    # Log CORS configuration
-    app.logger.info(f"Setting up CORS with origins: {clean_origins}")
-    app.logger.info(f"CORS enabled: {cors_enabled}")
-    app.logger.info(f"Allow credentials: {allow_credentials}")
+    # Log CORS configuration with environment details
+    app.logger.info(f"🌐 CORS Configuration:")
+    app.logger.info(f"  - Origins: {clean_origins}")
+    app.logger.info(f"  - Enabled: {cors_enabled}")
+    app.logger.info(f"  - Allow credentials: {allow_credentials}")
+    app.logger.info(f"  - Environment: {os.getenv('ENVIRONMENT', 'development')}")
+    app.logger.info(f"  - Backend URL: {os.getenv('BACKEND_URL', 'not set')}")
+    app.logger.info(f"  - Frontend URL: {os.getenv('FRONTEND_URL', 'not set')}")
 
     # Apply CORS if enabled
     if cors_enabled:
