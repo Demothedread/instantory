@@ -2,8 +2,10 @@
 
 import os
 import urllib.parse  # Import for URL encoding in GoogleOAuthConfig
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
+
 from .manager import config_manager
+
 
 class CORSConfig:
     """CORS configuration settings."""
@@ -12,7 +14,7 @@ class CORSConfig:
     def get_origins() -> List[str]:
         """Get allowed origins from environment or default to development origins."""
         # Use ConfigManager for consistency
-        return config_manager.get_api_config()['cors_origins']
+        return config_manager.get_api_config()["cors_origins"]
 
     @staticmethod
     def get_default_origins() -> List[str]:
@@ -20,7 +22,7 @@ class CORSConfig:
         # Default origins for development, including hocomnia.com with and without www
         return [
             "https://hocomnia.com",
-            "https://www.hocomnia.com", 
+            "https://www.hocomnia.com",
             "https://instantory.vercel.app",
             "https://bartleby.vercel.app",
             "https://accounts.google.com",
@@ -28,7 +30,7 @@ class CORSConfig:
             "https://bartleby-backend-mn96.onrender.com",
             "https://vercel.live",
             "http://localhost:3000",
-            "https://localhost:3000"
+            "https://localhost:3000",
         ]
 
     @staticmethod
@@ -52,7 +54,7 @@ class CORSConfig:
             "Accept-Language",
             "DNT",
             "Connection",
-            "Upgrade-Insecure-Requests"
+            "Upgrade-Insecure-Requests",
         ]
 
     @staticmethod
@@ -85,13 +87,15 @@ class CORSConfig:
             return False
 
         # Use ConfigManager for allowed origins
-        allowed_origins = config_manager.get_api_config()['cors_origins']
-        
+        allowed_origins = config_manager.get_api_config()["cors_origins"]
+
         # Also check ALLOWED_ORIGINS environment variable for additional origins
         env_origins = os.getenv("ALLOWED_ORIGINS", "")
         if env_origins:
-            allowed_origins.extend([o.strip() for o in env_origins.split(",") if o.strip()])
-        
+            allowed_origins.extend(
+                [o.strip() for o in env_origins.split(",") if o.strip()]
+            )
+
         # Remove duplicates while preserving order
         allowed_origins = list(dict.fromkeys(allowed_origins))
 
@@ -105,14 +109,16 @@ class CORSConfig:
                 # Extract the domain part after the asterisk
                 domain_suffix = allowed_origin.replace("https://*.", "")
                 # Check if the origin ends with this domain suffix
-                if origin.startswith("https://") and origin.endswith(f".{domain_suffix}"):
+                if origin.startswith("https://") and origin.endswith(
+                    f".{domain_suffix}"
+                ):
                     return True
 
         # Enhanced hocomnia.com support - allow all subdomains and the main domain
         if origin.startswith("https://") and (
-            origin == "https://hocomnia.com" or
-            origin == "https://www.hocomnia.com" or
-            origin.endswith(".hocomnia.com")
+            origin == "https://hocomnia.com"
+            or origin == "https://www.hocomnia.com"
+            or origin.endswith(".hocomnia.com")
         ):
             return True
 
@@ -121,10 +127,13 @@ class CORSConfig:
             return True
 
         # Support for localhost development
-        if origin.startswith("http://localhost") or origin.startswith("https://localhost"):
+        if origin.startswith("http://localhost") or origin.startswith(
+            "https://localhost"
+        ):
             return True
 
         return False
+
 
 class SecurityConfig:
     """Security configuration settings."""
@@ -134,9 +143,11 @@ class SecurityConfig:
         """Get JWT secret key from environment."""
         # Use ConfigManager for consistency
         auth_config = config_manager.get_auth_config()
-        secret = auth_config['jwt_secret']
-        if not secret or secret == 'dev-secret-key':
-            raise ValueError("JWT_SECRET environment variable is required for production")
+        secret = auth_config["jwt_secret"]
+        if not secret or secret == "dev-secret-key":
+            raise ValueError(
+                "JWT_SECRET environment variable is required for production"
+            )
         if len(secret) < 32:
             raise ValueError("JWT_SECRET must be at least 32 characters long")
         return secret
@@ -146,7 +157,7 @@ class SecurityConfig:
         """Get cookie secret key from environment."""
         # Use ConfigManager for consistency
         auth_config = config_manager.get_auth_config()
-        secret = auth_config['session_secret']
+        secret = auth_config["session_secret"]
         if not secret:
             raise ValueError("SESSION_SECRET environment variable is required")
         if len(secret) < 32:
@@ -164,20 +175,23 @@ class SecurityConfig:
             "Referrer-Policy": "strict-origin-when-cross-origin",
             "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=()",
             # Updated CSP to allow Google's GSI styles and improve OAuth compatibility
-            "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' accounts.google.com *.googleapis.com; style-src 'self' 'unsafe-inline' accounts.google.com *.googleapis.com https://fonts.googleapis.com; img-src 'self' data: https:; connect-src 'self' accounts.google.com *.googleapis.com; frame-src accounts.google.com; font-src 'self' https://fonts.gstatic.com",
-            "Cross-Origin-Embedder-Policy": "credentialless",
-            # Adjusted COOP to allow Google OAuth popups and postMessage
-            "Cross-Origin-Opener-Policy": "unsafe-none",
+            "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://gsi.gstatic.com *.googleapis.com; style-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://gsi.gstatic.com *.googleapis.com https://fonts.googleapis.com; img-src 'self' data: https: blob:; connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://apis.google.com *.googleapis.com; frame-src https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; base-uri 'self'; form-action 'self'",
+            "Cross-Origin-Embedder-Policy": "unsafe-none",
+            # Allow OAuth popups and postMessage for authentication
+            "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
             "Cross-Origin-Resource-Policy": "cross-origin",
         }
+
 
 def get_security_config() -> SecurityConfig:
     """Get security configuration instance."""
     return SecurityConfig()
 
+
 def get_cors_config() -> CORSConfig:
     """Get CORS configuration instance."""
     return CORSConfig()
+
 
 class GoogleOAuthConfig:
     """Google OAuth configuration settings."""
@@ -187,7 +201,7 @@ class GoogleOAuthConfig:
         """Get Google OAuth client ID from environment."""
         # Use ConfigManager for consistency
         auth_config = config_manager.get_auth_config()
-        client_id = auth_config['google_client_id']
+        client_id = auth_config["google_client_id"]
         if not client_id:
             raise ValueError("GOOGLE_CLIENT_ID environment variable is required")
         return client_id
@@ -214,7 +228,7 @@ class GoogleOAuthConfig:
         """Get Google OAuth client secret from environment."""
         # Use ConfigManager for consistency
         auth_config = config_manager.get_auth_config()
-        client_secret = auth_config['google_client_secret']
+        client_secret = auth_config["google_client_secret"]
         if not client_secret:
             raise ValueError("GOOGLE_CLIENT_SECRET environment variable is required")
         return client_secret
@@ -225,11 +239,11 @@ class GoogleOAuthConfig:
         redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "").strip()
         if not redirect_uri:
             raise ValueError("GOOGLE_REDIRECT_URI environment variable is required")
-        
+
         # Basic URL validation
         if not redirect_uri.startswith(("http://", "https://")):
             raise ValueError("GOOGLE_REDIRECT_URI must be a valid HTTP/HTTPS URL")
-        
+
         return redirect_uri
 
     @staticmethod
@@ -260,6 +274,7 @@ class GoogleOAuthConfig:
 
         query_string = urllib.parse.urlencode(params)
         return f"https://accounts.google.com/o/oauth2/v2/auth?{query_string}"
+
 
 def get_google_oauth_config() -> GoogleOAuthConfig:
     """Get Google OAuth configuration instance."""

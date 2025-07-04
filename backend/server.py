@@ -6,11 +6,11 @@ import asyncio
 import logging
 import os
 from datetime import datetime
-from quart import Quart, jsonify
+
+from quart import Quart, jsonify, request
 
 # Import centralized configuration manager
 from backend.config.manager import config_manager
-
 
 # Configure logging using config manager
 server_config = config_manager.get_server_config()
@@ -187,7 +187,37 @@ def create_app():
             else:
                 logger.warning("Skipping %s blueprint (not imported)", name)
 
-        logger.info("%d/6 blueprints registered successfully", blueprints_registered)
+        logger.info("%d/8 blueprints registered successfully", blueprints_registered)
+
+        # Debug: List all registered routes
+        logger.info("=== DEBUG: Registered Routes ===")
+        for rule in app.url_map.iter_rules():
+            logger.info(
+                f"Route: {rule.rule} -> {rule.endpoint} [{','.join(rule.methods)}]"
+            )
+        logger.info("=== END DEBUG: Registered Routes ===")
+
+        # Additional debug for auth endpoints specifically
+        auth_routes = [
+            rule for rule in app.url_map.iter_rules() if "/auth" in rule.rule
+        ]
+        logger.info(f"=== DEBUG: Auth Routes Found ({len(auth_routes)}) ===")
+        for rule in auth_routes:
+            logger.info(
+                f"Auth Route: {rule.rule} -> {rule.endpoint} [{','.join(rule.methods)}]"
+            )
+        logger.info("=== END DEBUG: Auth Routes ===")
+
+        # Test auth blueprint registration specifically
+        if auth_bp:
+            logger.info("✅ Auth blueprint is available and should be registered")
+            logger.info(f"Auth blueprint name: {auth_bp.name}")
+            logger.info(
+                f"Auth blueprint url_prefix: {getattr(auth_bp, 'url_prefix', 'None')}"
+            )
+        else:
+            logger.error("❌ Auth blueprint is None - this will cause 404 errors!")
+
     except Exception as e:
         logger.error("Error importing/registering blueprints: %s", str(e))
         logger.info("Application will start with basic functionality only")
@@ -202,6 +232,48 @@ def create_app():
                 "version": "1.0",
                 "environment": config_manager.get("NODE_ENV", "production"),
                 "blueprints_registered": blueprints_registered,
+            }
+        )
+
+    # Debug endpoints for troubleshooting
+    @app.route("/api/debug/status")
+    async def debug_status():
+        """Debug endpoint to check API status and registered routes"""
+        auth_routes = [
+            rule for rule in app.url_map.iter_rules() if "/auth" in rule.rule
+        ]
+        return jsonify(
+            {
+                "status": "ok",
+                "service": "Bartleby API Debug",
+                "version": "1.0",
+                "environment": config_manager.get("NODE_ENV", "production"),
+                "blueprints_registered": blueprints_registered,
+                "auth_routes_count": len(auth_routes),
+                "auth_routes": [
+                    {
+                        "rule": rule.rule,
+                        "endpoint": rule.endpoint,
+                        "methods": list(rule.methods),
+                    }
+                    for rule in auth_routes
+                ],
+                "total_routes": len(list(app.url_map.iter_rules())),
+            }
+        )
+
+    @app.route("/api/debug/cors")
+    async def debug_cors():
+        """Debug CORS headers and origin"""
+        origin = request.headers.get("Origin")
+        return jsonify(
+            {
+                "origin": origin,
+                "user_agent": request.headers.get("User-Agent"),
+                "headers": dict(request.headers),
+                "method": request.method,
+                "path": request.path,
+                "cors_configured": True,
             }
         )
 

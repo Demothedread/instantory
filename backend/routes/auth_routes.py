@@ -1,22 +1,18 @@
 """Authentication routes and utilities."""
 
 import logging
-from datetime import datetime, timedelta, timezone
-import jwt
-import bcrypt
-from google.oauth2 import id_token
-from google.auth.transport import requests as google_requests
-from functools import wraps
-from typing import Dict, Any
 import urllib.parse
+from datetime import datetime, timedelta, timezone
+from functools import wraps
+from typing import Any, Dict
+
 import aiohttp
-from quart import redirect, current_app, Blueprint, request, jsonify
-from quart_auth import (
-    QuartAuth,
-    AuthUser,
-    login_user,
-    logout_user
-)
+import bcrypt
+import jwt
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token
+from quart import Blueprint, current_app, jsonify, redirect, request
+from quart_auth import AuthUser, QuartAuth, login_user, logout_user
 
 # Import centralized configuration manager
 from backend.config.manager import config_manager
@@ -24,31 +20,38 @@ from backend.config.manager import config_manager
 # Try to import the GoogleOAuthConfig from two possible locations
 try:
     from ..config.security import GoogleOAuthConfig
+
     logger = logging.getLogger(__name__)
     logger.info("Imported GoogleOAuthConfig from security module")
 except ImportError:
     try:
         from backend.config.oauth import GoogleOAuthConfig
+
         logger = logging.getLogger(__name__)
         logger.info("Imported GoogleOAuthConfig from oauth module")
     except ImportError:
         # If both imports fail, we'll create a minimal implementation
         logger = logging.getLogger(__name__)
-        logger.warning("Failed to import GoogleOAuthConfig, using minimal implementation")
-        
+        logger.warning(
+            "Failed to import GoogleOAuthConfig, using minimal implementation"
+        )
+
         class GoogleOAuthConfig:
             @staticmethod
             def get_client_id():
                 return config_manager.get("GOOGLE_CLIENT_ID", "")
-                
+
             @staticmethod
             def get_client_secret():
                 return config_manager.get("GOOGLE_CLIENT_SECRET", "")
-                
+
             @staticmethod
             def get_redirect_uri():
-                backend_url = config_manager.get("BACKEND_URL", "https://bartleby-backend-mn96.onrender.com")
+                backend_url = config_manager.get(
+                    "BACKEND_URL", "https://bartleby-backend-mn96.onrender.com"
+                )
                 return f"{backend_url}/api/auth/google/callback"
+
 
 # Import with fallbacks to handle different execution contexts
 try:
@@ -70,14 +73,16 @@ def get_auth_config():
     """Get authentication configuration at runtime."""
     return config_manager.get_auth_config()
 
+
 def get_jwt_secret():
     """Get JWT secret with validation."""
-    jwt_secret = config_manager.get_auth_config()['jwt_secret']
-    if not jwt_secret or jwt_secret == 'dev-secret-key':
+    jwt_secret = config_manager.get_auth_config()["jwt_secret"]
+    if not jwt_secret or jwt_secret == "dev-secret-key":
         if config_manager.is_production():
             raise EnvironmentError("JWT_SECRET must be set in production")
         logger.warning("Using default JWT_SECRET in development")
     return jwt_secret
+
 
 # Get Google configuration
 GOOGLE_CLIENT_ID = config_manager.get("GOOGLE_CLIENT_ID")
@@ -98,9 +103,23 @@ FRONTEND_URL = config_manager.get("FRONTEND_URL", "https://hocomnia.com")
 # Blueprint setup
 auth_bp = Blueprint("auth", __name__)
 
+
+# Debug route to test if auth blueprint is accessible
+@auth_bp.route("/test", methods=["GET"])
+async def test_auth_blueprint():
+    """Test route to verify auth blueprint is working."""
+    return jsonify(
+        {
+            "message": "Auth blueprint is working",
+            "timestamp": datetime.now().isoformat(),
+        }
+    )
+
+
 def validate_jwt_secret():
     """Validate JWT_SECRET at runtime"""
     return get_jwt_secret()
+
 
 # --- Custom Auth User Class --- #
 
@@ -113,7 +132,7 @@ class BartlebyAuthUser(AuthUser):
         self.user_data = user_data or {}
 
     @property
-    def auth_id(self):  
+    def auth_id(self):
         return self.auth_id
 
     @property
@@ -379,7 +398,7 @@ async def log_user_login(user_id: int, login_method: str):
                 )
                 """
             )
-            
+
             # If table exists, log the login with the login_method
             if table_check and table_check[0]:
                 await conn.execute(
@@ -387,7 +406,8 @@ async def log_user_login(user_id: int, login_method: str):
                     INSERT INTO user_logins (user_id, login_timestamp, login_method) 
                     VALUES ($1, NOW(), $2)
                     """,
-                    user_id, login_method
+                    user_id,
+                    login_method,
                 )
 
     except (ConnectionError, TimeoutError) as e:
@@ -464,11 +484,11 @@ async def verify_google_token(token: str) -> Dict[str, Any]:
                     "accounts.google.com",
                     "https://accounts.google.com",
                 ]:
-                    logger.warning("Invalid issuer: %s", id_info['iss'])
+                    logger.warning("Invalid issuer: %s", id_info["iss"])
                     raise ValueError("Invalid token issuer")
 
                 logger.info(
-                    "Successfully verified Google token for: %s", id_info.get('email')   
+                    "Successfully verified Google token for: %s", id_info.get("email")
                 )
                 return id_info
 
@@ -555,7 +575,14 @@ async def google_login():
         # Optimize cookie settings for cross-origin usage
         # Always secure=True for cross-origin cookies - required by browsers
         # SameSite=None allows cross-origin use while being secure
-        response = jsonify({"authenticated": True, "user": user, "data": user_data, "is_new_user": is_new_user})
+        response = jsonify(
+            {
+                "authenticated": True,
+                "user": user,
+                "data": user_data,
+                "is_new_user": is_new_user,
+            }
+        )
 
         # Set cookies with cross-origin compatible settings
         response.set_cookie(
@@ -589,11 +616,11 @@ async def google_callback():
     if request.method == "OPTIONS":
         origin = request.headers.get("Origin")
         if origin and (
-            origin == "https://hocomnia.com" or
-            origin == "https://www.hocomnia.com" or
-            origin.endswith(".hocomnia.com") or
-            "vercel.app" in origin or
-            "localhost" in origin
+            origin == "https://hocomnia.com"
+            or origin == "https://www.hocomnia.com"
+            or origin.endswith(".hocomnia.com")
+            or "vercel.app" in origin
+            or "localhost" in origin
         ):
             headers = {
                 "Access-Control-Allow-Origin": origin,
@@ -610,10 +637,12 @@ async def google_callback():
         # Get the code parameter
         code = request.args.get("code")
         state = request.args.get("state", "")
-        
-        logger.info("Google callback received: code present: %s, state: %s", bool(code), state)
+
+        logger.info(
+            "Google callback received: code present: %s, state: %s", bool(code), state
+        )
         logger.info("Request headers: %s", dict(request.headers))
-        
+
         if not code:
             error = request.args.get("error", "Invalid or missing code")
             logger.warning("Google callback error: %s", error)
@@ -623,11 +652,11 @@ async def google_callback():
         # Use static methods to properly access configuration values
         client_id = GoogleOAuthConfig.get_client_id()
         client_secret = GoogleOAuthConfig.get_client_secret()
-        
+
         # Fix the redirect_uri to match what's registered with Google
         redirect_uri = GoogleOAuthConfig.get_redirect_uri()
         logger.info("Using redirect URI: %s", redirect_uri)
-        
+
         async with aiohttp.ClientSession() as session:
             try:
                 token_request_data = {
@@ -638,22 +667,24 @@ async def google_callback():
                     "grant_type": "authorization_code",
                 }
                 logger.info("Token exchange request data: %s", token_request_data)
-                
+
                 async with session.post(
                     "https://oauth2.googleapis.com/token",
                     data=token_request_data,
                 ) as response:
                     token_data = await response.json()
                     logger.info("Token exchange response status: %s", response.status)
-                    
+
                     if response.status != 200:
                         logger.error("Token exchange error response: %s", token_data)
             except (aiohttp.ClientError, TimeoutError) as e:
                 logger.exception("Error during token exchange request: %s", e)
-                return redirect(f"{FRONTEND_URL}/login?error=token_exchange_error&details={urllib.parse.quote(str(e))}")
+                return redirect(
+                    f"{FRONTEND_URL}/login?error=token_exchange_error&details={urllib.parse.quote(str(e))}"
+                )
 
         if "error" in token_data:
-            logger.warning("Token exchange error: %s", token_data['error'])
+            logger.warning("Token exchange error: %s", token_data["error"])
             return redirect(
                 f"{FRONTEND_URL}/login?error={urllib.parse.quote(token_data.get('error'))}&details={urllib.parse.quote(token_data.get('error_description', ''))}"
             )
@@ -674,8 +705,13 @@ async def google_callback():
         name = id_info.get("name", email)
         google_id = id_info.get("sub")
         picture = id_info.get("picture")
-        
-        logger.info("User info from Google: email=%s, name=%s, picture=%s", email, name, bool(picture))
+
+        logger.info(
+            "User info from Google: email=%s, name=%s, picture=%s",
+            email,
+            name,
+            bool(picture),
+        )
 
         # Create or update user
         try:
@@ -686,10 +722,12 @@ async def google_callback():
                 auth_provider="google",
                 is_verified=True,
             )
-            logger.info("User created/updated: %s", user['id'])
+            logger.info("User created/updated: %s", user["id"])
         except (ConnectionError, ValueError) as e:
             logger.exception("Error creating/updating user: %s", e)
-            return redirect(f"{FRONTEND_URL}/login?error=user_creation_failed&details={urllib.parse.quote(str(e))}")
+            return redirect(
+                f"{FRONTEND_URL}/login?error=user_creation_failed&details={urllib.parse.quote(str(e))}"
+            )
 
         # Create tokens with appropriate expiry
         try:
@@ -702,10 +740,12 @@ async def google_callback():
                 "access",
             )
             refresh_token = await create_token({"user_id": user["id"]}, "refresh")
-            logger.info("Tokens created for user %s", user['id'])
+            logger.info("Tokens created for user %s", user["id"])
         except (jwt.InvalidTokenError, ValueError) as e:
             logger.exception("Error creating tokens: %s", e)
-            return redirect(f"{FRONTEND_URL}/login?error=token_creation_failed&details={urllib.parse.quote(str(e))}")
+            return redirect(
+                f"{FRONTEND_URL}/login?error=token_creation_failed&details={urllib.parse.quote(str(e))}"
+            )
 
         # Redirect to frontend with tokens
         # Use state if provided (for redirecting to a specific page after login)
@@ -719,8 +759,10 @@ async def google_callback():
         # Add is_new_user to the redirect URL
         is_new_user_str = "true" if is_new_user else "false"
         final_redirect_url = f"{FRONTEND_URL}{redirect_path}?access_token={encoded_access}&refresh_token={encoded_refresh}&auth_success=true&is_new_user={is_new_user_str}"
-        logger.info("Redirecting to frontend: %s%s with tokens", FRONTEND_URL, redirect_path)
-        
+        logger.info(
+            "Redirecting to frontend: %s%s with tokens", FRONTEND_URL, redirect_path
+        )
+
         return redirect(final_redirect_url)
 
     except (ConnectionError, ValueError, aiohttp.ClientError) as e:
@@ -811,7 +853,7 @@ async def refresh_token_route():
 async def logout():
     """
     Log out the user by invalidating tokens.
-    
+
     """
     try:
         # Logout using Quart-Auth
@@ -953,7 +995,9 @@ async def login():
             return jsonify({"error": "Invalid email or password"}), 401
 
         # Check password
-        if not user["password_hash"] or not verify_password(password, user["password_hash"]):
+        if not user["password_hash"] or not verify_password(
+            password, user["password_hash"]
+        ):
             return jsonify({"error": "Invalid email or password"}), 401
 
         # Log login
@@ -1036,7 +1080,10 @@ async def check_session():
 
         user_id = payload.get("id")
         if not user_id:
-            return jsonify({"authenticated": False, "error": "Invalid token payload"}), 401
+            return (
+                jsonify({"authenticated": False, "error": "Invalid token payload"}),
+                401,
+            )
 
         # Get user
         pool = await get_db_pool()
@@ -1045,22 +1092,18 @@ async def check_session():
                 """
                 SELECT id, email, name, auth_provider, is_verified, is_admin 
                 FROM users WHERE id = $1
-                """, 
-                user_id
+                """,
+                user_id,
             )
 
         if not user:
             return jsonify({"authenticated": False, "error": "User not found"}), 401
-            
+
         # Get user data
         user_data = await get_user_data(user["id"])
 
         # Return user info
-        return jsonify({
-            "authenticated": True,
-            "user": dict(user),
-            "data": user_data
-        })
+        return jsonify({"authenticated": True, "user": dict(user), "data": user_data})
 
     except Exception as e:
         logger.exception(f"Session check failed: {e}")
@@ -1072,4 +1115,3 @@ async def check_sessions():
     """Check if the user has a valid session (plural endpoint for compatibility)."""
     # This is just an alias for the /session endpoint to handle both /session and /sessions
     return await check_session()
-
