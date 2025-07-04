@@ -118,7 +118,7 @@ def create_app():
                         logger.info(
                             "%s from %s imported successfully",
                             import_name,
-                            blueprint_name,
+                            blueprint_name, 
                         )
                     else:
                         logger.warning(
@@ -144,7 +144,7 @@ def create_app():
         if setup_auth:
             try:
                 setup_auth(app)
-                logger.info("Authentication setup completed")
+                logger.info("Authentication setup completed")  
             except Exception as e:
                 logger.error("Failed to setup authentication: %s", str(e))
 

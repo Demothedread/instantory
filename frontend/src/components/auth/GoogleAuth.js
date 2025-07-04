@@ -1,4 +1,4 @@
-import from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import config from '../../config';
