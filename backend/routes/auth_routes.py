@@ -1115,3 +1115,30 @@ async def check_sessions():
     """Check if the user has a valid session (plural endpoint for compatibility)."""
     # This is just an alias for the /session endpoint to handle both /session and /sessions
     return await check_session()
+
+
+@auth_bp.route("/google", methods=["GET"])
+async def google_auth():
+    """Redirect to Google OAuth for authentication."""
+    try:
+        # Generate the Google OAuth URL
+        redirect_uri = GoogleOAuthConfig.get_redirect_uri()
+        client_id = GoogleOAuthConfig.get_client_id()
+
+        if not client_id or not redirect_uri:
+            return jsonify({"error": "Google OAuth configuration is missing"}), 500
+
+        auth_url = (
+            f"https://accounts.google.com/o/oauth2/auth?response_type=code"
+            f"&client_id={client_id}&redirect_uri={redirect_uri}"
+            "&scope=email%20profile&access_type=offline&prompt=consent"
+        )
+
+        return redirect(auth_url)
+
+    except Exception as e:
+        logger.exception("Google OAuth redirect failed: %s", e)
+        return (
+            jsonify({"error": "Google OAuth redirect failed", "details": str(e)}),
+            500,
+        )
