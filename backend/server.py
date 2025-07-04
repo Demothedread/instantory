@@ -100,11 +100,11 @@ def create_app():
             ("backend.routes.auth_routes", ["auth_bp", "setup_auth"], "auth"),
             ("backend.routes.documents", ["documents_bp"], "documents"),
             ("backend.routes.files", ["files_bp"], "files"),
-            ("backend.routes.inventory", ["inventory_bp"], "inventory"),
-            ("backend.routes.process", ["process_bp"], "process"),
             ("backend.routes.health", ["health_bp"], "health"),
-            ("backend.routes.stats", ["stats_bp"], "stats"),
+            ("backend.routes.process", ["process_bp"], "process"),
             ("backend.routes.search", ["search_bp"], "search"),
+            ("backend.routes.stats", ["stats_bp"], "stats"),
+            ("backend.routes.inventory", ["inventory_bp"], "inventory"),
         ]
 
         imported_blueprints = {}
