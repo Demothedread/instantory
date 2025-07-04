@@ -609,165 +609,7 @@ async def google_login():
         return jsonify({"error": "Authentication failed", "details": str(e)}), 500
 
 
-@auth_bp.route("/google/callback", methods=["GET", "OPTIONS"])
-async def google_callback():
-    """Handle Google OAuth callback."""
-    # Handle preflight OPTIONS request
-    if request.method == "OPTIONS":
-        origin = request.headers.get("Origin")
-        if origin and (
-            origin == "https://hocomnia.com"
-            or origin == "https://www.hocomnia.com"
-            or origin.endswith(".hocomnia.com")
-            or "vercel.app" in origin
-            or "localhost" in origin
-        ):
-            headers = {
-                "Access-Control-Allow-Origin": origin,
-                "Access-Control-Allow-Methods": "GET, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept, Origin, X-Requested-With",
-                "Access-Control-Allow-Credentials": "true",
-                "Access-Control-Max-Age": "3600",
-            }
-            return "", 204, headers
-        else:
-            return "", 403
-
-    try:
-        # Get the code parameter
-        code = request.args.get("code")
-        state = request.args.get("state", "")
-
-        logger.info(
-            "Google callback received: code present: %s, state: %s", bool(code), state
-        )
-        logger.info("Request headers: %s", dict(request.headers))
-
-        if not code:
-            error = request.args.get("error", "Invalid or missing code")
-            logger.warning("Google callback error: %s", error)
-            return redirect(f"{FRONTEND_URL}/login?error={urllib.parse.quote(error)}")
-
-        # Exchange the code for tokens
-        # Use static methods to properly access configuration values
-        client_id = GoogleOAuthConfig.get_client_id()
-        client_secret = GoogleOAuthConfig.get_client_secret()
-
-        # Fix the redirect_uri to match what's registered with Google
-        redirect_uri = GoogleOAuthConfig.get_redirect_uri()
-        logger.info("Using redirect URI: %s", redirect_uri)
-
-        async with aiohttp.ClientSession() as session:
-            try:
-                token_request_data = {
-                    "client_id": client_id,
-                    "client_secret": client_secret,
-                    "code": code,
-                    "redirect_uri": redirect_uri,
-                    "grant_type": "authorization_code",
-                }
-                logger.info("Token exchange request data: %s", token_request_data)
-
-                async with session.post(
-                    "https://oauth2.googleapis.com/token",
-                    data=token_request_data,
-                ) as response:
-                    token_data = await response.json()
-                    logger.info("Token exchange response status: %s", response.status)
-
-                    if response.status != 200:
-                        logger.error("Token exchange error response: %s", token_data)
-            except (aiohttp.ClientError, TimeoutError) as e:
-                logger.exception("Error during token exchange request: %s", e)
-                return redirect(
-                    f"{FRONTEND_URL}/login?error=token_exchange_error&details={urllib.parse.quote(str(e))}"
-                )
-
-        if "error" in token_data:
-            logger.warning("Token exchange error: %s", token_data["error"])
-            return redirect(
-                f"{FRONTEND_URL}/login?error={urllib.parse.quote(token_data.get('error'))}&details={urllib.parse.quote(token_data.get('error_description', ''))}"
-            )
-
-        id_token_jwt = token_data.get("id_token")
-        if not id_token_jwt:
-            logger.error("No ID token in response")
-            return redirect(f"{FRONTEND_URL}/login?error=missing_id_token")
-
-        # Verify the token
-        id_info = await verify_google_token(id_token_jwt)
-        if not id_info:
-            logger.error("Failed to verify Google ID token")
-            return redirect(f"{FRONTEND_URL}/login?error=invalid_token")
-
-        # Extract user info
-        email = id_info.get("email")
-        name = id_info.get("name", email)
-        google_id = id_info.get("sub")
-        picture = id_info.get("picture")
-
-        logger.info(
-            "User info from Google: email=%s, name=%s, picture=%s",
-            email,
-            name,
-            bool(picture),
-        )
-
-        # Create or update user
-        try:
-            user, is_new_user = await upsert_user(
-                email=email,
-                name=name,
-                google_id=google_id,
-                auth_provider="google",
-                is_verified=True,
-            )
-            logger.info("User created/updated: %s", user["id"])
-        except (ConnectionError, ValueError) as e:
-            logger.exception("Error creating/updating user: %s", e)
-            return redirect(
-                f"{FRONTEND_URL}/login?error=user_creation_failed&details={urllib.parse.quote(str(e))}"
-            )
-
-        # Create tokens with appropriate expiry
-        try:
-            access_token = await create_token(
-                {
-                    "id": user["id"],
-                    "email": user["email"],
-                    "is_admin": user.get("is_admin", False),
-                },
-                "access",
-            )
-            refresh_token = await create_token({"user_id": user["id"]}, "refresh")
-            logger.info("Tokens created for user %s", user["id"])
-        except (jwt.InvalidTokenError, ValueError) as e:
-            logger.exception("Error creating tokens: %s", e)
-            return redirect(
-                f"{FRONTEND_URL}/login?error=token_creation_failed&details={urllib.parse.quote(str(e))}"
-            )
-
-        # Redirect to frontend with tokens
-        # Use state if provided (for redirecting to a specific page after login)
-        redirect_path = "/dashboard"
-        if state and state.startswith("/"):
-            redirect_path = state
-
-        # Encode tokens for URL
-        encoded_access = urllib.parse.quote(access_token)
-        encoded_refresh = urllib.parse.quote(refresh_token)
-        # Add is_new_user to the redirect URL
-        is_new_user_str = "true" if is_new_user else "false"
-        final_redirect_url = f"{FRONTEND_URL}{redirect_path}?access_token={encoded_access}&refresh_token={encoded_refresh}&auth_success=true&is_new_user={is_new_user_str}"
-        logger.info(
-            "Redirecting to frontend: %s%s with tokens", FRONTEND_URL, redirect_path
-        )
-
-        return redirect(final_redirect_url)
-
-    except (ConnectionError, ValueError, aiohttp.ClientError) as e:
-        logger.exception("Google callback error: %s", e)
-        return redirect(f"{FRONTEND_URL}/login?error={urllib.parse.quote(str(e))}")
+# Removed unused Google OAuth callback endpoint - using credential-based flow only
 
 
 @auth_bp.route("/refresh", methods=["POST"])
@@ -1056,6 +898,89 @@ async def login():
         return jsonify({"error": "Authentication failed", "details": str(e)}), 500
 
 
+# Add admin login route after the regular login route
+@auth_bp.route("/admin/login", methods=["POST"])
+async def admin_login():
+    """Log in with admin override password."""
+    try:
+        data = await request.get_json()
+        email = data.get("email")
+        admin_password = data.get("admin_password")
+
+        if not email or not admin_password:
+            return jsonify({"error": "Email and admin password are required"}), 400
+
+        # Check admin password override
+        if not ADMIN_PASSWORD_OVERRIDE or admin_password != ADMIN_PASSWORD_OVERRIDE:
+            return jsonify({"error": "Invalid admin password"}), 401
+
+        # Get user by email
+        user = await get_user_by_email(email)
+        if not user:
+            return jsonify({"error": "User not found"}), 401
+
+        # Log admin login
+        await log_user_login(user["id"], "admin")
+
+        # Force user to be admin
+        user_dict = dict(user)
+        user_dict["is_admin"] = True
+
+        # Create tokens with admin privileges
+        access_token = await create_token(
+            {
+                "id": user["id"],
+                "email": user["email"],
+                "is_admin": True,
+            },
+            "access",
+        )
+        refresh_token = await create_token({"user_id": user["id"]}, "refresh")
+
+        # Get user data
+        user_data = await get_user_data(user["id"])
+
+        # Login using Quart-Auth
+        auth_user = BartlebyAuthUser(
+            int(user["id"]),
+            {
+                "email": user["email"],
+                "name": user.get("name"),
+                "is_admin": True,
+            },
+        )
+        login_user(auth_user)
+
+        # Return response with user data and tokens
+        response = jsonify(
+            {"authenticated": True, "user": user_dict, "data": user_data}
+        )
+
+        # Set secure cookies
+        response.set_cookie(
+            "access_token",
+            access_token,
+            httponly=True,
+            secure=True,
+            samesite="None",
+            max_age=ACCESS_TOKEN_EXPIRY.total_seconds(),
+        )
+        response.set_cookie(
+            "refresh_token",
+            refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="None",
+            max_age=REFRESH_TOKEN_EXPIRY.total_seconds(),
+        )
+
+        return response
+
+    except Exception as e:
+        logger.exception("Admin login failed: %s", e)
+        return jsonify({"error": "Admin authentication failed", "details": str(e)}), 500
+
+
 @auth_bp.route("/session", methods=["GET"])
 async def check_session():
     """Check if the user has a valid session."""
@@ -1110,35 +1035,6 @@ async def check_session():
         return jsonify({"authenticated": False, "error": str(e)}), 500
 
 
-@auth_bp.route("/sessions", methods=["GET"])
-async def check_sessions():
-    """Check if the user has a valid session (plural endpoint for compatibility)."""
-    # This is just an alias for the /session endpoint to handle both /session and /sessions
-    return await check_session()
+# Removed duplicate /sessions endpoint - use /session instead
 
-
-@auth_bp.route("/google", methods=["GET"])
-async def google_auth():
-    """Redirect to Google OAuth for authentication."""
-    try:
-        # Generate the Google OAuth URL
-        redirect_uri = GoogleOAuthConfig.get_redirect_uri()
-        client_id = GoogleOAuthConfig.get_client_id()
-
-        if not client_id or not redirect_uri:
-            return jsonify({"error": "Google OAuth configuration is missing"}), 500
-
-        auth_url = (
-            f"https://accounts.google.com/o/oauth2/auth?response_type=code"
-            f"&client_id={client_id}&redirect_uri={redirect_uri}"
-            "&scope=email%20profile&access_type=offline&prompt=consent"
-        )
-
-        return redirect(auth_url)
-
-    except Exception as e:
-        logger.exception("Google OAuth redirect failed: %s", e)
-        return (
-            jsonify({"error": "Google OAuth redirect failed", "details": str(e)}),
-            500,
-        )
+# Removed unused Google OAuth redirect endpoint - using credential-based flow only

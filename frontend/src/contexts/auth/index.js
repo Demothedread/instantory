@@ -1,6 +1,6 @@
-import React, { createContext, useCallback, useEffect, useRef, useState } from 'react';
-import { authApi } from '../../services/api';
+import from 'react';
 import config from '../../config';
+import { authApi } from '../../services/api';
 
 // Create the auth context
 export const AuthContext = createContext();
@@ -45,8 +45,8 @@ export const AuthProvider = ({ children }) => {
       setUserData(sessionData);
     }
     
-    // Store minimal user data in local storage for persistence
-    // Avoid storing sensitive information
+    // Store minimal user data in localStorage for persistence across tabs
+    // Only store essential user info, not sensitive data
     localStorage.setItem(config.auth.sessionKey, JSON.stringify({
       id: userData.id,
       email: userData.email,

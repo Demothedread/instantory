@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Document Factory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            color: #e5e7eb; /* gray-200 */
+        }
+        .font-mono {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .node {
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        .node:hover > circle {
+            stroke-width: 4px;
+        }
+        .link {
+            stroke: #4b5563; /* gray-600 */
+            stroke-opacity: 0.6;
+        }
+        .factor-doc { background-color: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px; }
+        .factor-key { background-color: #10b981; color: white; padding: 2px 6px; border-radius: 4px; }
+        .factor-subkey { background-color: #f97316; color: white; padding: 2px 6px; border-radius: 4px; }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        .modal { transition: opacity 0.25s ease; }
+        .modal-content { transition: transform 0.25s ease; }
+
+        .agent-icon {
+            font-size: 20px;
+            fill: #e5e7eb;
+        }
+        .agent-circle {
+            transition: all 0.2s ease-in-out;
+        }
+        .agent-circle:hover {
+            stroke-width: 3px;
+            stroke: #3b82f6;
+        }
+        .knob-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 overflow-hidden h-screen">
+
+    <div id="app" class="flex flex-col h-screen">
+        <!-- Header -->
+        <header class="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700 p-4 flex justify-between items-center z-20">
+            <h1 class="text-2xl font-bold text-white tracking-wide">The Document Factory</h1>
+            <div class="flex items-center space-x-4">
+                <select id="docTypeSelector" class="bg-gray-700 border border-gray-600 text-white rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="business_proposal">Business Proposal</option>
+                    <option value="legal_claim">Legal Claim</option>
+                    <option value="white_paper">White Paper</option>
+                </select>
+                <button id="startButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors duration-200">
+                    Start Production
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 overflow-hidden">
+            
+            <!-- Left Panel: Blueprint -->
+            <div class="lg:col-span-3 bg-gray-800/50 rounded-lg p-6 shadow-lg flex flex-col overflow-y-auto">
+                <h2 class="text-xl font-semibold mb-4 text-white border-b border-gray-700 pb-2">Blueprint</h2>
+                <div>
+                    <label for="promptInput" class="block text-sm font-medium text-gray-300 mb-2">User Prompt</label>
+                    <textarea id="promptInput" rows="4" class="w-full bg-gray-900 border border-gray-700 rounded-md p-2 text-sm text-gray-200 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Enter your document request here..."></textarea>
+                    <div id="deconstructedPrompt" class="mt-4 p-3 bg-gray-900 rounded-md text-sm leading-relaxed min-h-[80px]"></div>
+                </div>
+                <!-- Instructions Box -->
+                <div id="instructionBox" class="mt-6 flex-grow flex flex-col bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+                    <!-- Dynamic content will be injected here -->
+                </div>
+            </div>
+
+            <!-- Center Panel: Factory Floor -->
+            <div class="lg:col-span-6 bg-gray-800/50 rounded-lg shadow-lg flex flex-col overflow-hidden relative">
+                <h2 class="text-xl font-semibold p-6 text-white border-b border-gray-700">Factory Floor</h2>
+                <div id="factoryFloor" class="flex-grow w-full h-full"></div>
+                <div id="factoryStatus" class="absolute bottom-4 left-4 bg-black/50 text-white text-xs font-mono p-2 rounded-md">STATUS: IDLE</div>
+            </div>
+
+            <!-- Right Panel: Final Product -->
+            <div class="lg:col-span-3 bg-gray-800/50 rounded-lg shadow-lg flex flex-col overflow-y-auto">
+                <h2 class="text-xl font-semibold p-6 text-white border-b border-gray-700">Final Product</h2>
+                <div id="finalProduct" class="p-6 space-y-4 text-sm leading-relaxed"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for Node Details -->
+    <div id="nodeModal" class="modal fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4 hidden opacity-0">
+        <div id="modalContent" class="modal-content bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col transform scale-95">
+            <div class="flex justify-between items-center p-4 border-b border-gray-700">
+                <h3 id="modalTitle" class="text-lg font-bold text-white">Task Details</h3>
+                <button id="closeModal" class="text-gray-400 hover:text-white">&times;</button>
+            </div>
+            <div id="modalBody" class="p-6 overflow-y-auto text-gray-300"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- ICONS ---
+        const ICONS = {
+            Maestro: `<path d="M12 2.5a5.5 5.5 0 0 1 3.096 10.047 9.005 9.005 0 0 1 5.9 8.198.75.75 0 0 1-1.492.154 7.505 7.505 0 0 0-14.998 0 .75.75 0 0 1-1.492-.154 9.005 9.005 0 0 1 5.9-8.198A5.5 5.5 0 0 1 12 2.5ZM8 8a4 4 0 1 0 8 0 4 4 0 0 0-8 0Z" />`,
+            Planner: `<path d="M3.5 2.75a.75.75 0 0 0-1.5 0v14.5a.75.75 0 0 0 1.5 0v-1.168c1.333.477 2.745.618 4.25.25V18.5a.75.75 0 0 0 1.5 0v-2.086c.334.035.67.062 1 .077v2.259a.75.75 0 0 0 1.5 0v-2.5a.75.75 0 0 0-.75-.75h-.25c-.322 0-.64-.015-.95-.042V9.528c.271.026.54.04.81.04H12a.75.75 0 0 0 .75-.75V3.5a.75.75 0 0 0-1.5 0v1.44c-1.333-.477-2.745-.618-4.25-.25V2.75Zm4.25 2.502c1.25-.316 2.519-.234 3.75.25V7.5c-1.25.316-2.519.234-3.75-.25V5.252Z" />`,
+            Researcher: `<path d="m16.704 15.182-2.855-2.855a6.002 6.002 0 1 0-1.522 1.522l2.855 2.855a1.076 1.076 0 1 0 1.522-1.522ZM10.5 15a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9Z" />`,
+            Writer: `<path d="M19.903 8.586a3.491 3.491 0 0 0-4.939-4.938L3.515 15.097a1.047 1.047 0 0 0-.307.74V19.5a.5.5 0 0 0 .5.5h3.662c.284 0 .55-.116.74-.307L19.903 8.586Zm-5.68-3.442a1.991 1.991 0 0 1 2.817 2.817L15.6 9.4l-2.817-2.817 1.437-1.437Z" />`,
+            Editor: `<path d="M14.623 2.236a2.75 2.75 0 0 1 3.89 3.89L9.29 15.348a2.75 2.75 0 0 1-1.572.792l-3.321.604a.75.75 0 0 1-.86-.86l.604-3.32a2.75 2.75 0 0 1 .792-1.572L14.623 2.236Zm1.879 1.878a1.25 1.25 0 0 0-1.768 0L6.5 12.348l-2.086 2.086 2.086-2.086.53-.53a1.25 1.25 0 1 0-1.768-1.768l-.53.53-2.086 2.086 2.086 2.086 8.234-8.234a1.25 1.25 0 0 0 0-1.768Z" />`,
+            MarketAnalyst: `<path d="M4 2.5a.5.5 0 0 1 .5-.5h15a.5.5 0 0 1 .5.5v15a.5.5 0 0 1-.5.5h-15a.5.5 0 0 1-.5-.5v-15Zm1.5 14v-5.5h2.5v5.5H5.5Zm3.5 0v-9h2.5v9H9Zm3.5 0v-7.5h2.5v7.5h-2.5Zm3.5 0v-11h2.5v11h-2.5Z" />`,
+            FinancialModeler: `<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-5 7.5a.5.5 0 0 1 .5-.5h2.5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-.5.5H7.5a.5.5 0 0 1-.5-.5v-5Zm4 0a.5.5 0 0 1 .5-.5h2.5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-.5.5h-2.5a.5.5 0 0 1-.5-.5v-5Z" />`,
+            LegalDrafter: `<path d="M12.75 3.5a.75.75 0 0 0-1.5 0V4h-1.5a.75.75 0 0 0 0 1.5h1.5v1.5a.75.75 0 0 0 1.5 0V5.5h1.5a.75.75 0 0 0 0-1.5h-1.5V3.5ZM9.5 2.5a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v18a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-18Zm-1 17v-16h-1v16h1Z" />`,
+            DataVisualizer: `<path d="M3 12a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v6.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5V12Zm5 0a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v6.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5V12Zm5-2a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v8.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5V10Zm5-4.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v13a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-13Z" />`
+        };
+
+        // --- CONFIGURATION & MOCK DATA ---
+        const MOCK_PROMPTS = {
+            business_proposal: "Draft a funding proposal for a new AI-powered logistics platform called 'ShipFast' that is targeting a $5M seed round from venture capital firms.",
+            legal_claim: "Prepare a legal claim for plaintiff John Doe against 'MegaCorp' for breach of contract, alleging failure to deliver goods as per the agreement signed on Jan 1, 2024.",
+            white_paper: "Write a white paper on the impact of decentralized finance (DeFi) on traditional banking institutions, focusing on lending protocols and yield farming."
+        };
+
+        const DOCUMENT_TEMPLATES = {
+            business_proposal: { 
+                name: "Business Proposal", 
+                sections: ["Executive Summary", "Problem Statement", "Proposed Solution", "Market Analysis", "Team", "Financial Projections"], 
+                specialistAgents: ["MarketAnalystAgent", "FinancialModelerAgent", "GeneralWriterAgent"],
+                knobs: {
+                    Tone: ["Persuasive", "Formal", "Visionary"],
+                    Style: ["Standard", "Data-Driven", "Narrative"],
+                    Length: ["Concise", "Standard", "Comprehensive"]
+                }
+            },
+            legal_claim: { 
+                name: "Legal Claim", 
+                sections: ["Caption", "Jurisdiction", "Statement of Facts", "Cause of Action: Breach of Contract", "Prayer for Relief"], 
+                specialistAgents: ["LegalDrafterAgent"],
+                knobs: {
+                    Tone: ["Formal", "Assertive"],
+                    Style: ["Procedural", "Argumentative"],
+                    Length: ["Standard", "Detailed"]
+                }
+            },
+            white_paper: { 
+                name: "White Paper", 
+                sections: ["Abstract", "Introduction", "Background Analysis", "DeFi Lending Protocols", "Impact on Banking", "Conclusion"], 
+                specialistAgents: ["TechnicalResearcherAgent", "DataVisualizationAgent", "GeneralWriterAgent"],
+                knobs: {
+                    Tone: ["Authoritative", "Academic", "Objective"],
+                    Style: ["Technical", "Analytical", "Educational"],
+                    Length: ["Standard", "In-Depth", "Exhaustive"]
+                }
+            }
+        };
+        
+        const MOCK_AGENT_OUTPUTS = {
+            "Executive Summary": "ShipFast is a revolutionary AI-powered logistics platform poised to disrupt the multi-trillion dollar shipping industry. By leveraging proprietary route optimization algorithms, we project a 30% increase in efficiency over existing solutions. We are seeking a $5M seed round to scale our operations and capture a significant market share within 24 months.",
+            "Market Analysis": "The global logistics market is valued at over $8 trillion, with a CAGR of 6.5%. Our target segment, last-mile delivery, represents a $400 billion opportunity. Key competitors are established but rely on outdated technology, presenting a clear opening for ShipFast's superior AI-driven approach.",
+            "Statement of Facts": "On January 1, 2024, Plaintiff John Doe entered into a binding agreement with Defendant MegaCorp. Under this agreement, MegaCorp was obligated to deliver 10,000 units of custom-manufactured widgets by March 31, 2024. MegaCorp failed to deliver any units by the specified date, thereby breaching the contract.",
+            "Cause of Action: Breach of Contract": "Defendant MegaCorp's failure to deliver the specified goods constitutes a material breach of the contract dated January 1, 2024. The contract explicitly stated that 'time is of the essence,' and Defendant's non-performance has caused significant financial harm to the Plaintiff.",
+            "Prayer for Relief": "WHEREFORE, Plaintiff demands judgment against Defendant for compensatory damages in an amount to be proven at trial, but not less than $150,000, plus interest, costs of suit, and such other and further relief as the Court deems just and proper.",
+            "Abstract": "This white paper examines the profound impact of decentralized finance (DeFi) on the legacy financial system. We analyze how DeFi lending protocols and yield farming strategies are challenging the core business models of traditional banking institutions, offering greater transparency, efficiency, and accessibility.",
+            "Default": "Content is being generated for this section by the assigned agent..."
+        };
+
+        const AGENT_POOL = [
+            { id: 'Maestro', role: 'Maestro', type: 'Orchestrator', icon: ICONS.Maestro },
+            { id: 'PlannerAgent', role: 'Planner', type: 'Generalist', icon: ICONS.Planner },
+            { id: 'WebResearchAgent', role: 'Researcher', type: 'Generalist', icon: ICONS.Researcher },
+            { id: 'GeneralWriterAgent', role: 'Writer', type: 'Generalist', icon: ICONS.Writer },
+            { id: 'EditorAgent', role: 'Editor', type: 'Generalist', icon: ICONS.Editor },
+            { id: 'MarketAnalystAgent', role: 'Market Analyst', type: 'Specialist', icon: ICONS.MarketAnalyst },
+            { id: 'FinancialModelerAgent', role: 'Financial Modeler', type: 'Specialist', icon: ICONS.FinancialModeler },
+            { id: 'LegalDrafterAgent', role: 'Legal Drafter', type: 'Specialist', icon: ICONS.LegalDrafter },
+            { id: 'DataVisualizationAgent', role: 'Data Visualizer', type: 'Specialist', icon: ICONS.DataVisualizer },
+        ];
+        
+        // --- DOM ELEMENTS ---
+        const docTypeSelector = document.getElementById('docTypeSelector');
+        const startButton = document.getElementById('startButton');
+        const promptInput = document.getElementById('promptInput');
+        const deconstructedPrompt = document.getElementById('deconstructedPrompt');
+        const instructionBox = document.getElementById('instructionBox');
+        const factoryFloor = document.getElementById('factoryFloor');
+        const factoryStatus = document.getElementById('factoryStatus');
+        const finalProduct = document.getElementById('finalProduct');
+        const nodeModal = document.getElementById('nodeModal');
+        const modalContent = document.getElementById('modalContent');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalBody = document.getElementById('modalBody');
+        const closeModal = document.getElementById('closeModal');
+
+        // --- D3.JS VISUALIZATION SETUP ---
+        let simulation, svg, g;
+        let width = factoryFloor.clientWidth;
+        let height = factoryFloor.clientHeight;
+
+        function initializeVisualization() {
+            if (svg) svg.remove();
+            
+            width = factoryFloor.clientWidth;
+            height = factoryFloor.clientHeight;
+
+            svg = d3.select("#factoryFloor").append("svg")
+                .attr("width", "100%")
+                .attr("height", "100%")
+                .attr("viewBox", `0 0 ${width} ${height}`);
+            
+            svg.append("rect")
+                .attr("x", width - 120)
+                .attr("y", 10)
+                .attr("width", 110)
+                .attr("height", height - 20)
+                .attr("rx", 10)
+                .attr("fill", "rgba(0,0,0,0.2)")
+                .attr("stroke", "#4b5563")
+                .attr("stroke-dasharray", "5,5");
+
+            svg.append("text")
+                .attr("x", width - 65)
+                .attr("y", 35)
+                .attr("text-anchor", "middle")
+                .attr("fill", "#9ca3af")
+                .style("font-size", "12px")
+                .style("font-weight", "bold")
+                .text("Agent Pool");
+
+            g = svg.append("g");
+
+            drawAgentPool();
+        }
+        
+        function drawAgentPool() {
+            const agentGroup = g.append("g").attr("class", "agent-pool");
+            AGENT_POOL.forEach((agent, i) => {
+                const isMaestro = agent.id === 'Maestro';
+                const agentX = isMaestro ? 50 : width - 65;
+                const agentY = isMaestro ? 50 : 80 + i * 50;
+                agent.homeX = agentX;
+                agent.homeY = agentY;
+                const agentNode = agentGroup.append("g")
+                    .attr("id", `agent-${agent.id}`)
+                    .attr("transform", `translate(${agentX}, ${agentY})`)
+                    .style("cursor", "pointer");
+                agentNode.append("circle").attr("r", 20).attr("fill", isMaestro ? "#3b82f6" : "#1f2937").attr("stroke", "#9ca3af").attr("class", "agent-circle");
+                agentNode.append("g").attr("class", "agent-icon").html(agent.icon).attr("transform", "translate(-12, -12) scale(1)");
+                agentNode.append("title").text(`${agent.role} (${agent.type})`);
+            });
+        }
+
+        function updateGraph(graph) {
+            const link = g.selectAll(".link").data(graph.links, d => `${d.source.id}-${d.target.id}`).join("line").attr("class", "link").attr("stroke-width", 2);
+            const node = g.selectAll(".node").data(graph.nodes, d => d.id).join("g").attr("class", "node").on("click", (event, d) => showNodeDetails(d)).call(drag(simulation));
+            node.append("circle").attr("r", 25).attr("id", d => `node-${d.id.replace(/\s|:/g, '-')}`).style("fill", d => getNodeColor(d.status)).style("stroke", "#9ca3af").style("stroke-width", 2);
+            node.append("text").attr("dy", 4).attr("text-anchor", "middle").style("fill", "#fff").style("font-size", "10px").text(d => d.id.length > 8 ? d.id.substring(0, 7) + '...' : d.id);
+            simulation.nodes(graph.nodes).on("tick", ticked);
+            simulation.force("link").links(graph.links);
+            simulation.alpha(1).restart();
+            function ticked() {
+                link.attr("x1", d => d.source.x).attr("y1", d => d.source.y).attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+                node.attr("transform", d => `translate(${d.x},${d.y})`);
+            }
+        }
+        
+        function setupSimulation() {
+            simulation = d3.forceSimulation()
+                .force("link", d3.forceLink().id(d => d.id).distance(120))
+                .force("charge", d3.forceManyBody().strength(-400))
+                .force("x", d3.forceX(d => {
+                    if (d.type === 'control') {
+                        return d.id === 'Start' ? 100 : width - 250;
+                    }
+                    if (d.id === 'Research') return (width-120)/2 - 150;
+                    return (width-120)/2;
+                }).strength(0.5))
+                .force("y", d3.forceY(height / 2).strength(0.1));
+        }
+
+        function drag(simulation) {
+            function dragstarted(event, d) { if (!event.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }
+            function dragged(event, d) { d.fx = event.x; d.fy = event.y; }
+            function dragended(event, d) { if (!event.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }
+            return d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended);
+        }
+
+        function getNodeColor(status) {
+            switch (status) {
+                case 'pending': return '#4b5563';
+                case 'active': return '#2563eb';
+                case 'complete': return '#16a34a';
+                case 'failed': return '#dc2626';
+                default: return '#4b5563';
+            }
+        }
+        
+        // --- APPLICATION LOGIC ---
+        class MaestroOrchestrator {
+            constructor() {
+                this.state = {};
+                this.graph = { nodes: [], links: [] };
+                this.isRunning = false;
+            }
+
+            preFlight(prompt, docType) {
+                this.state = { prompt, docType, keyFactors: this.deconstructPrompt(prompt, docType), session_id: `session_${new Date().getTime()}` };
+                this.displayBlueprint();
+                this.generateWorkflowDAG();
+                updateGraph(this.graph);
+            }
+
+            deconstructPrompt(prompt, docType) {
+                const template = DOCUMENT_TEMPLATES[docType];
+                let factors = {
+                    docType: { text: template.name, class: 'factor-doc' },
+                    keyFactor: null,
+                    subKeyFactors: []
+                };
+
+                // This is a rule-based engine. A real system would use an LLM call.
+                const keyFactorRegex = /(?:for|on|about)\s(.*?)(?:that|which|alleging|focusing)/i;
+                const subKeyFactorRegex = /(?:targeting|against|involving|focusing on)\s(.*?)(?:,|$)/gi;
+                
+                let keyFactorMatch = prompt.match(keyFactorRegex);
+                if(keyFactorMatch && keyFactorMatch[1]) {
+                    factors.keyFactor = { text: keyFactorMatch[1].trim().replace(/,$/, ''), class: 'factor-key' };
+                }
+
+                let subKeyMatch;
+                while ((subKeyMatch = subKeyFactorRegex.exec(prompt)) !== null) {
+                    factors.subKeyFactors.push({ text: subKeyMatch[1].trim().replace(/,$/, ''), class: 'factor-subkey' });
+                }
+                
+                return factors;
+            }
+
+            displayBlueprint() {
+                const { prompt, keyFactors, docType } = this.state;
+                let highlightedPrompt = prompt;
+                
+                if (keyFactors.keyFactor) {
+                    highlightedPrompt = highlightedPrompt.replace(keyFactors.keyFactor.text, `<span class="${keyFactors.keyFactor.class}">${keyFactors.keyFactor.text}</span>`);
+                }
+                keyFactors.subKeyFactors.forEach(f => {
+                    highlightedPrompt = highlightedPrompt.replace(f.text, `<span class="${f.class}">${f.text}</span>`);
+                });
+                highlightedPrompt = highlightedPrompt.replace(new RegExp(keyFactors.docType.text, 'i'), `<span class="${keyFactors.docType.class}">${keyFactors.docType.text}</span>`);
+                
+                deconstructedPrompt.innerHTML = highlightedPrompt;
+                this.displayInstructionBox(docType);
+            }
+            
+            displayInstructionBox(docType){
+                const template = DOCUMENT_TEMPLATES[docType];
+                let knobsHTML = Object.entries(template.knobs).map(([knobName, options]) => `
+                    <div class="flex-1">
+                        <label class="block text-xs font-medium text-gray-400 mb-1">${knobName}</label>
+                        <select class="knob-select w-full bg-gray-800 border border-gray-600 text-white rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            ${options.map(opt => `<option>${opt}</option>`).join('')}
+                        </select>
+                    </div>
+                `).join('');
+
+                instructionBox.innerHTML = `
+                    <h3 class="text-lg font-semibold mb-2 text-gray-200">Instructions</h3>
+                    <p class="text-xs text-gray-400 mb-3">Standard sections for a ${template.name}: <br/> <span class="text-gray-300">${template.sections.join(', ')}</span></p>
+                    <div class="flex gap-2">${knobsHTML}</div>
+                `;
+            }
+
+            generateWorkflowDAG() {
+                const template = DOCUMENT_TEMPLATES[docTypeSelector.value];
+                const nodes = [];
+                const links = [];
+                const startNode = { id: 'Start', status: 'pending', type: 'control' };
+                const endNode = { id: 'End', status: 'pending', type: 'control' };
+                nodes.push(startNode, endNode);
+                const researchNode = { id: 'Research', agentId: 'WebResearchAgent', status: 'pending', type: 'task' };
+                nodes.push(researchNode);
+                links.push({ source: 'Start', target: 'Research' });
+                template.sections.forEach(section => {
+                    const agentId = this.getAgentForSection(section);
+                    const sectionNode = { id: section, agentId: agentId, status: 'pending', type: 'task' };
+                    nodes.push(sectionNode);
+                    links.push({ source: 'Research', target: section });
+                    links.push({ source: section, target: 'End' });
+                });
+                this.graph = { nodes, links };
+            }
+
+            getAgentForSection(section) {
+                if (section.toLowerCase().includes('market')) return 'MarketAnalystAgent';
+                if (section.toLowerCase().includes('financial')) return 'FinancialModelerAgent';
+                if (section.toLowerCase().includes('legal') || section.toLowerCase().includes('claim') || section.toLowerCase().includes('fact') || section.toLowerCase().includes('action') || section.toLowerCase().includes('relief') || section.toLowerCase().includes('caption') || section.toLowerCase().includes('jurisdiction')) return 'LegalDrafterAgent';
+                if (section.toLowerCase().includes('data') || section.toLowerCase().includes('visualization')) return 'DataVisualizationAgent';
+                return 'GeneralWriterAgent';
+            }
+
+            async startProduction() {
+                if (this.isRunning || !this.graph.nodes.length) return;
+                this.isRunning = true;
+                this.resetUI();
+                factoryStatus.textContent = "STATUS: RUNNING";
+                startButton.disabled = true;
+                startButton.classList.add('opacity-50', 'cursor-not-allowed');
+                const executionOrder = ['Start', 'Research', ...DOCUMENT_TEMPLATES[this.state.docType].sections, 'End'];
+                for (const nodeId of executionOrder) {
+                    const node = this.graph.nodes.find(n => n.id === nodeId);
+                    if (!node || node.type === 'control') continue;
+                    await this.executeTask(node);
+                }
+                this.graph.nodes.find(n => n.id === 'End').status = 'complete';
+                d3.select(`#node-End`).style("fill", getNodeColor('complete'));
+                factoryStatus.textContent = "STATUS: COMPLETE";
+                this.isRunning = false;
+                startButton.disabled = false;
+                startButton.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+            
+            resetUI() {
+                finalProduct.innerHTML = '';
+                this.graph.nodes.forEach(n => n.status = 'pending');
+                updateGraph(this.graph);
+                this.displayBlueprint();
+            }
+
+            async executeTask(node) {
+                const nodeIdSanitized = node.id.replace(/\s|:/g, '-');
+                const agent = AGENT_POOL.find(a => a.id === node.agentId);
+                node.agent = agent;
+                const agentElement = d3.select(`#agent-${agent.id}`);
+                agentElement.transition().duration(1000).attr("transform", `translate(${node.x}, ${node.y})`);
+                node.status = 'active';
+                d3.select(`#node-${nodeIdSanitized}`).style("fill", getNodeColor('active')).transition().duration(300).attr('r', 30).transition().duration(300).attr('r', 25);
+                factoryStatus.textContent = `STATUS: ${agent.role} is working on ${node.id}...`;
+                await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
+                const output = MOCK_AGENT_OUTPUTS[node.id] || MOCK_AGENT_OUTPUTS['Default'];
+                node.output = output;
+                node.status = 'complete';
+                d3.select(`#node-${nodeIdSanitized}`).style("fill", getNodeColor('complete'));
+                agentElement.transition().duration(1000).attr("transform", `translate(${agent.homeX}, ${agent.homeY})`);
+                if(node.id !== 'Research' && node.id !== 'Caption' && node.id !== 'Jurisdiction') {
+                    this.addSectionToProduct(node.id, output);
+                }
+            }
+            
+            addSectionToProduct(title, content) {
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = 'bg-gray-900/70 p-4 rounded-lg border border-gray-700 animate-fade-in';
+                sectionDiv.innerHTML = `<h4 class="font-bold text-md text-blue-300 mb-2">${title}</h4><p class="text-gray-300">${content}</p>`;
+                finalProduct.appendChild(sectionDiv);
+                finalProduct.scrollTop = finalProduct.scrollHeight;
+            }
+        }
+        
+        const maestro = new MaestroOrchestrator();
+
+        // --- UI EVENT LISTENERS ---
+        docTypeSelector.addEventListener('change', (e) => {
+            promptInput.value = MOCK_PROMPTS[e.target.value];
+            maestro.preFlight(promptInput.value, e.target.value);
+        });
+        promptInput.addEventListener('input', (e) => {
+            maestro.preFlight(e.target.value, docTypeSelector.value);
+        });
+        startButton.addEventListener('click', () => {
+             maestro.startProduction();
+        });
+        closeModal.addEventListener('click', hideNodeDetails);
+        nodeModal.addEventListener('click', (e) => { if (e.target.id === 'nodeModal') hideNodeDetails(); });
+
+        function showNodeDetails(nodeData) {
+            modalTitle.textContent = `Task: ${nodeData.id}`;
+            modalBody.innerHTML = `
+                <div class="space-y-4 font-mono text-sm">
+                    <div><p class="text-gray-400 uppercase tracking-wider text-xs">Status</p><p class="text-lg font-semibold" style="color: ${getNodeColor(nodeData.status)}">${nodeData.status.toUpperCase()}</p></div>
+                    <div><p class="text-gray-400 uppercase tracking-wider text-xs">Assigned Agent</p><p>${nodeData.agent?.role || 'N/A'}</p></div>
+                    <div><p class="text-gray-400 uppercase tracking-wider text-xs">Generated Output</p><pre class="bg-gray-900 p-3 rounded-md whitespace-pre-wrap">${nodeData.output || 'No output yet.'}</pre></div>
+                </div>`;
+            nodeModal.classList.remove('hidden');
+            setTimeout(() => {
+                nodeModal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function hideNodeDetails() {
+            nodeModal.classList.add('opacity-0');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => { nodeModal.classList.add('hidden'); }, 250);
+        }
+
+        // --- INITIALIZATION ---
+        window.addEventListener('load', () => {
+            initializeVisualization();
+            setupSimulation();
+            promptInput.value = MOCK_PROMPTS[docTypeSelector.value];
+            maestro.preFlight(promptInput.value, docTypeSelector.value);
+        });
+        
+        window.addEventListener('resize', () => {
+            initializeVisualization();
+            setupSimulation();
+            if(maestro.graph.nodes.length > 0) {
+                 updateGraph(maestro.graph);
+            }
+        });
+    </script>
+    <style>
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
+    </style>
+</body>
+</html>
