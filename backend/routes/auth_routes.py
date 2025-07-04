@@ -403,7 +403,7 @@ async def log_user_login(user_id: int, login_method: str):
             if table_check and table_check[0]:
                 await conn.execute(
                     """
-                    INSERT INTO user_logins (user_id, login_timestamp, login_method) 
+                    INSERT INTO user_logins (user_id, login_time, login_method) 
                     VALUES ($1, NOW(), $2)
                     """,
                     user_id,
@@ -429,10 +429,10 @@ async def get_user_data(user_id: int):
             # Get last login time
             last_login = await conn.fetchrow(
                 """
-                SELECT login_timestamp 
+                SELECT login_time 
                 FROM user_logins 
                 WHERE user_id = $1 
-                ORDER BY login_timestamp DESC 
+                ORDER BY login_time DESC 
                 LIMIT 1 OFFSET 1
                 """,
                 user_id,
@@ -449,7 +449,7 @@ async def get_user_data(user_id: int):
                     }
                 ),
                 "last_login": (
-                    last_login["login_timestamp"].isoformat() if last_login else None
+                    last_login["login_time"].isoformat() if last_login else None
                 ),
             }
     except (ConnectionError, TimeoutError) as e:
