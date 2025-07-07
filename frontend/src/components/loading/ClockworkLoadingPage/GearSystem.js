@@ -1,376 +1,351 @@
 /** @jsxImportSource @emotion/react */
-import { css } from '@emotion/react';
-import { useEffect, useState } from 'react';
+import { css, keyframes } from '@emotion/react';
 import { colors } from '../../../styles/theme/colors';
 
 /**
- * GearSystem - Interconnected gear assembly creating chain reaction animations
- * Features multiple gears of varying sizes with synchronized rotation and sparks
+ * GearSystem - Intricate mechanical gear system for Neo-Deco-Rococo clockwork
+ * Features multiple interconnected gears with realistic physics and Art Deco styling
  */
+
+// Gear rotation animations with varying speeds for realistic mechanical movement
+const gearRotateClockwise = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`;
+
+const gearRotateCounterClockwise = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+`;
+
+const gearTeethGlow = keyframes`
+  0%, 100% { 
+    filter: drop-shadow(0 0 5px ${colors.neonTeal}40);
+  }
+  50% { 
+    filter: drop-shadow(0 0 15px ${colors.neonTeal}80) drop-shadow(0 0 25px ${colors.neonGold}40);
+  }
+`;
+
+const mechanicalPulse = keyframes`
+  0%, 100% { 
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.02);
+  }
+`;
+
 const GearSystem = ({ isInitialized, animationPhase }) => {
-  const [isActive, setIsActive] = useState(false);
-  const [sparkPositions, setSparkPositions] = useState([]);
-
-  useEffect(() => {
-    if (isInitialized && animationPhase >= 1) {
-      setIsActive(true);
-      
-      // Generate spark positions where gears interact
-      const sparks = [
-        { x: 120, y: 80, delay: 0 },
-        { x: 200, y: 120, delay: 0.5 },
-        { x: 80, y: 200, delay: 1 },
-        { x: 250, y: 200, delay: 1.5 },
-        { x: 150, y: 280, delay: 2 }
-      ];
-      setSparkPositions(sparks);
-    }
-  }, [isInitialized, animationPhase]);
-
-  // Gear configuration with sizes, positions, and rotation speeds
-  const gears = [
-    {
-      id: 'master',
-      size: 80,
-      x: 150,
-      y: 150,
-      teeth: 16,
-      speed: 1,
-      color: colors.neonGold,
-      metallic: 'gold',
-      zIndex: 10
-    },
-    {
-      id: 'secondary-1',
-      size: 60,
-      x: 100,
-      y: 100,
-      teeth: 12,
-      speed: -1.33,
-      color: colors.neonTeal,
-      metallic: 'bronze',
-      zIndex: 8
-    },
-    {
-      id: 'secondary-2',
-      size: 50,
-      x: 220,
-      y: 120,
-      teeth: 10,
-      speed: 1.6,
-      color: colors.neonPurple,
-      metallic: 'copper',
-      zIndex: 9
-    },
-    {
-      id: 'tertiary-1',
-      size: 40,
-      x: 80,
-      y: 200,
-      teeth: 8,
-      speed: -2,
-      color: colors.neonBlue,
-      metallic: 'silver',
-      zIndex: 7
-    },
-    {
-      id: 'tertiary-2',
-      size: 45,
-      x: 250,
-      y: 190,
-      teeth: 9,
-      speed: 1.78,
-      color: colors.neonGreen,
-      metallic: 'brass',
-      zIndex: 6
-    },
-    {
-      id: 'micro-1',
-      size: 25,
-      x: 120,
-      y: 80,
-      teeth: 5,
-      speed: -3.2,
-      color: colors.neonRed,
-      metallic: 'platinum',
-      zIndex: 11
-    },
-    {
-      id: 'micro-2',
-      size: 30,
-      x: 170,
-      y: 270,
-      teeth: 6,
-      speed: 2.67,
-      color: colors.neonPink,
-      metallic: 'titanium',
-      zIndex: 5
-    }
-  ];
-
-  const createGearPath = (size, teeth) => {
-    const radius = size / 2;
-    const innerRadius = radius * 0.7;
-    const toothHeight = radius * 0.15;
-    const toothWidth = (2 * Math.PI * radius) / (teeth * 2);
-    
-    let path = '';
-    
-    for (let i = 0; i < teeth; i++) {
-      const angle = (i * 2 * Math.PI) / teeth;
-      const nextAngle = ((i + 1) * 2 * Math.PI) / teeth;
-      
-      // Outer edge of tooth
-      const x1 = Math.cos(angle) * radius;
-      const y1 = Math.sin(angle) * radius;
-      
-      // Top of tooth
-      const x2 = Math.cos(angle + Math.PI / teeth / 2) * (radius + toothHeight);
-      const y2 = Math.sin(angle + Math.PI / teeth / 2) * (radius + toothHeight);
-      
-      // Other side of tooth
-      const x3 = Math.cos(nextAngle) * radius;
-      const y3 = Math.sin(nextAngle) * radius;
-      
-      if (i === 0) {
-        path += `M ${x1} ${y1}`;
-      } else {
-        path += ` L ${x1} ${y1}`;
-      }
-      
-      path += ` L ${x2} ${y2} L ${x3} ${y3}`;
-    }
-    
-    path += ' Z';
-    return path;
-  };
-
-  const getMetallicGradient = (metallic, color) => {
-    const gradients = {
-      gold: `linear-gradient(135deg, #ffd700 0%, #ffed4e 25%, #ffd700 50%, #b8860b 75%, #ffd700 100%)`,
-      bronze: `linear-gradient(135deg, #cd7f32 0%, #d4a574 25%, #cd7f32 50%, #8b4513 75%, #cd7f32 100%)`,
-      copper: `linear-gradient(135deg, #b87333 0%, #d4a574 25%, #b87333 50%, #8b4513 75%, #b87333 100%)`,
-      silver: `linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 25%, #c0c0c0 50%, #808080 75%, #c0c0c0 100%)`,
-      brass: `linear-gradient(135deg, #b5a642 0%, #d4c649 25%, #b5a642 50%, #8b7355 75%, #b5a642 100%)`,
-      platinum: `linear-gradient(135deg, #e5e4e2 0%, #f5f5f5 25%, #e5e4e2 50%, #a8a8a8 75%, #e5e4e2 100%)`,
-      titanium: `linear-gradient(135deg, #878681 0%, #b8b8b8 25%, #878681 50%, #5a5a5a 75%, #878681 100%)`
-    };
-    
-    return gradients[metallic] || color;
-  };
-
   return (
-    <div css={[styles.container, isActive && styles.active]}>
-      {/* Main gear assembly */}
-      <div css={styles.gearsContainer}>
-        {gears.map((gear) => (
-          <div
-            key={gear.id}
-            css={styles.gearWrapper}
-            style={{
-              left: gear.x - gear.size / 2,
-              top: gear.y - gear.size / 2,
-              zIndex: gear.zIndex
-            }}
-          >
+    <div css={styles.gearSystemContainer}>
+      {/* Primary gear - large central gear */}
+      <div css={[styles.gear, styles.primaryGear]}>
+        <div css={styles.gearBody}>
+          {/* Gear teeth */}
+          {[...Array(24)].map((_, i) => (
             <div
-              css={[
-                styles.gear,
-                isActive && styles.rotating
-              ]}
-              style={{
-                width: gear.size,
-                height: gear.size,
-                background: getMetallicGradient(gear.metallic, gear.color),
-                boxShadow: `
-                  0 0 20px ${gear.color}40,
-                  inset 0 0 20px rgba(0, 0, 0, 0.3),
-                  0 4px 8px rgba(0, 0, 0, 0.4)
-                `,
-                animationDuration: `${Math.abs(4 / gear.speed)}s`,
-                animationDirection: gear.speed > 0 ? 'normal' : 'reverse'
-              }}
-            >
-              {/* Gear teeth using CSS */}
-              <div css={styles.gearTeeth}>
-                {[...Array(gear.teeth)].map((_, i) => (
-                  <div
-                    key={i}
-                    css={styles.tooth}
-                    style={{
-                      transform: `rotate(${i * (360 / gear.teeth)}deg)`,
-                      background: gear.color
-                    }}
-                  />
-                ))}
-              </div>
-              
-              {/* Central hub */}
-              <div 
-                css={styles.gearHub}
-                style={{
-                  background: getMetallicGradient(gear.metallic, gear.color),
-                  boxShadow: `
-                    0 0 10px ${gear.color}60,
-                    inset 0 0 10px rgba(0, 0, 0, 0.5)
-                  `
-                }}
-              >
-                <div css={styles.hubJewel} style={{ background: gear.color }} />
-              </div>
-              
-              {/* Gear spokes */}
-              <div css={styles.gearSpokes}>
-                {[...Array(Math.floor(gear.teeth / 2))].map((_, i) => (
-                  <div
-                    key={i}
-                    css={styles.spoke}
-                    style={{
-                      transform: `rotate(${i * (360 / Math.floor(gear.teeth / 2))}deg)`,
-                      background: `linear-gradient(90deg, transparent 0%, ${gear.color}40 50%, transparent 100%)`
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
+              key={i}
+              css={styles.gearTooth}
+              style={{ transform: `rotate(${i * 15}deg)` }}
+            />
+          ))}
+          
+          {/* Central hub */}
+          <div css={styles.gearHub}>
+            <div css={styles.hubCenter} />
           </div>
-        ))}
-      </div>
-
-      {/* Spark effects at gear interaction points */}
-      {isActive && sparkPositions.map((spark, index) => (
-        <div
-          key={index}
-          css={styles.sparkContainer}
-          style={{
-            left: spark.x,
-            top: spark.y,
-            animationDelay: `${spark.delay}s`
-          }}
-        >
-          <div css={styles.sparkCore} />
+          
+          {/* Spokes */}
           {[...Array(6)].map((_, i) => (
             <div
               key={i}
-              css={styles.sparkRay}
-              style={{
-                transform: `rotate(${i * 60}deg)`,
-                animationDelay: `${spark.delay + (i * 0.1)}s`
-              }}
+              css={styles.gearSpoke}
+              style={{ transform: `rotate(${i * 60}deg)` }}
             />
           ))}
         </div>
-      ))}
+      </div>
 
-      {/* Connecting rods and linkages */}
-      <div css={styles.linkageContainer}>
-        <div css={styles.linkage} style={{ 
-          left: 125, 
-          top: 125, 
-          width: 50, 
-          transform: 'rotate(45deg)' 
-        }} />
-        <div css={styles.linkage} style={{ 
-          left: 185, 
-          top: 135, 
-          width: 65, 
-          transform: 'rotate(-30deg)' 
-        }} />
-        <div css={styles.linkage} style={{ 
-          left: 90, 
-          top: 175, 
-          width: 40, 
-          transform: 'rotate(90deg)' 
-        }} />
-        <div css={styles.linkage} style={{ 
-          left: 210, 
-          top: 155, 
-          width: 55, 
-          transform: 'rotate(60deg)' 
-        }} />
+      {/* Secondary gear - top right */}
+      <div css={[styles.gear, styles.secondaryGear1]}>
+        <div css={styles.gearBody}>
+          {[...Array(16)].map((_, i) => (
+            <div
+              key={i}
+              css={styles.gearTooth}
+              style={{ transform: `rotate(${i * 22.5}deg)` }}
+            />
+          ))}
+          <div css={styles.gearHub}>
+            <div css={styles.hubCenter} />
+          </div>
+          {[...Array(4)].map((_, i) => (
+            <div
+              key={i}
+              css={styles.gearSpoke}
+              style={{ transform: `rotate(${i * 90}deg)` }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Tertiary gear - bottom left */}
+      <div css={[styles.gear, styles.tertiaryGear1]}>
+        <div css={styles.gearBody}>
+          {[...Array(12)].map((_, i) => (
+            <div
+              key={i}
+              css={styles.gearTooth}
+              style={{ transform: `rotate(${i * 30}deg)` }}
+            />
+          ))}
+          <div css={styles.gearHub}>
+            <div css={styles.hubCenter} />
+          </div>
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              css={styles.gearSpoke}
+              style={{ transform: `rotate(${i * 120}deg)` }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Quaternary gear - top left */}
+      <div css={[styles.gear, styles.quaternaryGear1]}>
+        <div css={styles.gearBody}>
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              css={styles.gearTooth}
+              style={{ transform: `rotate(${i * 18}deg)` }}
+            />
+          ))}
+          <div css={styles.gearHub}>
+            <div css={styles.hubCenter} />
+          </div>
+          {[...Array(5)].map((_, i) => (
+            <div
+              key={i}
+              css={styles.gearSpoke}
+              style={{ transform: `rotate(${i * 72}deg)` }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Mechanical connectors */}
+      <div css={styles.mechanicalConnectors}>
+        <div css={[styles.connector, styles.connector1]} />
+        <div css={[styles.connector, styles.connector2]} />
+        <div css={[styles.connector, styles.connector3]} />
+      </div>
+
+      {/* Steam/energy effects */}
+      <div css={styles.energyEffects}>
+        {[...Array(5)].map((_, i) => (
+          <div
+            key={i}
+            css={styles.energyParticle}
+            style={{
+              animationDelay: `${i * 0.8}s`,
+              left: `${20 + i * 15}%`,
+              top: `${30 + (i % 2) * 40}%`
+            }}
+          />
+        ))}
       </div>
     </div>
   );
 };
 
 const styles = {
-  container: css`
+  gearSystemContainer: css`
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0);
-    width: 350px;
-    height: 350px;
-    opacity: 0;
-    transition: all 1.5s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 3;
-    
-    @media (max-width: 768px) {
-      width: 280px;
-      height: 280px;
-    }
-    
-    @media (max-width: 480px) {
-      width: 220px;
-      height: 220px;
-    }
-  `,
-
-  active: css`
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
-  `,
-
-  gearsContainer: css`
-    position: relative;
     width: 100%;
     height: 100%;
-  `,
-
-  gearWrapper: css`
-    position: absolute;
-    transform-style: preserve-3d;
+    pointer-events: none;
+    z-index: 5;
   `,
 
   gear: css`
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `,
+
+  gearBody: css`
     position: relative;
     border-radius: 50%;
-    transform-style: preserve-3d;
-    transition: all 0.3s ease;
+    background: 
+      radial-gradient(circle at 30% 30%, ${colors.surface}90 0%, transparent 70%),
+      radial-gradient(circle at center, ${colors.card}85 0%, ${colors.background}70 100%);
+    border: 2px solid ${colors.borderLight};
+    backdrop-filter: blur(5px);
+    box-shadow: 
+      0 0 20px rgba(0, 0, 0, 0.4),
+      inset 0 0 20px rgba(255, 255, 255, 0.1);
+  `,
+
+  primaryGear: css`
+    width: 150px;
+    height: 150px;
+    top: 25%;
+    right: 15%;
+    animation: ${gearRotateClockwise} 8s linear infinite;
+    z-index: 3;
     
-    &:hover {
-      transform: scale(1.05);
+    ${styles.gearBody} {
+      width: 150px;
+      height: 150px;
+    }
+    
+    @media (max-width: 768px) {
+      width: 120px;
+      height: 120px;
+      ${styles.gearBody} {
+        width: 120px;
+        height: 120px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      width: 100px;
+      height: 100px;
+      ${styles.gearBody} {
+        width: 100px;
+        height: 100px;
+      }
     }
   `,
 
-  rotating: css`
-    animation: gearRotate linear infinite;
+  secondaryGear1: css`
+    width: 100px;
+    height: 100px;
+    top: 10%;
+    right: 35%;
+    animation: ${gearRotateCounterClockwise} 6s linear infinite;
+    z-index: 2;
     
-    @keyframes gearRotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+    ${styles.gearBody} {
+      width: 100px;
+      height: 100px;
+    }
+    
+    @media (max-width: 768px) {
+      width: 80px;
+      height: 80px;
+      ${styles.gearBody} {
+        width: 80px;
+        height: 80px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      width: 65px;
+      height: 65px;
+      ${styles.gearBody} {
+        width: 65px;
+        height: 65px;
+      }
     }
   `,
 
-  gearTeeth: css`
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
+  tertiaryGear1: css`
+    width: 80px;
+    height: 80px;
+    bottom: 20%;
+    left: 20%;
+    animation: ${gearRotateClockwise} 4s linear infinite;
+    z-index: 2;
+    
+    ${styles.gearBody} {
+      width: 80px;
+      height: 80px;
+    }
+    
+    @media (max-width: 768px) {
+      width: 65px;
+      height: 65px;
+      ${styles.gearBody} {
+        width: 65px;
+        height: 65px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      width: 50px;
+      height: 50px;
+      ${styles.gearBody} {
+        width: 50px;
+        height: 50px;
+      }
+    }
   `,
 
-  tooth: css`
+  quaternaryGear1: css`
+    width: 120px;
+    height: 120px;
+    top: 15%;
+    left: 10%;
+    animation: ${gearRotateCounterClockwise} 10s linear infinite;
+    z-index: 1;
+    
+    ${styles.gearBody} {
+      width: 120px;
+      height: 120px;
+    }
+    
+    @media (max-width: 768px) {
+      width: 95px;
+      height: 95px;
+      ${styles.gearBody} {
+        width: 95px;
+        height: 95px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      width: 75px;
+      height: 75px;
+      ${styles.gearBody} {
+        width: 75px;
+        height: 75px;
+      }
+    }
+  `,
+
+  gearTooth: css`
     position: absolute;
-    top: -2px;
+    width: 6px;
+    height: 12px;
+    background: linear-gradient(180deg, ${colors.neonTeal}80, ${colors.neonGold}60);
+    border-radius: 2px;
+    top: -6px;
     left: 50%;
-    width: 3px;
-    height: 8px;
-    transform-origin: bottom center;
-    border-radius: 1px;
-    box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
-    margin-left: -1.5px;
+    margin-left: -3px;
+    transform-origin: 50% 81px;
+    box-shadow: 0 0 8px ${colors.neonTeal}40;
+    animation: ${gearTeethGlow} 3s ease-in-out infinite;
+    
+    @media (max-width: 768px) {
+      width: 5px;
+      height: 10px;
+      margin-left: -2.5px;
+      transform-origin: 50% 65px;
+    }
+    
+    @media (max-width: 480px) {
+      width: 4px;
+      height: 8px;
+      margin-left: -2px;
+      transform-origin: 50% 52px;
+    }
   `,
 
   gearHub: css`
@@ -380,139 +355,109 @@ const styles = {
     transform: translate(-50%, -50%);
     width: 30%;
     height: 30%;
+    background: 
+      radial-gradient(circle at center, ${colors.neonGold}90 0%, ${colors.surface}60 100%);
+    border: 2px solid ${colors.neonGold};
     border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    z-index: 2;
+    box-shadow: 
+      0 0 15px ${colors.neonGold}50,
+      inset 0 0 10px rgba(0, 0, 0, 0.3);
+    z-index: 10;
   `,
 
-  hubJewel: css`
+  hubCenter: css`
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     width: 40%;
     height: 40%;
+    background: ${colors.background};
+    border: 1px solid ${colors.borderLight};
     border-radius: 50%;
-    box-shadow: 
-      0 0 8px rgba(255, 255, 255, 0.8),
-      inset 0 0 4px rgba(0, 0, 0, 0.5);
-    animation: hubPulse 2s ease-in-out infinite;
-    
-    @keyframes hubPulse {
-      0%, 100% { transform: translate(-50%, -50%) scale(1); }
-      50% { transform: translate(-50%, -50%) scale(1.2); }
-    }
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
   `,
 
-  gearSpokes: css`
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    z-index: 1;
-  `,
-
-  spoke: css`
+  gearSpoke: css`
     position: absolute;
     top: 50%;
     left: 50%;
     width: 2px;
-    height: 40%;
-    transform-origin: bottom center;
+    height: 35%;
+    background: linear-gradient(180deg, ${colors.neonTeal}, transparent);
+    border-radius: 1px;
+    transform-origin: 50% 0%;
     margin-left: -1px;
-    margin-top: -20%;
+    margin-top: 15%;
+    opacity: 0.8;
+    animation: ${mechanicalPulse} 4s ease-in-out infinite;
+  `,
+
+  mechanicalConnectors: css`
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  `,
+
+  connector: css`
+    position: absolute;
+    background: linear-gradient(90deg, ${colors.borderLight}, ${colors.neonTeal}40, ${colors.borderLight});
+    border-radius: 2px;
     opacity: 0.6;
+    animation: ${mechanicalPulse} 5s ease-in-out infinite;
   `,
 
-  sparkContainer: css`
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    transform: translate(-50%, -50%);
-    animation: sparkBurst 3s ease-in-out infinite;
-    
-    @keyframes sparkBurst {
-      0%, 80% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
-      90% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-      100% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
-    }
+  connector1: css`
+    width: 100px;
+    height: 3px;
+    top: 25%;
+    right: 25%;
+    transform: rotate(45deg);
   `,
 
-  sparkCore: css`
+  connector2: css`
+    width: 80px;
+    height: 2px;
+    top: 30%;
+    left: 25%;
+    transform: rotate(-30deg);
+  `,
+
+  connector3: css`
+    width: 60px;
+    height: 2px;
+    bottom: 35%;
+    left: 35%;
+    transform: rotate(15deg);
+  `,
+
+  energyEffects: css`
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  `,
+
+  energyParticle: css`
+    position: absolute;
     width: 4px;
     height: 4px;
+    background: ${colors.neonTeal};
     border-radius: 50%;
-    background: #ffffff;
-    box-shadow: 
-      0 0 10px #ffffff,
-      0 0 20px ${colors.neonTeal},
-      0 0 30px ${colors.neonGold};
-    animation: sparkCore 0.5s ease-in-out infinite alternate;
+    box-shadow: 0 0 10px ${colors.neonTeal};
+    animation: ${mechanicalPulse} 2s ease-in-out infinite;
     
-    @keyframes sparkCore {
-      from { transform: translate(-50%, -50%) scale(0.8); }
-      to { transform: translate(-50%, -50%) scale(1.2); }
-    }
-  `,
-
-  sparkRay: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 2px;
-    height: 8px;
-    background: linear-gradient(
-      to top,
-      transparent 0%,
-      #ffffff 50%,
-      transparent 100%
-    );
-    transform-origin: bottom center;
-    margin-left: -1px;
-    animation: sparkRay 0.3s ease-in-out infinite alternate;
-    
-    @keyframes sparkRay {
-      from { transform: scaleY(0.5); opacity: 0.5; }
-      to { transform: scaleY(1.5); opacity: 1; }
-    }
-  `,
-
-  linkageContainer: css`
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 1;
-  `,
-
-  linkage: css`
-    position: absolute;
-    height: 3px;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.3) 20%,
-      rgba(255, 255, 255, 0.6) 50%,
-      rgba(255, 255, 255, 0.3) 80%,
-      transparent 100%
-    );
-    border-radius: 2px;
-    box-shadow: 
-      0 0 5px rgba(255, 255, 255, 0.3),
-      inset 0 0 2px rgba(0, 0, 0, 0.5);
-    animation: linkagePulse 2s ease-in-out infinite;
-    
-    @keyframes linkagePulse {
-      0%, 100% { opacity: 0.4; }
-      50% { opacity: 0.8; }
+    &::after {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      width: 8px;
+      height: 8px;
+      background: ${colors.neonGold}30;
+      border-radius: 50%;
+      animation: ${gearTeethGlow} 1.5s ease-in-out infinite;
     }
   `
 };

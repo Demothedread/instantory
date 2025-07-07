@@ -1,180 +1,166 @@
 /** @jsxImportSource @emotion/react */
-import { css } from '@emotion/react';
-import { useEffect, useState } from 'react';
+import { css, keyframes } from '@emotion/react';
 import { colors } from '../../../styles/theme/colors';
 
 /**
- * ClockFace - Central ornate timepiece with Roman numerals and Art Deco styling
- * Features animated hands, glowing numbers, and intricate decorative elements
+ * ClockFace - The heart of our Neo-Deco-Rococo clockwork mechanism
+ * Combines Art Deco geometric precision with Rococo ornamental excess
+ * Features a functioning clock with progress indicator and time display
  */
-const ClockFace = ({ isInitialized, animationPhase, progress }) => {
-  const [time, setTime] = useState(new Date());
-  const [isGlowing, setIsGlowing] = useState(false);
 
-  useEffect(() => {
-    // Update time every second for realistic clock movement
-    const timeInterval = setInterval(() => {
-      setTime(new Date());
-    }, 1000);
+// Animations for the clockwork mechanism
+const clockHandRotation = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`;
 
-    // Periodic glow effect
-    const glowInterval = setInterval(() => {
-      setIsGlowing(prev => !prev);
-    }, 4000);
+const numeralGlow = keyframes`
+  0%, 100% { 
+    text-shadow: 0 0 10px ${colors.neonGold}40;
+    transform: scale(1);
+  }
+  50% { 
+    text-shadow: 0 0 20px ${colors.neonGold}80, 0 0 30px ${colors.neonTeal}40;
+    transform: scale(1.05);
+  }
+`;
 
-    return () => {
-      clearInterval(timeInterval);
-      clearInterval(glowInterval);
-    };
-  }, []);
+const progressPulse = keyframes`
+  0%, 100% { 
+    filter: drop-shadow(0 0 10px ${colors.neonTeal});
+    opacity: 0.8;
+  }
+  50% { 
+    filter: drop-shadow(0 0 25px ${colors.neonTeal}) drop-shadow(0 0 35px ${colors.neonGold});
+    opacity: 1;
+  }
+`;
 
-  // Calculate hand positions
-  const seconds = time.getSeconds();
-  const minutes = time.getMinutes();
-  const hours = time.getHours() % 12;
-
+const ClockFace = ({ isInitialized, animationPhase, progress = 0 }) => {
+  const currentTime = new Date();
+  const hours = currentTime.getHours() % 12;
+  const minutes = currentTime.getMinutes();
+  const seconds = currentTime.getSeconds();
+  
+  // Calculate hand angles
   const secondAngle = (seconds * 6) - 90; // 6 degrees per second
-  const minuteAngle = (minutes * 6) + (seconds * 0.1) - 90; // 6 degrees per minute
-  const hourAngle = (hours * 30) + (minutes * 0.5) - 90; // 30 degrees per hour
-
-  // Roman numerals for clock face
-  const romanNumerals = [
-    { num: 'XII', angle: 0 },
-    { num: 'I', angle: 30 },
-    { num: 'II', angle: 60 },
-    { num: 'III', angle: 90 },
-    { num: 'IV', angle: 120 },
-    { num: 'V', angle: 150 },
-    { num: 'VI', angle: 180 },
-    { num: 'VII', angle: 210 },
-    { num: 'VIII', angle: 240 },
-    { num: 'IX', angle: 270 },
-    { num: 'X', angle: 300 },
-    { num: 'XI', angle: 330 }
-  ];
+  const minuteAngle = (minutes * 6 + seconds * 0.1) - 90; // 6 degrees per minute
+  const hourAngle = (hours * 30 + minutes * 0.5) - 90; // 30 degrees per hour
+  
+  // Progress circle angle (360 degrees = 100%)
+  const progressAngle = (progress / 100) * 360;
 
   return (
-    <div css={[styles.container, isInitialized && styles.initialized]}>
-      {/* Outer decorative ring */}
+    <div css={styles.clockContainer}>
+      {/* Outer ornamental ring */}
       <div css={styles.outerRing}>
-        {/* Art Deco sunburst pattern */}
-        <div css={styles.sunburstPattern}>
-          {[...Array(24)].map((_, i) => (
-            <div
-              key={i}
-              css={styles.sunburstRay}
-              style={{
-                transform: `rotate(${i * 15}deg)`,
-                animationDelay: `${i * 0.1}s`
-              }}
-            />
-          ))}
-        </div>
+        {/* Art Deco decorative elements */}
+        {[...Array(12)].map((_, i) => (
+          <div
+            key={i}
+            css={styles.decorativeElement}
+            style={{ transform: `rotate(${i * 30}deg)` }}
+          />
+        ))}
       </div>
 
       {/* Main clock face */}
-      <div css={[styles.clockFace, isGlowing && styles.glowing]}>
-        {/* Inner decorative border */}
-        <div css={styles.innerBorder}>
-          {/* Minute markers */}
-          {[...Array(60)].map((_, i) => (
-            <div
-              key={i}
-              css={[
-                styles.minuteMarker,
-                i % 5 === 0 && styles.hourMarker
-              ]}
-              style={{
-                transform: `rotate(${i * 6}deg)`,
-                animationDelay: `${i * 0.02}s`
-              }}
-            />
-          ))}
+      <div css={styles.clockFace}>
+        {/* Progress ring */}
+        <svg css={styles.progressRing} viewBox="0 0 200 200">
+          <circle
+            cx="100"
+            cy="100"
+            r="85"
+            css={styles.progressBackground}
+          />
+          <circle
+            cx="100"
+            cy="100"
+            r="85"
+            css={styles.progressForeground}
+            strokeDasharray={`${progressAngle * (534.07 / 360)} 534.07`}
+            transform="rotate(-90 100 100)"
+          />
+        </svg>
 
-          {/* Roman numerals */}
-          {romanNumerals.map((item, index) => (
-            <div
-              key={index}
-              css={styles.romanNumeral}
-              style={{
-                transform: `rotate(${item.angle}deg)`,
-                animationDelay: `${index * 0.2}s`
-              }}
-            >
-              <span css={styles.romanText}>{item.num}</span>
-            </div>
-          ))}
-
-          {/* Center ornament */}
-          <div css={styles.centerOrnament}>
-            <div css={styles.centerJewel} />
-          </div>
-
-          {/* Clock hands */}
-          <div css={styles.handsContainer}>
-            {/* Hour hand */}
-            <div
-              css={[styles.hand, styles.hourHand]}
-              style={{
-                transform: `rotate(${hourAngle}deg)`
-              }}
-            />
-            
-            {/* Minute hand */}
-            <div
-              css={[styles.hand, styles.minuteHand]}
-              style={{
-                transform: `rotate(${minuteAngle}deg)`
-              }}
-            />
-            
-            {/* Second hand */}
-            <div
-              css={[styles.hand, styles.secondHand]}
-              style={{
-                transform: `rotate(${secondAngle}deg)`
-              }}
-            />
-          </div>
-
-          {/* Progress indicator ring */}
-          <div css={styles.progressRing}>
-            <svg css={styles.progressSvg} viewBox="0 0 200 200">
-              <circle
-                cx="100"
-                cy="100"
-                r="90"
-                css={styles.progressTrack}
-              />
-              <circle
-                cx="100"
-                cy="100"
-                r="90"
-                css={styles.progressBar}
+        {/* Clock numerals */}
+        <div css={styles.numeralsContainer}>
+          {[...Array(12)].map((_, i) => {
+            const number = i === 0 ? 12 : i;
+            const angle = i * 30;
+            return (
+              <div
+                key={i}
+                css={styles.numeral}
                 style={{
-                  strokeDasharray: `${2 * Math.PI * 90}`,
-                  strokeDashoffset: `${2 * Math.PI * 90 * (1 - progress / 100)}`
+                  transform: `rotate(${angle}deg) translateY(-65px) rotate(-${angle}deg)`,
+                  animationDelay: `${i * 0.1}s`
                 }}
-              />
-            </svg>
-          </div>
+              >
+                {number}
+              </div>
+            );
+          })}
         </div>
+
+        {/* Clock hands */}
+        <div css={styles.handsContainer}>
+          {/* Hour hand */}
+          <div
+            css={[styles.hand, styles.hourHand]}
+            style={{ transform: `rotate(${hourAngle}deg)` }}
+          />
+          
+          {/* Minute hand */}
+          <div
+            css={[styles.hand, styles.minuteHand]}
+            style={{ transform: `rotate(${minuteAngle}deg)` }}
+          />
+          
+          {/* Second hand */}
+          <div
+            css={[styles.hand, styles.secondHand]}
+            style={{ transform: `rotate(${secondAngle}deg)` }}
+          />
+          
+          {/* Center hub */}
+          <div css={styles.centerHub} />
+        </div>
+
+        {/* Progress indicator text */}
+        <div css={styles.progressText}>
+          <div css={styles.progressPercent}>{Math.round(progress)}%</div>
+          <div css={styles.progressLabel}>Loading</div>
+        </div>
+      </div>
+
+      {/* Inner mechanical details */}
+      <div css={styles.mechanicalDetails}>
+        {[...Array(8)].map((_, i) => (
+          <div
+            key={i}
+            css={styles.mechanicalTick}
+            style={{ 
+              transform: `rotate(${i * 45}deg)`,
+              animationDelay: `${i * 0.2}s`
+            }}
+          />
+        ))}
       </div>
     </div>
   );
 };
 
 const styles = {
-  container: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0);
+  clockContainer: css`
+    position: relative;
     width: 300px;
     height: 300px;
-    opacity: 0;
-    transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
     
     @media (max-width: 768px) {
       width: 250px;
@@ -187,296 +173,234 @@ const styles = {
     }
   `,
 
-  initialized: css`
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
-  `,
-
   outerRing: css`
     position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
     height: 100%;
+    border: 3px solid ${colors.neonGold}60;
     border-radius: 50%;
-    background: linear-gradient(
-      45deg,
-      ${colors.neonGold} 0%,
-      #b8860b 25%,
-      ${colors.neonGold} 50%,
-      #daa520 75%,
-      ${colors.neonGold} 100%
-    );
+    background: linear-gradient(135deg, 
+      ${colors.surface}80 0%,
+      ${colors.card}60 50%,
+      ${colors.surface}80 100%);
+    backdrop-filter: blur(10px);
     box-shadow: 
-      0 0 30px rgba(255, 215, 0, 0.6),
-      inset 0 0 30px rgba(0, 0, 0, 0.5);
-    padding: 8px;
+      0 0 30px ${colors.neonGold}30,
+      inset 0 0 30px rgba(0, 0, 0, 0.3);
   `,
 
-  sunburstPattern: css`
+  decorativeElement: css`
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    overflow: hidden;
-  `,
-
-  sunburstRay: css`
-    position: absolute;
-    top: 50%;
+    top: 5px;
     left: 50%;
-    width: 2px;
-    height: 50%;
-    background: linear-gradient(
-      to top,
-      transparent 0%,
-      rgba(255, 215, 0, 0.8) 30%,
-      transparent 100%
-    );
-    transform-origin: bottom center;
-    animation: sunburstPulse 6s ease-in-out infinite;
-    
-    @keyframes sunburstPulse {
-      0%, 100% { opacity: 0.3; transform: scaleY(0.8); }
-      50% { opacity: 1; transform: scaleY(1.2); }
-    }
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(180deg, ${colors.neonTeal}, ${colors.neonGold});
+    border-radius: 2px;
+    transform-origin: 50% 145px;
+    animation: ${numeralGlow} 4s ease-in-out infinite;
   `,
 
   clockFace: css`
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    width: calc(100% - 16px);
-    height: calc(100% - 16px);
+    position: relative;
+    width: 240px;
+    height: 240px;
     border-radius: 50%;
-    background: radial-gradient(
-      circle at center,
-      #1a1a2e 0%,
-      #16213e 50%,
-      #0f3460 100%
-    );
+    background: 
+      radial-gradient(circle at 30% 30%, ${colors.surface}90 0%, transparent 50%),
+      radial-gradient(circle at center, ${colors.background}95 0%, ${colors.card}80 100%);
+    border: 2px solid ${colors.borderLight};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(15px);
     box-shadow: 
-      inset 0 0 40px rgba(0, 0, 0, 0.8),
-      inset 0 0 20px rgba(0, 255, 255, 0.1);
-    transition: all 0.5s ease;
-  `,
-
-  glowing: css`
-    box-shadow: 
-      inset 0 0 40px rgba(0, 0, 0, 0.8),
-      inset 0 0 20px rgba(0, 255, 255, 0.3),
-      0 0 50px rgba(0, 255, 255, 0.2);
-  `,
-
-  innerBorder: css`
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    width: calc(100% - 20px);
-    height: calc(100% - 20px);
-    border-radius: 50%;
-    border: 2px solid rgba(0, 255, 255, 0.3);
-    box-shadow: 
-      inset 0 0 20px rgba(0, 255, 255, 0.1),
-      0 0 10px rgba(0, 255, 255, 0.2);
-  `,
-
-  minuteMarker: css`
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 1px;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.5);
-    transform-origin: bottom center;
-    animation: markerFade 3s ease-in-out infinite;
-    
-    @keyframes markerFade {
-      0%, 100% { opacity: 0.3; }
-      50% { opacity: 1; }
-    }
-  `,
-
-  hourMarker: css`
-    width: 2px;
-    height: 15px;
-    background: ${colors.neonGold};
-    box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
-  `,
-
-  romanNumeral: css`
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform-origin: bottom center;
-    height: 40px;
-    animation: numeralGlow 4s ease-in-out infinite;
-    
-    @keyframes numeralGlow {
-      0%, 100% { opacity: 0.7; }
-      50% { opacity: 1; }
-    }
-  `,
-
-  romanText: css`
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    font-family: 'Cinzel Decorative', serif;
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: ${colors.neonGold};
-    text-shadow: 
-      0 0 5px rgba(255, 215, 0, 0.8),
-      0 0 10px rgba(255, 215, 0, 0.4);
+      0 0 40px rgba(0, 0, 0, 0.5),
+      inset 0 0 40px rgba(255, 255, 255, 0.05);
     
     @media (max-width: 768px) {
-      font-size: 0.8rem;
+      width: 200px;
+      height: 200px;
     }
     
     @media (max-width: 480px) {
-      font-size: 0.7rem;
-    }
-  `,
-
-  centerOrnament: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: radial-gradient(
-      circle at center,
-      ${colors.neonGold} 0%,
-      #b8860b 50%,
-      ${colors.neonGold} 100%
-    );
-    box-shadow: 
-      0 0 20px rgba(255, 215, 0, 0.8),
-      inset 0 0 10px rgba(0, 0, 0, 0.5);
-    z-index: 10;
-  `,
-
-  centerJewel: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: ${colors.neonTeal};
-    box-shadow: 
-      0 0 10px rgba(0, 255, 255, 1),
-      inset 0 0 5px rgba(255, 255, 255, 0.8);
-    animation: jewelPulse 2s ease-in-out infinite;
-    
-    @keyframes jewelPulse {
-      0%, 100% { transform: translate(-50%, -50%) scale(1); }
-      50% { transform: translate(-50%, -50%) scale(1.2); }
-    }
-  `,
-
-  handsContainer: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
-    height: 100%;
-  `,
-
-  hand: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform-origin: bottom center;
-    border-radius: 2px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  `,
-
-  hourHand: css`
-    width: 4px;
-    height: 60px;
-    background: linear-gradient(
-      to top,
-      ${colors.neonGold} 0%,
-      #daa520 100%
-    );
-    margin-top: -60px;
-    margin-left: -2px;
-    box-shadow: 
-      0 0 15px rgba(255, 215, 0, 0.6),
-      inset 0 0 5px rgba(255, 255, 255, 0.3);
-  `,
-
-  minuteHand: css`
-    width: 3px;
-    height: 80px;
-    background: linear-gradient(
-      to top,
-      ${colors.neonTeal} 0%,
-      #40e0d0 100%
-    );
-    margin-top: -80px;
-    margin-left: -1.5px;
-    box-shadow: 
-      0 0 15px rgba(0, 255, 255, 0.6),
-      inset 0 0 5px rgba(255, 255, 255, 0.3);
-  `,
-
-  secondHand: css`
-    width: 1px;
-    height: 90px;
-    background: ${colors.neonRed};
-    margin-top: -90px;
-    margin-left: -0.5px;
-    box-shadow: 
-      0 0 10px rgba(255, 7, 58, 0.8),
-      0 0 20px rgba(255, 7, 58, 0.4);
-    animation: secondHandGlow 1s ease-in-out infinite alternate;
-    
-    @keyframes secondHandGlow {
-      from { opacity: 0.8; }
-      to { opacity: 1; }
+      width: 160px;
+      height: 160px;
     }
   `,
 
   progressRing: css`
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
-    height: 100%;
-    opacity: 0.7;
-  `,
-
-  progressSvg: css`
     width: 100%;
     height: 100%;
     transform: rotate(-90deg);
+    z-index: 1;
   `,
 
-  progressTrack: css`
+  progressBackground: css`
     fill: none;
-    stroke: rgba(255, 255, 255, 0.1);
-    stroke-width: 2;
+    stroke: ${colors.border};
+    stroke-width: 3;
+    opacity: 0.3;
   `,
 
-  progressBar: css`
+  progressForeground: css`
     fill: none;
     stroke: ${colors.neonTeal};
     stroke-width: 3;
     stroke-linecap: round;
-    transition: stroke-dashoffset 0.5s ease;
-    filter: drop-shadow(0 0 5px rgba(0, 255, 255, 0.6));
+    transition: stroke-dasharray 0.3s ease;
+    animation: ${progressPulse} 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 8px ${colors.neonTeal});
+  `,
+
+  numeralsContainer: css`
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+  `,
+
+  numeral: css`
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: ${colors.neonGold};
+    text-align: center;
+    animation: ${numeralGlow} 6s ease-in-out infinite;
+    
+    @media (max-width: 768px) {
+      font-size: 1rem;
+    }
+    
+    @media (max-width: 480px) {
+      font-size: 0.8rem;
+    }
+  `,
+
+  handsContainer: css`
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 4;
+  `,
+
+  hand: css`
+    position: absolute;
+    background: linear-gradient(180deg, ${colors.neonTeal}, ${colors.neonGold});
+    border-radius: 2px;
+    transform-origin: 50% 100%;
+    top: 50%;
+    left: 50%;
+    box-shadow: 0 0 10px ${colors.neonTeal}50;
+    transition: transform 0.1s ease-out;
+  `,
+
+  hourHand: css`
+    width: 4px;
+    height: 50px;
+    margin-left: -2px;
+    margin-top: -50px;
+  `,
+
+  minuteHand: css`
+    width: 3px;
+    height: 70px;
+    margin-left: -1.5px;
+    margin-top: -70px;
+  `,
+
+  secondHand: css`
+    width: 2px;
+    height: 80px;
+    margin-left: -1px;
+    margin-top: -80px;
+    background: ${colors.neonRed};
+    box-shadow: 0 0 8px ${colors.neonRed}50;
+  `,
+
+  centerHub: css`
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    background: linear-gradient(135deg, ${colors.neonGold}, ${colors.neonTeal});
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 
+      0 0 15px ${colors.neonGold}60,
+      inset 0 0 8px rgba(0, 0, 0, 0.3);
+    z-index: 5;
+  `,
+
+  progressText: css`
+    position: absolute;
+    bottom: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 6;
+  `,
+
+  progressPercent: css`
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: ${colors.neonTeal};
+    text-shadow: 0 0 15px ${colors.neonTeal}60;
+    margin-bottom: 0.2rem;
+    
+    @media (max-width: 768px) {
+      font-size: 1.2rem;
+    }
+    
+    @media (max-width: 480px) {
+      font-size: 1rem;
+    }
+  `,
+
+  progressLabel: css`
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 0.7rem;
+    color: ${colors.neonGold};
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-shadow: 0 0 10px ${colors.neonGold}50;
+    
+    @media (max-width: 480px) {
+      font-size: 0.6rem;
+    }
+  `,
+
+  mechanicalDetails: css`
+    position: absolute;
+    width: 60%;
+    height: 60%;
+    z-index: 2;
+  `,
+
+  mechanicalTick: css`
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 8px;
+    background: ${colors.neonGold}80;
+    border-radius: 1px;
+    transform-origin: 50% 60px;
+    animation: ${numeralGlow} 3s ease-in-out infinite;
+    
+    @media (max-width: 768px) {
+      transform-origin: 50% 50px;
+    }
+    
+    @media (max-width: 480px) {
+      transform-origin: 50% 40px;
+    }
   `
 };
 

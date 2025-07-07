@@ -1,261 +1,242 @@
 /** @jsxImportSource @emotion/react */
-import { css } from '@emotion/react';
-import { useEffect, useState } from 'react';
+import { css, keyframes } from '@emotion/react';
 import { colors } from '../../../styles/theme/colors';
 
 /**
- * CuckooMechanism - Emerging bird element with neon burst effects
- * Features periodic appearances, sound wave visualizations, and ornate housing
+ * CuckooMechanism - Whimsical cuckoo bird that emerges during loading milestones
+ * Features Art Deco bird design with Rococo ornamental details
  */
+
+// Cuckoo door animations
+const doorOpen = keyframes`
+  0% { 
+    transform: rotateY(0deg);
+    opacity: 0.9;
+  }
+  100% { 
+    transform: rotateY(-90deg);
+    opacity: 0.3;
+  }
+`;
+
+const doorClose = keyframes`
+  0% { 
+    transform: rotateY(-90deg);
+    opacity: 0.3;
+  }
+  100% { 
+    transform: rotateY(0deg);
+    opacity: 0.9;
+  }
+`;
+
+// Cuckoo bird emergence
+const birdEmerge = keyframes`
+  0% { 
+    transform: translateX(-100%) scale(0.8);
+    opacity: 0;
+  }
+  20% { 
+    transform: translateX(-50%) scale(0.9);
+    opacity: 0.7;
+  }
+  80% { 
+    transform: translateX(0%) scale(1);
+    opacity: 1;
+  }
+  100% { 
+    transform: translateX(0%) scale(1);
+    opacity: 1;
+  }
+`;
+
+const birdRetreat = keyframes`
+  0% { 
+    transform: translateX(0%) scale(1);
+    opacity: 1;
+  }
+  100% { 
+    transform: translateX(-100%) scale(0.8);
+    opacity: 0;
+  }
+`;
+
+// Bird bobbing animation
+const birdBob = keyframes`
+  0%, 100% { 
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% { 
+    transform: translateY(-3px) rotate(2deg);
+  }
+  75% { 
+    transform: translateY(3px) rotate(-2deg);
+  }
+`;
+
+// Wing flap animation
+const wingFlap = keyframes`
+  0%, 100% { 
+    transform: rotateZ(0deg);
+  }
+  50% { 
+    transform: rotateZ(-15deg);
+  }
+`;
+
+// Door hinge glow
+const hingeGlow = keyframes`
+  0%, 100% { 
+    box-shadow: 0 0 8px ${colors.neonTeal}40;
+  }
+  50% { 
+    box-shadow: 0 0 15px ${colors.neonTeal}80, 0 0 25px ${colors.neonGold}40;
+  }
+`;
+
 const CuckooMechanism = ({ isInitialized, animationPhase }) => {
-  const [isActive, setIsActive] = useState(false);
-  const [isCuckooOut, setIsCuckooOut] = useState(false);
-  const [chimeCount, setChimeCount] = useState(0);
-
-  useEffect(() => {
-    if (isInitialized && animationPhase >= 3) {
-      setIsActive(true);
-      
-      // Cuckoo emergence cycle
-      const cuckooInterval = setInterval(() => {
-        setIsCuckooOut(true);
-        setChimeCount(prev => prev + 1);
-        
-        // Retract after 2 seconds
-        setTimeout(() => {
-          setIsCuckooOut(false);
-        }, 2000);
-      }, 6000);
-
-      return () => clearInterval(cuckooInterval);
-    }
-  }, [isInitialized, animationPhase]);
+  // Determine if cuckoo should be active based on animation phase
+  const isActive = animationPhase >= 2;
+  const shouldEmerge = animationPhase === 2 || animationPhase === 4;
 
   return (
-    <div css={[styles.container, isActive && styles.active]}>
+    <div css={styles.cuckooContainer}>
       {/* Cuckoo house structure */}
       <div css={styles.cuckooHouse}>
-        {/* Ornate roof */}
-        <div css={styles.roof}>
-          <div css={styles.roofTiles}>
-            {[...Array(8)].map((_, i) => (
-              <div
+        {/* House body */}
+        <div css={styles.houseBody}>
+          {/* Roof */}
+          <div css={styles.houseRoof}>
+            <div css={styles.roofOrnament} />
+            <div css={styles.roofLines}>
+              {[...Array(5)].map((_, i) => (
+                <div key={i} css={styles.roofLine} />
+              ))}
+            </div>
+          </div>
+
+          {/* Door frame */}
+          <div css={styles.doorFrame}>
+            {/* Door hinges */}
+            <div css={styles.doorHinges}>
+              <div css={styles.doorHinge} />
+              <div css={styles.doorHinge} />
+            </div>
+
+            {/* Cuckoo door */}
+            <div 
+              css={[
+                styles.cuckooDooor,
+                shouldEmerge ? styles.doorOpenState : styles.doorClosedState
+              ]}
+            >
+              <div css={styles.doorPanel}>
+                <div css={styles.doorOrnament} />
+                <div css={styles.doorHandle} />
+              </div>
+            </div>
+
+            {/* Door opening */}
+            <div css={styles.doorOpening}>
+              {/* Interior shadow */}
+              <div css={styles.interiorShadow} />
+              
+              {/* Cuckoo bird */}
+              <div 
+                css={[
+                  styles.cuckooBird,
+                  shouldEmerge ? styles.birdEmergedState : styles.birdHiddenState
+                ]}
+              >
+                {/* Bird body */}
+                <div css={styles.birdBody}>
+                  {/* Bird head */}
+                  <div css={styles.birdHead}>
+                    <div css={styles.birdBeak} />
+                    <div css={styles.birdEye} />
+                    <div css={styles.birdCrest}>
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} css={styles.crestFeather} />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Bird wings */}
+                  <div css={styles.birdWings}>
+                    <div css={[styles.birdWing, styles.leftWing]} />
+                    <div css={[styles.birdWing, styles.rightWing]} />
+                  </div>
+
+                  {/* Bird tail */}
+                  <div css={styles.birdTail}>
+                    {[...Array(3)].map((_, i) => (
+                      <div 
+                        key={i} 
+                        css={styles.tailFeather}
+                        style={{ transform: `rotate(${(i - 1) * 10}deg)` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sound effect visualization */}
+                {shouldEmerge && (
+                  <div css={styles.soundEffect}>
+                    {[...Array(3)].map((_, i) => (
+                      <div 
+                        key={i}
+                        css={styles.soundWave}
+                        style={{ animationDelay: `${i * 0.1}s` }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* House decorations */}
+          <div css={styles.houseDecorations}>
+            <div css={styles.windowLeft}>
+              <div css={styles.windowPane} />
+              <div css={styles.windowCross} />
+            </div>
+            <div css={styles.windowRight}>
+              <div css={styles.windowPane} />
+              <div css={styles.windowCross} />
+            </div>
+          </div>
+        </div>
+
+        {/* Base platform */}
+        <div css={styles.housePlatform}>
+          <div css={styles.platformOrnaments}>
+            {[...Array(6)].map((_, i) => (
+              <div 
                 key={i}
-                css={styles.roofTile}
-                style={{
-                  left: `${i * 12}%`,
-                  animationDelay: `${i * 0.1}s`
-                }}
+                css={styles.platformOrnament}
+                style={{ left: `${10 + i * 15}%` }}
               />
             ))}
-          </div>
-          <div css={styles.roofPeak}>
-            <div css={styles.peakOrnament} />
-          </div>
-        </div>
-
-        {/* House facade */}
-        <div css={styles.houseFacade}>
-          {/* Decorative columns */}
-          <div css={styles.columns}>
-            <div css={styles.column} style={{ left: '10%' }} />
-            <div css={styles.column} style={{ right: '10%' }} />
-          </div>
-
-          {/* Central door mechanism */}
-          <div css={styles.doorFrame}>
-            <div css={styles.doorOrnament}>
-              {/* Art Deco door pattern */}
-              <div css={styles.doorPattern}>
-                {[...Array(5)].map((_, i) => (
-                  <div
-                    key={i}
-                    css={styles.doorLine}
-                    style={{
-                      width: `${60 + i * 8}%`,
-                      opacity: 1 - (i * 0.15),
-                      animationDelay: `${i * 0.1}s`
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Door panels */}
-            <div css={styles.doorPanels}>
-              <div 
-                css={[styles.doorPanel, styles.leftPanel, isCuckooOut && styles.panelOpen]}
-              />
-              <div 
-                css={[styles.doorPanel, styles.rightPanel, isCuckooOut && styles.panelOpen]}
-              />
-            </div>
-
-            {/* Door threshold */}
-            <div css={styles.doorThreshold} />
-          </div>
-        </div>
-
-        {/* Cuckoo bird */}
-        <div css={[styles.cuckooContainer, isCuckooOut && styles.cuckooEmerged]}>
-          <div css={styles.cuckooBird}>
-            {/* Bird body */}
-            <div css={styles.birdBody}>
-              <div css={styles.bodyGradient} />
-              <div css={styles.bodyHighlight} />
-            </div>
-
-            {/* Bird head */}
-            <div css={styles.birdHead}>
-              <div css={styles.headCrest}>
-                {[...Array(3)].map((_, i) => (
-                  <div
-                    key={i}
-                    css={styles.crestFeather}
-                    style={{
-                      transform: `rotate(${(i - 1) * 15}deg)`,
-                      animationDelay: `${i * 0.1}s`
-                    }}
-                  />
-                ))}
-              </div>
-              <div css={styles.birdEye} />
-              <div css={styles.birdBeak} />
-            </div>
-
-            {/* Bird wings */}
-            <div css={styles.birdWings}>
-              <div css={[styles.wing, styles.leftWing]} />
-              <div css={[styles.wing, styles.rightWing]} />
-            </div>
-
-            {/* Bird tail */}
-            <div css={styles.birdTail}>
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  css={styles.tailFeather}
-                  style={{
-                    transform: `rotate(${(i - 2) * 8}deg)`,
-                    zIndex: 5 - i,
-                    animationDelay: `${i * 0.05}s`
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Sound wave effects */}
-          {isCuckooOut && (
-            <div css={styles.soundWaves}>
-              {[...Array(4)].map((_, i) => (
-                <div
-                  key={i}
-                  css={styles.soundWave}
-                  style={{
-                    animationDelay: `${i * 0.2}s`,
-                    width: `${40 + i * 20}px`,
-                    height: `${40 + i * 20}px`
-                  }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Mechanism gears visible through windows */}
-        <div css={styles.mechanismWindows}>
-          <div css={styles.window} style={{ left: '15%', top: '60%' }}>
-            <div css={styles.windowGear}>
-              {[...Array(8)].map((_, i) => (
-                <div
-                  key={i}
-                  css={styles.windowGearTooth}
-                  style={{ transform: `rotate(${i * 45}deg)` }}
-                />
-              ))}
-            </div>
-          </div>
-          <div css={styles.window} style={{ right: '15%', top: '60%' }}>
-            <div css={styles.windowGear}>
-              {[...Array(6)].map((_, i) => (
-                <div
-                  key={i}
-                  css={styles.windowGearTooth}
-                  style={{ transform: `rotate(${i * 60}deg)` }}
-                />
-              ))}
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Chime visualization */}
-      {isCuckooOut && (
-        <div css={styles.chimeEffects}>
-          {/* Musical notes */}
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={`note-${chimeCount}-${i}`}
-              css={styles.musicalNote}
-              style={{
-                left: `${50 + (i - 1) * 30}%`,
-                animationDelay: `${i * 0.3}s`
-              }}
-            >
-              ♪
-            </div>
+      {/* Mechanical springs and gears */}
+      <div css={styles.mechanicalBase}>
+        <div css={styles.springAssembly}>
+          {[...Array(4)].map((_, i) => (
+            <div key={i} css={styles.spring} />
           ))}
-
-          {/* Energy burst */}
-          <div css={styles.energyBurst}>
-            {[...Array(12)].map((_, i) => (
-              <div
-                key={i}
-                css={styles.burstRay}
-                style={{
-                  transform: `rotate(${i * 30}deg)`,
-                  animationDelay: `${i * 0.05}s`
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Ripple effects */}
-          {[...Array(3)].map((_, i) => (
-            <div
+        </div>
+        <div css={styles.baseGear}>
+          {[...Array(12)].map((_, i) => (
+            <div 
               key={i}
-              css={styles.rippleEffect}
-              style={{
-                animationDelay: `${i * 0.5}s`,
-                width: `${150 + i * 100}px`,
-                height: `${150 + i * 100}px`
-              }}
+              css={styles.gearTooth}
+              style={{ transform: `rotate(${i * 30}deg)` }}
             />
           ))}
-        </div>
-      )}
-
-      {/* Clockwork springs and mechanisms */}
-      <div css={styles.clockworkDetails}>
-        <div css={styles.springMechanism}>
-          <div css={styles.spring}>
-            {[...Array(8)].map((_, i) => (
-              <div
-                key={i}
-                css={styles.springCoil}
-                style={{
-                  top: `${i * 8}px`,
-                  animationDelay: `${i * 0.1}s`
-                }}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div css={styles.leverMechanism}>
-          <div css={styles.lever} />
-          <div css={styles.leverPivot} />
         </div>
       </div>
     </div>
@@ -263,206 +244,157 @@ const CuckooMechanism = ({ isInitialized, animationPhase }) => {
 };
 
 const styles = {
-  container: css`
+  cuckooContainer: css`
     position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%) scale(0);
-    width: 180px;
-    height: 140px;
-    opacity: 0;
-    transition: all 2.5s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 4;
+    top: 5%;
+    left: 5%;
+    width: 120px;
+    height: 160px;
+    pointer-events: none;
+    z-index: 8;
     
     @media (max-width: 768px) {
-      width: 144px;
-      height: 112px;
+      width: 100px;
+      height: 130px;
     }
     
     @media (max-width: 480px) {
-      width: 120px;
-      height: 96px;
+      width: 80px;
+      height: 110px;
     }
-  `,
-
-  active: css`
-    transform: translateX(-50%) scale(1);
-    opacity: 1;
   `,
 
   cuckooHouse: css`
     position: relative;
     width: 100%;
-    height: 100%;
-    background: linear-gradient(
-      135deg,
-      #2c1810 0%,
-      #4a2c18 50%,
-      #2c1810 100%
-    );
-    border-radius: 8px 8px 4px 4px;
-    box-shadow: 
-      0 0 20px rgba(255, 215, 0, 0.3),
-      inset 0 0 15px rgba(0, 0, 0, 0.5);
-    border: 2px solid rgba(255, 215, 0, 0.4);
+    height: 80%;
   `,
 
-  roof: css`
-    position: absolute;
-    top: -20px;
-    left: -10px;
-    width: calc(100% + 20px);
-    height: 30px;
-    background: linear-gradient(
-      135deg,
-      #8b4513 0%,
-      #a0522d 50%,
-      #8b4513 100%
-    );
-    border-radius: 15px 15px 0 0;
-    box-shadow: 
-      0 0 15px rgba(139, 69, 19, 0.6),
-      inset 0 0 10px rgba(0, 0, 0, 0.3);
-  `,
-
-  roofTiles: css`
-    position: absolute;
-    top: 0;
-    left: 0;
+  houseBody: css`
+    position: relative;
     width: 100%;
     height: 100%;
-    overflow: hidden;
-    border-radius: 15px 15px 0 0;
+    background: 
+      linear-gradient(135deg, 
+        ${colors.surface}90 0%,
+        ${colors.card}70 50%,
+        ${colors.background}80 100%);
+    border: 2px solid ${colors.borderLight};
+    border-radius: 15px 15px 5px 5px;
+    backdrop-filter: blur(10px);
+    box-shadow: 
+      0 0 20px rgba(0, 0, 0, 0.4),
+      inset 0 0 15px rgba(255, 255, 255, 0.1);
   `,
 
-  roofTile: css`
+  houseRoof: css`
     position: absolute;
-    top: 2px;
-    width: 12%;
-    height: 4px;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.3) 50%,
-      transparent 100%
-    );
-    border-radius: 2px;
-    animation: tileShimmer 4s ease-in-out infinite;
-    
-    @keyframes tileShimmer {
-      0%, 100% { opacity: 0.3; }
-      50% { opacity: 0.8; }
-    }
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110%;
+    height: 30px;
+    background: linear-gradient(135deg, ${colors.neonGold}80, ${colors.surface}60);
+    border: 2px solid ${colors.neonGold};
+    border-radius: 15px 15px 0 0;
+    clip-path: polygon(10% 100%, 50% 0%, 90% 100%);
+    box-shadow: 0 0 15px ${colors.neonGold}40;
   `,
 
-  roofPeak: css`
+  roofOrnament: css`
     position: absolute;
     top: -8px;
     left: 50%;
     transform: translateX(-50%);
-    width: 20px;
-    height: 12px;
-    background: ${colors.neonGold};
-    border-radius: 50%;
-    box-shadow: 
-      0 0 15px rgba(255, 215, 0, 0.8),
-      inset 0 0 5px rgba(0, 0, 0, 0.3);
+    width: 8px;
+    height: 16px;
+    background: ${colors.neonTeal};
+    border-radius: 4px;
+    box-shadow: 0 0 10px ${colors.neonTeal}60;
   `,
 
-  peakOrnament: css`
+  roofLines: css`
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20%;
+  `,
+
+  roofLine: css`
+    width: 2px;
+    height: 60%;
+    background: ${colors.neonTeal}60;
+    border-radius: 1px;
+  `,
+
+  doorFrame: css`
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: ${colors.neonTeal};
-    box-shadow: 
-      0 0 10px rgba(0, 255, 255, 1),
-      inset 0 0 3px rgba(255, 255, 255, 0.8);
-    animation: ornamentPulse 2s ease-in-out infinite;
-    
-    @keyframes ornamentPulse {
-      0%, 100% { transform: translate(-50%, -50%) scale(1); }
-      50% { transform: translate(-50%, -50%) scale(1.3); }
-    }
+    width: 40px;
+    height: 50px;
+    background: ${colors.background}80;
+    border: 2px solid ${colors.borderLight};
+    border-radius: 8px;
+    overflow: hidden;
+    perspective: 200px;
   `,
 
-  houseFacade: css`
-    position: relative;
+  doorHinges: css`
+    position: absolute;
+    left: -2px;
+    top: 10%;
+    width: 4px;
+    height: 80%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 10;
+  `,
+
+  doorHinge: css`
     width: 100%;
-    height: 100%;
-    border-radius: 8px 8px 4px 4px;
+    height: 8px;
+    background: ${colors.neonTeal};
+    border-radius: 2px;
+    animation: ${hingeGlow} 3s ease-in-out infinite;
   `,
 
-  columns: css`
+  cuckooDooor: css`
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    transform-origin: left center;
+    transform-style: preserve-3d;
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 5;
   `,
 
-  column: css`
-    position: absolute;
-    top: 20%;
-    width: 8px;
-    height: 60%;
-    background: linear-gradient(
-      to bottom,
-      ${colors.neonGold} 0%,
-      #b8860b 50%,
-      ${colors.neonGold} 100%
-    );
-    border-radius: 4px;
-    box-shadow: 
-      0 0 10px rgba(255, 215, 0, 0.4),
-      inset 0 0 5px rgba(0, 0, 0, 0.3);
-    
-    &::before {
-      content: '';
-      position: absolute;
-      top: -4px;
-      left: -2px;
-      width: 12px;
-      height: 8px;
-      background: ${colors.neonGold};
-      border-radius: 50%;
-      box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
-    }
-    
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: -4px;
-      left: -2px;
-      width: 12px;
-      height: 8px;
-      background: ${colors.neonGold};
-      border-radius: 50%;
-      box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
-    }
+  doorOpenState: css`
+    animation: ${doorOpen} 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   `,
 
-  doorFrame: css`
-    position: absolute;
-    top: 30%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(
-      135deg,
-      #1a1a2e 0%,
-      #16213e 50%,
-      #0f3460 100%
-    );
-    border-radius: 50% 50% 0 0;
-    border: 2px solid ${colors.neonTeal};
+  doorClosedState: css`
+    animation: ${doorClose} 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  `,
+
+  doorPanel: css`
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: 
+      linear-gradient(135deg, ${colors.neonGold}60, ${colors.surface}80);
+    border: 1px solid ${colors.neonGold};
+    border-radius: 6px;
     box-shadow: 
-      0 0 20px rgba(0, 255, 255, 0.4),
-      inset 0 0 15px rgba(0, 0, 0, 0.6);
+      0 0 10px ${colors.neonGold}30,
+      inset 0 0 10px rgba(0, 0, 0, 0.2);
   `,
 
   doorOrnament: css`
@@ -470,563 +402,359 @@ const styles = {
     top: 20%;
     left: 50%;
     transform: translateX(-50%);
-    width: 80%;
-    height: 40%;
-  `,
-
-  doorPattern: css`
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-around;
-    height: 100%;
-  `,
-
-  doorLine: css`
-    height: 2px;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      ${colors.neonTeal} 50%,
-      transparent 100%
-    );
-    border-radius: 1px;
-    box-shadow: 0 0 3px rgba(0, 255, 255, 0.6);
-    animation: doorLineGlow 3s ease-in-out infinite;
-    
-    @keyframes doorLineGlow {
-      0%, 100% { opacity: 0.4; }
-      50% { opacity: 1; }
-    }
-  `,
-
-  doorPanels: css`
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 60%;
-    overflow: hidden;
-    border-radius: 0 0 30px 30px;
-  `,
-
-  doorPanel: css`
-    position: absolute;
-    bottom: 0;
-    width: 50%;
-    height: 100%;
-    background: linear-gradient(
-      135deg,
-      #2c1810 0%,
-      #4a2c18 50%,
-      #2c1810 100%
-    );
-    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
-  `,
-
-  leftPanel: css`
-    left: 0;
-    border-radius: 0 0 0 30px;
-    transform-origin: left center;
-  `,
-
-  rightPanel: css`
-    right: 0;
-    border-radius: 0 0 30px 0;
-    transform-origin: right center;
-  `,
-
-  panelOpen: css`
-    &:first-of-type {
-      transform: rotateY(-120deg);
-    }
-    &:last-of-type {
-      transform: rotateY(120deg);
-    }
-  `,
-
-  doorThreshold: css`
-    position: absolute;
-    bottom: -2px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 70%;
-    height: 4px;
-    background: ${colors.neonGold};
+    width: 60%;
+    height: 3px;
+    background: ${colors.neonTeal};
     border-radius: 2px;
-    box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+    box-shadow: 0 0 5px ${colors.neonTeal}60;
   `,
 
-  cuckooContainer: css`
+  doorHandle: css`
     position: absolute;
-    top: 60%;
-    left: 50%;
-    transform: translate(-50%, -50%) translateZ(-50px);
-    width: 40px;
-    height: 30px;
-    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 10;
+    top: 50%;
+    right: 4px;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 4px;
+    background: ${colors.neonTeal};
+    border-radius: 50%;
+    box-shadow: 0 0 5px ${colors.neonTeal}60;
   `,
 
-  cuckooEmerged: css`
-    transform: translate(-50%, -50%) translateZ(20px);
-  `,
-
-  cuckooBird: css`
-    position: relative;
-    width: 100%;
-    height: 100%;
-    transform-style: preserve-3d;
-  `,
-
-  birdBody: css`
-    position: absolute;
-    top: 40%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 25px;
-    height: 18px;
-    border-radius: 50% 50% 40% 40%;
-    background: linear-gradient(
-      135deg,
-      ${colors.neonPurple} 0%,
-      #8a2be2 50%,
-      ${colors.neonPurple} 100%
-    );
-    box-shadow: 
-      0 0 15px rgba(191, 0, 255, 0.6),
-      inset 0 0 8px rgba(255, 255, 255, 0.2);
-  `,
-
-  bodyGradient: css`
+  doorOpening: css`
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(
-      45deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.3) 30%,
-      transparent 60%
-    );
+    background: ${colors.background}95;
+    border-radius: 6px;
+    overflow: hidden;
   `,
 
-  bodyHighlight: css`
+  interiorShadow: css`
     position: absolute;
-    top: 20%;
-    left: 20%;
-    width: 30%;
-    height: 30%;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.6);
-    filter: blur(2px);
-    animation: bodyShimmer 2s ease-in-out infinite;
-    
-    @keyframes bodyShimmer {
-      0%, 100% { opacity: 0.3; }
-      50% { opacity: 0.8; }
-    }
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+      radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.6) 100%);
+  `,
+
+  cuckooBird: css`
+    position: absolute;
+    top: 50%;
+    left: 0%;
+    transform: translateY(-50%);
+    width: 30px;
+    height: 25px;
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  `,
+
+  birdEmergedState: css`
+    animation: ${birdEmerge} 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  `,
+
+  birdHiddenState: css`
+    animation: ${birdRetreat} 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  `,
+
+  birdBody: css`
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: 
+      radial-gradient(ellipse at center, ${colors.neonGold}80 0%, ${colors.surface}60 100%);
+    border: 1px solid ${colors.neonGold};
+    border-radius: 50% 40% 60% 30%;
+    animation: ${birdBob} 2s ease-in-out infinite;
+    box-shadow: 
+      0 0 10px ${colors.neonGold}40,
+      inset 0 0 8px rgba(255, 255, 255, 0.2);
   `,
 
   birdHead: css`
     position: absolute;
-    top: 10%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 20px;
+    top: -5px;
+    right: -5px;
+    width: 15px;
     height: 15px;
-    border-radius: 50%;
-    background: linear-gradient(
-      135deg,
-      ${colors.neonGreen} 0%,
-      #32cd32 50%,
-      ${colors.neonGreen} 100%
-    );
-    box-shadow: 
-      0 0 12px rgba(57, 255, 20, 0.6),
-      inset 0 0 6px rgba(255, 255, 255, 0.2);
+    background: 
+      radial-gradient(circle at center, ${colors.neonTeal}80 0%, ${colors.surface}60 100%);
+    border: 1px solid ${colors.neonTeal};
+    border-radius: 60% 40% 50% 50%;
+    box-shadow: 0 0 8px ${colors.neonTeal}40;
   `,
 
-  headCrest: css`
+  birdBeak: css`
     position: absolute;
-    top: -6px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    height: 12px;
-  `,
-
-  crestFeather: css`
-    position: absolute;
-    top: 0;
-    left: 50%;
-    width: 2px;
-    height: 8px;
-    background: ${colors.neonRed};
-    border-radius: 1px;
-    transform-origin: bottom center;
-    margin-left: -1px;
-    box-shadow: 0 0 4px rgba(255, 7, 58, 0.8);
-    animation: featherSway 1.5s ease-in-out infinite;
-    
-    @keyframes featherSway {
-      0%, 100% { transform: rotate(0deg); }
-      25% { transform: rotate(5deg); }
-      75% { transform: rotate(-5deg); }
-    }
+    top: 40%;
+    right: -3px;
+    width: 6px;
+    height: 2px;
+    background: ${colors.neonGold};
+    border-radius: 0 2px 2px 0;
+    box-shadow: 0 0 3px ${colors.neonGold}60;
   `,
 
   birdEye: css`
     position: absolute;
     top: 30%;
-    left: 60%;
-    width: 4px;
-    height: 4px;
+    right: 2px;
+    width: 3px;
+    height: 3px;
+    background: ${colors.background};
+    border: 1px solid ${colors.neonTeal};
     border-radius: 50%;
-    background: #000000;
-    border: 1px solid #ffffff;
-    box-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
-    animation: eyeBlink 3s ease-in-out infinite;
-    
-    @keyframes eyeBlink {
-      0%, 90%, 100% { transform: scaleY(1); }
-      95% { transform: scaleY(0.1); }
-    }
+    box-shadow: inset 0 0 2px ${colors.neonTeal}80;
   `,
 
-  birdBeak: css`
+  birdCrest: css`
     position: absolute;
-    top: 50%;
-    left: 80%;
-    width: 8px;
-    height: 3px;
-    background: ${colors.neonGold};
-    border-radius: 0 50% 50% 0;
-    box-shadow: 0 0 6px rgba(255, 215, 0, 0.8);
-    transform-origin: left center;
-    animation: beakOpen 6s ease-in-out infinite;
-    
-    @keyframes beakOpen {
-      0%, 80%, 100% { transform: rotateZ(0deg); }
-      85%, 95% { transform: rotateZ(15deg); }
-    }
+    top: -3px;
+    left: 20%;
+    width: 60%;
+    height: 8px;
+    display: flex;
+    justify-content: space-between;
+  `,
+
+  crestFeather: css`
+    width: 2px;
+    height: 100%;
+    background: ${colors.neonTeal};
+    border-radius: 1px;
+    transform-origin: bottom center;
+    animation: ${wingFlap} 1s ease-in-out infinite;
   `,
 
   birdWings: css`
     position: absolute;
-    top: 45%;
-    left: 50%;
-    transform: translateX(-50%);
     width: 100%;
-    height: 60%;
+    height: 100%;
   `,
 
-  wing: css`
+  birdWing: css`
     position: absolute;
-    top: 0;
-    width: 15px;
+    width: 8px;
     height: 12px;
-    background: linear-gradient(
-      45deg,
-      ${colors.neonBlue} 0%,
-      #1e90ff 50%,
-      ${colors.neonBlue} 100%
-    );
-    border-radius: 50% 0 80% 20%;
-    box-shadow: 0 0 8px rgba(0, 162, 255, 0.6);
-    animation: wingFlap 0.5s ease-in-out infinite alternate;
-    
-    @keyframes wingFlap {
-      from { transform: rotateZ(0deg); }
-      to { transform: rotateZ(-15deg); }
-    }
+    background: ${colors.neonGold}70;
+    border: 1px solid ${colors.neonGold};
+    border-radius: 50% 20% 80% 30%;
+    transform-origin: top center;
+    animation: ${wingFlap} 0.5s ease-in-out infinite;
   `,
 
   leftWing: css`
-    left: 5px;
-    transform-origin: right center;
+    top: 20%;
+    left: -2px;
+    animation-delay: 0s;
   `,
 
   rightWing: css`
-    right: 5px;
+    top: 20%;
+    right: 8px;
     transform: scaleX(-1);
-    transform-origin: left center;
+    animation-delay: 0.25s;
   `,
 
   birdTail: css`
     position: absolute;
-    top: 60%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    height: 40%;
+    top: 50%;
+    left: -8px;
+    width: 10px;
+    height: 15px;
+    transform: translateY(-50%);
   `,
 
   tailFeather: css`
     position: absolute;
     bottom: 0;
     left: 50%;
-    width: 3px;
-    height: 12px;
-    background: linear-gradient(
-      to top,
-      ${colors.neonPink} 0%,
-      #ff1493 50%,
-      ${colors.neonPink} 100%
-    );
+    width: 2px;
+    height: 8px;
+    background: ${colors.neonTeal}80;
     border-radius: 1px;
     transform-origin: bottom center;
-    margin-left: -1.5px;
-    box-shadow: 0 0 5px rgba(255, 20, 147, 0.6);
-    animation: tailSway 2s ease-in-out infinite;
-    
-    @keyframes tailSway {
-      0%, 100% { transform: rotate(0deg); }
-      25% { transform: rotate(10deg); }
-      75% { transform: rotate(-10deg); }
-    }
+    animation: ${wingFlap} 1.2s ease-in-out infinite;
   `,
 
-  soundWaves: css`
+  soundEffect: css`
     position: absolute;
-    top: 50%;
-    left: 100%;
-    transform: translateY(-50%);
-    width: 100px;
-    height: 100px;
-    pointer-events: none;
+    top: -10px;
+    right: -15px;
+    width: 20px;
+    height: 20px;
   `,
 
   soundWave: css`
     position: absolute;
     top: 50%;
     left: 0;
+    width: 15px;
+    height: 2px;
+    background: ${colors.neonTeal}60;
+    border-radius: 1px;
     transform: translateY(-50%);
-    border-radius: 50%;
-    border: 2px solid ${colors.neonTeal};
-    animation: soundWaveExpand 2s ease-out infinite;
+    animation: ${birdBob} 0.3s ease-in-out infinite;
     
-    @keyframes soundWaveExpand {
-      0% { opacity: 0.8; transform: translateY(-50%) scale(0.2); }
-      100% { opacity: 0; transform: translateY(-50%) scale(2); }
+    &:nth-child(2) {
+      top: 40%;
+      width: 12px;
+    }
+    
+    &:nth-child(3) {
+      top: 60%;
+      width: 18px;
     }
   `,
 
-  mechanismWindows: css`
+  houseDecorations: css`
     position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
     height: 100%;
   `,
 
-  window: css`
+  windowLeft: css`
     position: absolute;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.8);
-    border: 1px solid rgba(255, 215, 0, 0.4);
-    box-shadow: 
-      inset 0 0 8px rgba(0, 0, 0, 0.8),
-      0 0 5px rgba(255, 215, 0, 0.3);
-    overflow: hidden;
+    top: 20%;
+    left: 10%;
+    width: 15px;
+    height: 15px;
+    background: ${colors.background}80;
+    border: 1px solid ${colors.borderLight};
+    border-radius: 3px;
   `,
 
-  windowGear: css`
+  windowRight: css`
+    position: absolute;
+    top: 20%;
+    right: 10%;
+    width: 15px;
+    height: 15px;
+    background: ${colors.background}80;
+    border: 1px solid ${colors.borderLight};
+    border-radius: 3px;
+  `,
+
+  windowPane: css`
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: calc(100% - 4px);
+    height: calc(100% - 4px);
+    background: ${colors.neonTeal}20;
+    border-radius: 2px;
+  `,
+
+  windowCross: css`
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     width: 80%;
-    height: 80%;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 215, 0, 0.6);
-    animation: windowGearRotate 3s linear infinite;
+    height: 1px;
+    background: ${colors.borderLight};
     
-    @keyframes windowGearRotate {
-      from { transform: translate(-50%, -50%) rotate(0deg); }
-      to { transform: translate(-50%, -50%) rotate(360deg); }
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(90deg);
+      width: 100%;
+      height: 1px;
+      background: ${colors.borderLight};
     }
   `,
 
-  windowGearTooth: css`
+  housePlatform: css`
     position: absolute;
-    top: 0;
-    left: 50%;
-    width: 1px;
-    height: 4px;
-    background: rgba(255, 215, 0, 0.8);
-    transform-origin: bottom center;
-    margin-left: -0.5px;
-  `,
-
-  chimeEffects: css`
-    position: absolute;
-    top: 0;
+    bottom: -10px;
     left: 50%;
     transform: translateX(-50%);
-    width: 200px;
-    height: 200px;
-    pointer-events: none;
-    z-index: 15;
+    width: 110%;
+    height: 12px;
+    background: linear-gradient(135deg, ${colors.surface}80, ${colors.card}60);
+    border: 1px solid ${colors.borderLight};
+    border-radius: 6px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
   `,
 
-  musicalNote: css`
+  platformOrnaments: css`
     position: absolute;
-    top: 80%;
-    font-size: 20px;
-    color: ${colors.neonGold};
-    text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
-    animation: noteFloat 3s ease-out forwards;
-    
-    @keyframes noteFloat {
-      0% { 
-        opacity: 0; 
-        transform: translateY(0) scale(0.5); 
-      }
-      20% { 
-        opacity: 1; 
-        transform: translateY(-20px) scale(1); 
-      }
-      100% { 
-        opacity: 0; 
-        transform: translateY(-80px) scale(1.2); 
-      }
-    }
-  `,
-
-  energyBurst: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100px;
-    height: 100px;
-    animation: burstPulse 2s ease-out;
-    
-    @keyframes burstPulse {
-      0% { transform: translate(-50%, -50%) scale(0); }
-      50% { transform: translate(-50%, -50%) scale(1.2); }
-      100% { transform: translate(-50%, -50%) scale(0); }
-    }
-  `,
-
-  burstRay: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 3px;
-    height: 40px;
-    background: linear-gradient(
-      to top,
-      transparent 0%,
-      ${colors.neonTeal} 50%,
-      transparent 100%
-    );
-    transform-origin: bottom center;
-    margin-left: -1.5px;
-    margin-top: -40px;
-    animation: rayFlash 0.5s ease-out;
-    
-    @keyframes rayFlash {
-      0% { opacity: 0; transform: scaleY(0); }
-      50% { opacity: 1; transform: scaleY(1.5); }
-      100% { opacity: 0; transform: scaleY(0); }
-    }
-  `,
-
-  rippleEffect: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    border: 2px solid rgba(0, 255, 255, 0.4);
-    animation: rippleExpand 3s ease-out;
-    
-    @keyframes rippleExpand {
-      0% { opacity: 0.8; transform: translate(-50%, -50%) scale(0.1); }
-      100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
-    }
-  `,
-
-  clockworkDetails: css`
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    width: 30px;
-    height: 30px;
-    opacity: 0.6;
-  `,
-
-  springMechanism: css`
-    position: relative;
     width: 100%;
     height: 100%;
+    display: flex;
+    align-items: center;
+  `,
+
+  platformOrnament: css`
+    position: absolute;
+    width: 3px;
+    height: 8px;
+    background: ${colors.neonGold}60;
+    border-radius: 2px;
+    animation: ${hingeGlow} 2s ease-in-out infinite;
+  `,
+
+  mechanicalBase: css`
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 20%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  `,
+
+  springAssembly: css`
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   `,
 
   spring: css`
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 8px;
+    width: 3px;
     height: 100%;
+    background: 
+      repeating-linear-gradient(
+        0deg,
+        ${colors.borderLight} 0px,
+        ${colors.borderLight} 2px,
+        transparent 2px,
+        transparent 4px
+      );
+    border-radius: 2px;
+    animation: ${birdBob} 1.5s ease-in-out infinite;
   `,
 
-  springCoil: css`
-    position: absolute;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    border: 1px solid rgba(255, 215, 0, 0.4);
+  baseGear: css`
+    position: relative;
+    width: 30px;
+    height: 30px;
+    background: 
+      radial-gradient(circle at center, ${colors.surface}80 0%, ${colors.background}60 100%);
+    border: 2px solid ${colors.borderLight};
     border-radius: 50%;
-    animation: springCompress 2s ease-in-out infinite;
-    
-    @keyframes springCompress {
-      0%, 100% { transform: scaleY(1); }
-      50% { transform: scaleY(0.7); }
-    }
+    animation: ${wingFlap} 4s linear infinite;
   `,
 
-  leverMechanism: css`
+  gearTooth: css`
     position: absolute;
-    bottom: 5px;
-    right: 10px;
-    width: 20px;
-    height: 10px;
-  `,
-
-  lever: css`
-    position: absolute;
-    top: 50%;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: rgba(255, 215, 0, 0.6);
-    transform-origin: left center;
-    animation: leverRock 1.5s ease-in-out infinite;
-    
-    @keyframes leverRock {
-      0%, 100% { transform: rotate(0deg); }
-      50% { transform: rotate(15deg); }
-    }
-  `,
-
-  leverPivot: css`
-    position: absolute;
-    top: 50%;
-    left: 0;
-    transform: translateY(-50%);
-    width: 4px;
+    top: -2px;
+    left: 50%;
+    width: 2px;
     height: 4px;
-    border-radius: 50%;
-    background: ${colors.neonTeal};
-    box-shadow: 0 0 5px rgba(0, 255, 255, 0.8);
+    background: ${colors.neonTeal}60;
+    border-radius: 1px;
+    transform-origin: 50% 17px;
   `
 };
 

@@ -1,744 +1,825 @@
 /** @jsxImportSource @emotion/react */
-import { css } from '@emotion/react';
-import { useEffect, useState } from 'react';
+import { css, keyframes } from '@emotion/react';
 import { colors } from '../../../styles/theme/colors';
 
 /**
- * OrnamentalFrame - Decorative border elements and background enhancements
- * Features Rococo flourishes, Art Deco patterns, and atmospheric effects
+ * OrnamentalFrame - Elaborate Neo-Deco-Rococo decorative frame
+ * Combines Art Deco geometric precision with Rococo ornamental excess
+ * Creates an immersive border around the entire clockwork mechanism
  */
+
+// Frame animation keyframes
+const frameGlow = keyframes`
+  0%, 100% { 
+    filter: drop-shadow(0 0 15px ${colors.neonGold}40);
+    opacity: 0.8;
+  }
+  50% { 
+    filter: drop-shadow(0 0 30px ${colors.neonGold}80) drop-shadow(0 0 45px ${colors.neonTeal}40);
+    opacity: 1;
+  }
+`;
+
+const ornamentFloat = keyframes`
+  0%, 100% { 
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+  33% { 
+    transform: translateY(-2px) rotate(2deg) scale(1.02);
+  }
+  66% { 
+    transform: translateY(2px) rotate(-1deg) scale(0.98);
+  }
+`;
+
+const cornerSpiral = keyframes`
+  0% { 
+    transform: rotate(0deg) scale(1);
+    opacity: 0.7;
+  }
+  50% { 
+    transform: rotate(180deg) scale(1.1);
+    opacity: 1;
+  }
+  100% { 
+    transform: rotate(360deg) scale(1);
+    opacity: 0.7;
+  }
+`;
+
+const geometricPulse = keyframes`
+  0%, 100% { 
+    stroke-dashoffset: 0;
+    opacity: 0.6;
+  }
+  50% { 
+    stroke-dashoffset: -20;
+    opacity: 1;
+  }
+`;
+
+const artDecoFlow = keyframes`
+  0% { 
+    background-position: 0% 0%;
+    filter: hue-rotate(0deg);
+  }
+  50% { 
+    background-position: 100% 100%;
+    filter: hue-rotate(30deg);
+  }
+  100% { 
+    background-position: 0% 0%;
+    filter: hue-rotate(0deg);
+  }
+`;
+
 const OrnamentalFrame = () => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [particlesActive, setParticlesActive] = useState(false);
-
-  useEffect(() => {
-    // Fade in the ornamental frame
-    const showTimeout = setTimeout(() => {
-      setIsVisible(true);
-    }, 300);
-
-    // Activate floating particles
-    const particlesTimeout = setTimeout(() => {
-      setParticlesActive(true);
-    }, 1000);
-
-    return () => {
-      clearTimeout(showTimeout);
-      clearTimeout(particlesTimeout);
-    };
-  }, []);
-
   return (
-    <div css={[styles.container, isVisible && styles.visible]}>
-      {/* Corner ornaments */}
-      <div css={styles.cornerOrnaments}>
-        {['topLeft', 'topRight', 'bottomLeft', 'bottomRight'].map((corner, index) => (
-          <div
-            key={corner}
-            css={[styles.cornerOrnament, styles[corner]]}
-            style={{ animationDelay: `${index * 0.2}s` }}
-          >
-            {/* Art Deco corner design */}
-            <div css={styles.cornerPattern}>
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  css={styles.cornerLine}
-                  style={{
-                    width: `${20 + i * 8}px`,
-                    height: `${20 + i * 8}px`,
-                    animationDelay: `${i * 0.1}s`
-                  }}
-                />
-              ))}
-            </div>
-            
-            {/* Rococo flourish */}
-            <div css={styles.flourish}>
-              <div css={styles.flourishCurve} />
-              <div css={styles.flourishSpiral} />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Side panels with geometric patterns */}
-      <div css={styles.sidePanels}>
-        {['left', 'right', 'top', 'bottom'].map((side, index) => (
-          <div
-            key={side}
-            css={[styles.sidePanel, styles[`${side}Panel`]]}
-            style={{ animationDelay: `${index * 0.3}s` }}
-          >
-            <div css={styles.panelPattern}>
-              {/* Repeating Art Deco motifs */}
-              {[...Array(8)].map((_, i) => (
-                <div
-                  key={i}
-                  css={styles.patternElement}
-                  style={{
-                    animationDelay: `${i * 0.1}s`,
-                    opacity: 0.8 - (i * 0.08)
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Central decorative frame */}
-      <div css={styles.centralFrame}>
-        <div css={styles.frameRing}>
-          {/* Ornate bezel with jewels */}
-          <div css={styles.frameBezel}>
-            {[...Array(12)].map((_, i) => (
+    <div css={styles.frameContainer}>
+      {/* Main outer frame */}
+      <div css={styles.outerFrame}>
+        {/* Corner ornaments */}
+        <div css={[styles.cornerOrnament, styles.topLeft]}>
+          <div css={styles.cornerSpiral}>
+            <div css={styles.spiralCore} />
+            {[...Array(8)].map((_, i) => (
               <div
                 key={i}
-                css={styles.bezelJewel}
-                style={{
-                  transform: `rotate(${i * 30}deg) translateY(-80px)`,
+                css={styles.spiralArm}
+                style={{ transform: `rotate(${i * 45}deg)` }}
+              />
+            ))}
+          </div>
+          <div css={styles.cornerGem} />
+        </div>
+
+        <div css={[styles.cornerOrnament, styles.topRight]}>
+          <div css={styles.cornerSpiral}>
+            <div css={styles.spiralCore} />
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                css={styles.spiralArm}
+                style={{ transform: `rotate(${i * 45}deg)` }}
+              />
+            ))}
+          </div>
+          <div css={styles.cornerGem} />
+        </div>
+
+        <div css={[styles.cornerOrnament, styles.bottomLeft]}>
+          <div css={styles.cornerSpiral}>
+            <div css={styles.spiralCore} />
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                css={styles.spiralArm}
+                style={{ transform: `rotate(${i * 45}deg)` }}
+              />
+            ))}
+          </div>
+          <div css={styles.cornerGem} />
+        </div>
+
+        <div css={[styles.cornerOrnament, styles.bottomRight]}>
+          <div css={styles.cornerSpiral}>
+            <div css={styles.spiralCore} />
+            {[...Array(8)].map((_, i) => (
+              <div
+                key={i}
+                css={styles.spiralArm}
+                style={{ transform: `rotate(${i * 45}deg)` }}
+              />
+            ))}
+          </div>
+          <div css={styles.cornerGem} />
+        </div>
+
+        {/* Border decorations */}
+        <div css={styles.borderDecorations}>
+          {/* Top border */}
+          <div css={[styles.borderLine, styles.topBorder]}>
+            {[...Array(12)].map((_, i) => (
+              <div 
+                key={i}
+                css={styles.borderOrnament}
+                style={{ 
+                  left: `${(i + 1) * 8}%`,
                   animationDelay: `${i * 0.1}s`
                 }}
               />
             ))}
           </div>
 
-          {/* Inner decorative ring */}
-          <div css={styles.innerDecoRing}>
-            {[...Array(24)].map((_, i) => (
+          {/* Right border */}
+          <div css={[styles.borderLine, styles.rightBorder]}>
+            {[...Array(12)].map((_, i) => (
+              <div 
+                key={i}
+                css={styles.borderOrnament}
+                style={{ 
+                  top: `${(i + 1) * 8}%`,
+                  animationDelay: `${i * 0.1}s`
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Bottom border */}
+          <div css={[styles.borderLine, styles.bottomBorder]}>
+            {[...Array(12)].map((_, i) => (
+              <div 
+                key={i}
+                css={styles.borderOrnament}
+                style={{ 
+                  left: `${(i + 1) * 8}%`,
+                  animationDelay: `${i * 0.1}s`
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Left border */}
+          <div css={[styles.borderLine, styles.leftBorder]}>
+            {[...Array(12)].map((_, i) => (
+              <div 
+                key={i}
+                css={styles.borderOrnament}
+                style={{ 
+                  top: `${(i + 1) * 8}%`,
+                  animationDelay: `${i * 0.1}s`
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Art Deco geometric patterns */}
+        <svg css={styles.geometricOverlay} viewBox="0 0 100 100" preserveAspectRatio="none">
+          {/* Diamond patterns */}
+          <defs>
+            <pattern id="diamond-pattern" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+              <polygon 
+                points="5,2 8,5 5,8 2,5" 
+                fill="none" 
+                stroke={colors.neonTeal}
+                strokeWidth="0.5"
+                opacity="0.6"
+              />
+            </pattern>
+            
+            <linearGradient id="frame-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={colors.neonGold} stopOpacity="0.8" />
+              <stop offset="50%" stopColor={colors.neonTeal} stopOpacity="0.6" />
+              <stop offset="100%" stopColor={colors.neonGold} stopOpacity="0.8" />
+            </linearGradient>
+          </defs>
+
+          {/* Main frame outline */}
+          <rect 
+            x="2" y="2" width="96" height="96" 
+            fill="url(#diamond-pattern)" 
+            stroke="url(#frame-gradient)" 
+            strokeWidth="1"
+            strokeDasharray="5,3"
+            css={styles.animatedStroke}
+          />
+
+          {/* Art Deco chevron patterns */}
+          <g css={styles.chevronGroup}>
+            <polyline 
+              points="20,10 25,5 30,10" 
+              fill="none" 
+              stroke={colors.neonGold} 
+              strokeWidth="1"
+              css={styles.animatedStroke}
+            />
+            <polyline 
+              points="70,10 75,5 80,10" 
+              fill="none" 
+              stroke={colors.neonGold} 
+              strokeWidth="1"
+              css={styles.animatedStroke}
+            />
+            <polyline 
+              points="20,90 25,95 30,90" 
+              fill="none" 
+              stroke={colors.neonGold} 
+              strokeWidth="1"
+              css={styles.animatedStroke}
+            />
+            <polyline 
+              points="70,90 75,95 80,90" 
+              fill="none" 
+              stroke={colors.neonGold} 
+              strokeWidth="1"
+              css={styles.animatedStroke}
+            />
+          </g>
+
+          {/* Central cross accent */}
+          <g css={styles.centralCross}>
+            <line 
+              x1="50" y1="20" x2="50" y2="80" 
+              stroke={colors.neonTeal} 
+              strokeWidth="0.5" 
+              opacity="0.4"
+              css={styles.animatedStroke}
+            />
+            <line 
+              x1="20" y1="50" x2="80" y2="50" 
+              stroke={colors.neonTeal} 
+              strokeWidth="0.5" 
+              opacity="0.4"
+              css={styles.animatedStroke}
+            />
+          </g>
+        </svg>
+      </div>
+
+      {/* Inner decorative elements */}
+      <div css={styles.innerDecorations}>
+        {/* Floating ornamental particles */}
+        {[...Array(16)].map((_, i) => (
+          <div
+            key={i}
+            css={styles.floatingParticle}
+            style={{
+              left: `${10 + (i % 4) * 20}%`,
+              top: `${10 + Math.floor(i / 4) * 20}%`,
+              animationDelay: `${i * 0.3}s`,
+              animationDuration: `${4 + (i % 3)}s`
+            }}
+          />
+        ))}
+
+        {/* Art Deco sunburst patterns */}
+        <div css={styles.sunburstPatterns}>
+          <div css={[styles.sunburst, styles.topLeftSunburst]}>
+            {[...Array(12)].map((_, i) => (
               <div
                 key={i}
-                css={styles.decoTick}
-                style={{
-                  transform: `rotate(${i * 15}deg)`,
-                  animationDelay: `${i * 0.05}s`
-                }}
+                css={styles.sunburstRay}
+                style={{ transform: `rotate(${i * 30}deg)` }}
+              />
+            ))}
+          </div>
+
+          <div css={[styles.sunburst, styles.topRightSunburst]}>
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                css={styles.sunburstRay}
+                style={{ transform: `rotate(${i * 30}deg)` }}
+              />
+            ))}
+          </div>
+
+          <div css={[styles.sunburst, styles.bottomLeftSunburst]}>
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                css={styles.sunburstRay}
+                style={{ transform: `rotate(${i * 30}deg)` }}
+              />
+            ))}
+          </div>
+
+          <div css={[styles.sunburst, styles.bottomRightSunburst]}>
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                css={styles.sunburstRay}
+                style={{ transform: `rotate(${i * 30}deg)` }}
               />
             ))}
           </div>
         </div>
       </div>
 
-      {/* Floating atmospheric particles */}
-      {particlesActive && (
-        <div css={styles.atmosphericEffects}>
-          {/* Golden dust particles */}
-          {[...Array(20)].map((_, i) => (
-            <div
-              key={`dust-${i}`}
-              css={styles.dustParticle}
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 5}s`,
-                animationDuration: `${8 + Math.random() * 4}s`
-              }}
-            />
-          ))}
-
-          {/* Light rays */}
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={`ray-${i}`}
-              css={styles.lightRay}
-              style={{
-                transform: `rotate(${i * 60}deg)`,
-                animationDelay: `${i * 0.5}s`
-              }}
-            />
-          ))}
-
-          {/* Ambient glow orbs */}
-          {[...Array(8)].map((_, i) => (
-            <div
-              key={`orb-${i}`}
-              css={styles.glowOrb}
-              style={{
-                left: `${15 + Math.random() * 70}%`,
-                top: `${15 + Math.random() * 70}%`,
-                animationDelay: `${Math.random() * 3}s`,
-                animationDuration: `${6 + Math.random() * 3}s`
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Decorative scrollwork */}
-      <div css={styles.scrollwork}>
-        {/* Left scrollwork */}
-        <div css={[styles.scroll, styles.leftScroll]}>
-          <svg css={styles.scrollSvg} viewBox="0 0 100 200">
-            <path
-              d="M20,20 Q40,10 60,30 Q80,50 60,70 Q40,90 20,80 Q10,60 20,40 Q30,20 20,20"
-              css={styles.scrollPath}
-            />
-            <path
-              d="M20,120 Q40,110 60,130 Q80,150 60,170 Q40,190 20,180 Q10,160 20,140 Q30,120 20,120"
-              css={styles.scrollPath}
-            />
-          </svg>
-        </div>
-
-        {/* Right scrollwork */}
-        <div css={[styles.scroll, styles.rightScroll]}>
-          <svg css={styles.scrollSvg} viewBox="0 0 100 200">
-            <path
-              d="M80,20 Q60,10 40,30 Q20,50 40,70 Q60,90 80,80 Q90,60 80,40 Q70,20 80,20"
-              css={styles.scrollPath}
-            />
-            <path
-              d="M80,120 Q60,110 40,130 Q20,150 40,170 Q60,190 80,180 Q90,160 80,140 Q70,120 80,120"
-              css={styles.scrollPath}
-            />
-          </svg>
-        </div>
-      </div>
-
-      {/* Background texture overlay */}
-      <div css={styles.textureOverlay}>
-        <div css={styles.texturePattern}>
-          {/* Subtle geometric background pattern */}
-          {[...Array(50)].map((_, i) => (
-            <div
-              key={i}
-              css={styles.textureElement}
-              style={{
-                left: `${(i % 10) * 10}%`,
-                top: `${Math.floor(i / 10) * 20}%`,
-                animationDelay: `${i * 0.05}s`
-              }}
-            />
-          ))}
-        </div>
+      {/* Rococo flourishes */}
+      <div css={styles.rococoFlourishes}>
+        <div css={[styles.flourish, styles.flourishTopLeft]} />
+        <div css={[styles.flourish, styles.flourishTopRight]} />
+        <div css={[styles.flourish, styles.flourishBottomLeft]} />
+        <div css={[styles.flourish, styles.flourishBottomRight]} />
       </div>
     </div>
   );
 };
 
 const styles = {
-  container: css`
-    position: absolute;
+  frameContainer: css`
+    position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    transition: opacity 2s ease-in-out;
+    width: 100vw;
+    height: 100vh;
     pointer-events: none;
     z-index: 1;
+    overflow: hidden;
   `,
 
-  visible: css`
-    opacity: 1;
-  `,
-
-  cornerOrnaments: css`
+  outerFrame: css`
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    border: 3px solid transparent;
+    background: 
+      linear-gradient(45deg, ${colors.neonGold}30, ${colors.neonTeal}20, ${colors.neonGold}30),
+      linear-gradient(135deg, transparent 40%, ${colors.surface}10 50%, transparent 60%);
+    background-clip: border-box;
+    border-radius: 20px;
+    animation: ${frameGlow} 8s ease-in-out infinite;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      background: 
+        linear-gradient(45deg, 
+          ${colors.neonGold}80 0%, 
+          ${colors.neonTeal}60 25%, 
+          transparent 50%, 
+          ${colors.neonTeal}60 75%, 
+          ${colors.neonGold}80 100%);
+      border-radius: 23px;
+      z-index: -1;
+      animation: ${artDecoFlow} 12s linear infinite;
+    }
+    
+    @media (max-width: 768px) {
+      top: 15px;
+      left: 15px;
+      right: 15px;
+      bottom: 15px;
+      border-radius: 15px;
+      
+      &::before {
+        border-radius: 18px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      border-radius: 10px;
+      
+      &::before {
+        border-radius: 13px;
+      }
+    }
   `,
 
   cornerOrnament: css`
     position: absolute;
-    width: 120px;
-    height: 120px;
-    transform: scale(0);
-    animation: ornamentAppear 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    
-    @keyframes ornamentAppear {
-      from { transform: scale(0) rotate(-180deg); opacity: 0; }
-      to { transform: scale(1) rotate(0deg); opacity: 1; }
-    }
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     
     @media (max-width: 768px) {
-      width: 80px;
-      height: 80px;
+      width: 60px;
+      height: 60px;
+    }
+    
+    @media (max-width: 480px) {
+      width: 40px;
+      height: 40px;
     }
   `,
 
   topLeft: css`
-    top: 20px;
-    left: 20px;
+    top: -40px;
+    left: -40px;
+    
+    @media (max-width: 768px) {
+      top: -30px;
+      left: -30px;
+    }
+    
+    @media (max-width: 480px) {
+      top: -20px;
+      left: -20px;
+    }
   `,
 
   topRight: css`
-    top: 20px;
-    right: 20px;
-    transform-origin: bottom left;
+    top: -40px;
+    right: -40px;
+    
+    @media (max-width: 768px) {
+      top: -30px;
+      right: -30px;
+    }
+    
+    @media (max-width: 480px) {
+      top: -20px;
+      right: -20px;
+    }
   `,
 
   bottomLeft: css`
-    bottom: 20px;
-    left: 20px;
-    transform-origin: top right;
+    bottom: -40px;
+    left: -40px;
+    
+    @media (max-width: 768px) {
+      bottom: -30px;
+      left: -30px;
+    }
+    
+    @media (max-width: 480px) {
+      bottom: -20px;
+      left: -20px;
+    }
   `,
 
   bottomRight: css`
+    bottom: -40px;
+    right: -40px;
+    
+    @media (max-width: 768px) {
+      bottom: -30px;
+      right: -30px;
+    }
+    
+    @media (max-width: 480px) {
+      bottom: -20px;
+      right: -20px;
+    }
+  `,
+
+  cornerSpiral: css`
+    position: relative;
+    width: 60px;
+    height: 60px;
+    animation: ${cornerSpiral} 20s linear infinite;
+    
+    @media (max-width: 768px) {
+      width: 45px;
+      height: 45px;
+    }
+    
+    @media (max-width: 480px) {
+      width: 30px;
+      height: 30px;
+    }
+  `,
+
+  spiralCore: css`
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    background: 
+      radial-gradient(circle at center, ${colors.neonGold}90 0%, transparent 100%);
+    border: 2px solid ${colors.neonGold};
+    border-radius: 50%;
+    box-shadow: 
+      0 0 20px ${colors.neonGold}60,
+      inset 0 0 10px rgba(0, 0, 0, 0.3);
+    
+    @media (max-width: 768px) {
+      width: 15px;
+      height: 15px;
+    }
+    
+    @media (max-width: 480px) {
+      width: 10px;
+      height: 10px;
+    }
+  `,
+
+  spiralArm: css`
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 3px;
+    height: 25px;
+    background: linear-gradient(180deg, ${colors.neonTeal}, transparent);
+    border-radius: 2px;
+    transform-origin: 50% 0%;
+    margin-left: -1.5px;
+    margin-top: -25px;
+    box-shadow: 0 0 8px ${colors.neonTeal}40;
+    
+    @media (max-width: 768px) {
+      height: 20px;
+      margin-top: -20px;
+    }
+    
+    @media (max-width: 480px) {
+      width: 2px;
+      height: 15px;
+      margin-left: -1px;
+      margin-top: -15px;
+    }
+  `,
+
+  cornerGem: css`
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background: ${colors.neonTeal};
+    border-radius: 50%;
+    box-shadow: 
+      0 0 15px ${colors.neonTeal}80,
+      inset 0 0 5px rgba(255, 255, 255, 0.5);
+    animation: ${ornamentFloat} 3s ease-in-out infinite;
+    
+    @media (max-width: 768px) {
+      width: 6px;
+      height: 6px;
+    }
+    
+    @media (max-width: 480px) {
+      width: 4px;
+      height: 4px;
+    }
+  `,
+
+  borderDecorations: css`
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  `,
+
+  borderLine: css`
+    position: absolute;
+  `,
+
+  topBorder: css`
+    top: -5px;
+    left: 0;
+    right: 0;
+    height: 10px;
+  `,
+
+  rightBorder: css`
+    top: 0;
+    right: -5px;
+    bottom: 0;
+    width: 10px;
+  `,
+
+  bottomBorder: css`
+    bottom: -5px;
+    left: 0;
+    right: 0;
+    height: 10px;
+  `,
+
+  leftBorder: css`
+    top: 0;
+    left: -5px;
+    bottom: 0;
+    width: 10px;
+  `,
+
+  borderOrnament: css`
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: ${colors.neonGold};
+    border-radius: 50%;
+    box-shadow: 0 0 8px ${colors.neonGold}60;
+    animation: ${ornamentFloat} 2s ease-in-out infinite;
+    
+    @media (max-width: 768px) {
+      width: 3px;
+      height: 3px;
+    }
+    
+    @media (max-width: 480px) {
+      width: 2px;
+      height: 2px;
+    }
+  `,
+
+  geometricOverlay: css`
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.6;
+  `,
+
+  animatedStroke: css`
+    stroke-dasharray: 10, 5;
+    animation: ${geometricPulse} 4s ease-in-out infinite;
+  `,
+
+  chevronGroup: css`
+    animation: ${ornamentFloat} 6s ease-in-out infinite;
+  `,
+
+  centralCross: css`
+    animation: ${frameGlow} 10s ease-in-out infinite;
+  `,
+
+  innerDecorations: css`
+    position: absolute;
+    top: 40px;
+    left: 40px;
+    right: 40px;
+    bottom: 40px;
+    
+    @media (max-width: 768px) {
+      top: 30px;
+      left: 30px;
+      right: 30px;
+      bottom: 30px;
+    }
+    
+    @media (max-width: 480px) {
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      bottom: 20px;
+    }
+  `,
+
+  floatingParticle: css`
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: ${colors.neonTeal}60;
+    border-radius: 50%;
+    box-shadow: 0 0 6px ${colors.neonTeal}80;
+    animation: ${ornamentFloat} 4s ease-in-out infinite;
+    
+    @media (max-width: 480px) {
+      width: 2px;
+      height: 2px;
+    }
+  `,
+
+  sunburstPatterns: css`
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  `,
+
+  sunburst: css`
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    animation: ${cornerSpiral} 30s linear infinite;
+    
+    @media (max-width: 768px) {
+      width: 45px;
+      height: 45px;
+    }
+    
+    @media (max-width: 480px) {
+      width: 30px;
+      height: 30px;
+    }
+  `,
+
+  topLeftSunburst: css`
+    top: 20px;
+    left: 20px;
+  `,
+
+  topRightSunburst: css`
+    top: 20px;
+    right: 20px;
+  `,
+
+  bottomLeftSunburst: css`
+    bottom: 20px;
+    left: 20px;
+  `,
+
+  bottomRightSunburst: css`
     bottom: 20px;
     right: 20px;
-    transform-origin: top left;
   `,
 
-  cornerPattern: css`
+  sunburstRay: css`
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    width: 80%;
-    height: 80%;
-  `,
-
-  cornerLine: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    border: 1px solid rgba(255, 215, 0, 0.3);
-    border-radius: 2px;
-    animation: cornerLineGlow 4s ease-in-out infinite;
+    width: 1px;
+    height: 15px;
+    background: linear-gradient(180deg, ${colors.neonGold}60, transparent);
+    border-radius: 1px;
+    transform-origin: 50% 0%;
+    margin-left: -0.5px;
+    margin-top: -15px;
     
-    @keyframes cornerLineGlow {
-      0%, 100% { 
-        border-color: rgba(255, 215, 0, 0.3);
-        box-shadow: 0 0 5px rgba(255, 215, 0, 0.2);
-      }
-      50% { 
-        border-color: rgba(255, 215, 0, 0.8);
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
-      }
+    @media (max-width: 768px) {
+      height: 12px;
+      margin-top: -12px;
     }
+    
+    @media (max-width: 480px) {
+      height: 8px;
+      margin-top: -8px;
+    }
+  `,
+
+  rococoFlourishes: css`
+    position: absolute;
+    width: 100%;
+    height: 100%;
   `,
 
   flourish: css`
     position: absolute;
-    top: 20%;
-    left: 20%;
-    width: 60%;
-    height: 60%;
-  `,
-
-  flourishCurve: css`
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    border: 2px solid transparent;
-    border-radius: 50%;
-    background: linear-gradient(45deg, transparent, ${colors.neonTeal}, transparent);
-    background-clip: border-box;
-    animation: flourishRotate 8s linear infinite;
-    
-    @keyframes flourishRotate {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-  `,
-
-  flourishSpiral: css`
-    position: absolute;
-    top: 25%;
-    left: 25%;
-    width: 50%;
-    height: 50%;
-    border: 1px solid ${colors.neonGold};
-    border-radius: 50%;
-    animation: spiralPulse 3s ease-in-out infinite;
-    
-    @keyframes spiralPulse {
-      0%, 100% { transform: scale(0.8); opacity: 0.6; }
-      50% { transform: scale(1.2); opacity: 1; }
-    }
-  `,
-
-  sidePanels: css`
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  `,
-
-  sidePanel: css`
-    position: absolute;
-    opacity: 0;
-    animation: panelSlideIn 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    
-    @keyframes panelSlideIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 0.4; transform: translateY(0); }
-    }
-  `,
-
-  leftPanel: css`
-    top: 150px;
-    left: 0;
     width: 40px;
-    height: calc(100% - 300px);
-    background: linear-gradient(
-      to right,
-      rgba(255, 215, 0, 0.1) 0%,
-      transparent 100%
-    );
-  `,
-
-  rightPanel: css`
-    top: 150px;
-    right: 0;
-    width: 40px;
-    height: calc(100% - 300px);
-    background: linear-gradient(
-      to left,
-      rgba(255, 215, 0, 0.1) 0%,
-      transparent 100%
-    );
-  `,
-
-  topPanel: css`
-    top: 0;
-    left: 150px;
-    width: calc(100% - 300px);
     height: 40px;
-    background: linear-gradient(
-      to bottom,
-      rgba(255, 215, 0, 0.1) 0%,
-      transparent 100%
-    );
-  `,
-
-  bottomPanel: css`
-    bottom: 0;
-    left: 150px;
-    width: calc(100% - 300px);
-    height: 40px;
-    background: linear-gradient(
-      to top,
-      rgba(255, 215, 0, 0.1) 0%,
-      transparent 100%
-    );
-  `,
-
-  panelPattern: css`
-    position: relative;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    align-items: center;
-  `,
-
-  patternElement: css`
-    width: 8px;
-    height: 8px;
-    background: radial-gradient(
-      circle at center,
-      ${colors.neonTeal} 0%,
-      transparent 70%
-    );
-    border-radius: 50%;
-    animation: patternPulse 6s ease-in-out infinite;
-    
-    @keyframes patternPulse {
-      0%, 100% { transform: scale(0.8); opacity: 0.3; }
-      50% { transform: scale(1.5); opacity: 0.8; }
-    }
-  `,
-
-  centralFrame: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 700px;
-    height: 700px;
-    opacity: 0;
-    animation: frameExpand 3s cubic-bezier(0.4, 0, 0.2, 1) 1s forwards;
-    
-    @keyframes frameExpand {
-      from { 
-        opacity: 0; 
-        transform: translate(-50%, -50%) scale(0.5); 
-      }
-      to { 
-        opacity: 0.6; 
-        transform: translate(-50%, -50%) scale(1); 
-      }
-    }
+    background: 
+      radial-gradient(ellipse at center, ${colors.neonTeal}20 0%, transparent 70%);
+    border: 1px solid ${colors.neonTeal}40;
+    border-radius: 50% 30% 60% 40%;
+    animation: ${ornamentFloat} 8s ease-in-out infinite;
     
     @media (max-width: 768px) {
-      width: 500px;
-      height: 500px;
+      width: 30px;
+      height: 30px;
     }
     
     @media (max-width: 480px) {
-      width: 350px;
-      height: 350px;
+      width: 20px;
+      height: 20px;
     }
   `,
 
-  frameRing: css`
-    position: relative;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 215, 0, 0.2);
-    box-shadow: 
-      0 0 30px rgba(255, 215, 0, 0.1),
-      inset 0 0 30px rgba(255, 215, 0, 0.05);
+  flourishTopLeft: css`
+    top: 60px;
+    left: 60px;
+    animation-delay: 0s;
   `,
 
-  frameBezel: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100%;
-    height: 100%;
+  flourishTopRight: css`
+    top: 60px;
+    right: 60px;
+    animation-delay: 2s;
   `,
 
-  bezelJewel: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: ${colors.neonTeal};
-    box-shadow: 
-      0 0 15px rgba(0, 255, 255, 0.8),
-      inset 0 0 5px rgba(255, 255, 255, 0.6);
-    animation: jewelTwinkle 4s ease-in-out infinite;
-    
-    @keyframes jewelTwinkle {
-      0%, 100% { 
-        opacity: 0.6; 
-        transform: translate(-50%, -50%) scale(0.8); 
-      }
-      50% { 
-        opacity: 1; 
-        transform: translate(-50%, -50%) scale(1.2); 
-      }
-    }
+  flourishBottomLeft: css`
+    bottom: 60px;
+    left: 60px;
+    animation-delay: 4s;
   `,
 
-  innerDecoRing: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 90%;
-    height: 90%;
-  `,
-
-  decoTick: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 2px;
-    height: 20px;
-    background: linear-gradient(
-      to top,
-      transparent 0%,
-      rgba(255, 215, 0, 0.4) 50%,
-      transparent 100%
-    );
-    transform-origin: bottom center;
-    margin-left: -1px;
-    margin-top: -200px;
-    animation: tickGlow 8s ease-in-out infinite;
-    
-    @keyframes tickGlow {
-      0%, 100% { opacity: 0.3; }
-      25%, 75% { opacity: 0.8; }
-      50% { opacity: 0.5; }
-    }
-  `,
-
-  atmosphericEffects: css`
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-  `,
-
-  dustParticle: css`
-    position: absolute;
-    width: 2px;
-    height: 2px;
-    border-radius: 50%;
-    background: ${colors.neonGold};
-    box-shadow: 0 0 4px rgba(255, 215, 0, 0.6);
-    animation: dustFloat linear infinite;
-    
-    @keyframes dustFloat {
-      0% {
-        opacity: 0;
-        transform: translateY(100vh) translateX(0);
-      }
-      10% {
-        opacity: 1;
-      }
-      90% {
-        opacity: 1;
-      }
-      100% {
-        opacity: 0;
-        transform: translateY(-20px) translateX(50px);
-      }
-    }
-  `,
-
-  lightRay: css`
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 2px;
-    height: 300px;
-    background: linear-gradient(
-      to top,
-      transparent 0%,
-      rgba(0, 255, 255, 0.2) 30%,
-      rgba(255, 215, 0, 0.3) 50%,
-      rgba(0, 255, 255, 0.2) 70%,
-      transparent 100%
-    );
-    transform-origin: bottom center;
-    margin-left: -1px;
-    margin-top: -300px;
-    animation: rayPulse 6s ease-in-out infinite;
-    
-    @keyframes rayPulse {
-      0%, 100% { opacity: 0.1; transform: scaleY(0.5); }
-      50% { opacity: 0.6; transform: scaleY(1.2); }
-    }
-  `,
-
-  glowOrb: css`
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: radial-gradient(
-      circle at center,
-      rgba(0, 255, 255, 0.3) 0%,
-      rgba(255, 215, 0, 0.2) 50%,
-      transparent 100%
-    );
-    animation: orbFloat ease-in-out infinite;
-    
-    @keyframes orbFloat {
-      0%, 100% { 
-        transform: translateY(0) scale(1); 
-        opacity: 0.3; 
-      }
-      50% { 
-        transform: translateY(-20px) scale(1.2); 
-        opacity: 0.7; 
-      }
-    }
-  `,
-
-  scrollwork: css`
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  `,
-
-  scroll: css`
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 60px;
-    height: 200px;
-    opacity: 0;
-    animation: scrollAppear 2.5s ease-in-out 2s forwards;
-    
-    @keyframes scrollAppear {
-      from { opacity: 0; transform: translateY(-50%) scale(0.8); }
-      to { opacity: 0.6; transform: translateY(-50%) scale(1); }
-    }
-    
-    @media (max-width: 768px) {
-      width: 40px;
-      height: 150px;
-    }
-  `,
-
-  leftScroll: css`
-    left: -10px;
-  `,
-
-  rightScroll: css`
-    right: -10px;
-  `,
-
-  scrollSvg: css`
-    width: 100%;
-    height: 100%;
-  `,
-
-  scrollPath: css`
-    fill: none;
-    stroke: ${colors.neonTeal};
-    stroke-width: 1;
-    stroke-opacity: 0.4;
-    animation: pathGlow 5s ease-in-out infinite;
-    
-    @keyframes pathGlow {
-      0%, 100% { 
-        stroke-opacity: 0.2; 
-        filter: drop-shadow(0 0 2px rgba(0, 255, 255, 0.3)); 
-      }
-      50% { 
-        stroke-opacity: 0.8; 
-        filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.6)); 
-      }
-    }
-  `,
-
-  textureOverlay: css`
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0.1;
-    z-index: -1;
-  `,
-
-  texturePattern: css`
-    position: relative;
-    width: 100%;
-    height: 100%;
-  `,
-
-  textureElement: css`
-    position: absolute;
-    width: 4px;
-    height: 4px;
-    background: linear-gradient(
-      45deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.1) 50%,
-      transparent 100%
-    );
-    transform: rotate(45deg);
-    animation: textureShimmer 8s ease-in-out infinite;
-    
-    @keyframes textureShimmer {
-      0%, 100% { opacity: 0.1; }
-      25%, 75% { opacity: 0.3; }
-      50% { opacity: 0.05; }
-    }
+  flourishBottomRight: css`
+    bottom: 60px;
+    right: 60px;
+    animation-delay: 6s;
   `
 };
 

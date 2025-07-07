@@ -2,7 +2,7 @@
 
 Bartleby is an elegant, comprehensive application for analyzing, organizing, and managing documents and images. It uses AI via OpenAI's API to extract metadata and create structured, searchable content from user uploads.
 
-![Bartleby Logo](frontend/src/assets/NeonBartlebebyGreen.png)
+![Bartleby Logo](frontend/src/assets/mascot/NeonBartlebebyGreen.png)
 
 ## System Architecture
 
