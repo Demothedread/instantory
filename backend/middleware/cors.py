@@ -9,6 +9,7 @@ from quart import Quart, request
 def is_origin_allowed(origin: str, allowed_origins: List[str]) -> bool:
     """
     Check if the origin is allowed, supporting wildcard domains.
+    Now delegates to the new combined auth_security middleware.
 
     Args:
         origin: The request origin to check
@@ -17,39 +18,78 @@ def is_origin_allowed(origin: str, allowed_origins: List[str]) -> bool:
     Returns:
         True if origin is allowed, False otherwise
     """
-    if not origin:
+    try:
+        from backend.middleware.auth_security import AuthSecurityMiddleware
+        # Create a temporary instance to use the origin checking logic
+        # Don't actually initialize the app - just access the method
+        class TempAuthMiddleware:
+            def __init__(self):
+                self.cors_origins = allowed_origins
+            
+            def _is_origin_allowed(self, origin):
+                if not origin:
+                    return False
+                # Exact match
+                if origin in self.cors_origins:
+                    return True
+                # Wildcard domains
+                for allowed_origin in self.cors_origins:
+                    if allowed_origin.startswith("https://*."):
+                        domain_suffix = allowed_origin.replace("https://*.", "")
+                        if origin.startswith("https://") and origin.endswith(f".{domain_suffix}"):
+                            return True
+                # Enhanced hocomnia.com support
+                if origin.startswith("https://") and (
+                    origin == "https://hocomnia.com"
+                    or origin == "https://www.hocomnia.com" 
+                    or origin.endswith(".hocomnia.com")
+                ):
+                    return True
+                # Vercel preview deployments
+                if origin.startswith("https://") and ".vercel.app" in origin:
+                    return True
+                # Localhost development
+                if origin.startswith("http://localhost") or origin.startswith("https://localhost"):
+                    return True
+                return False
+        
+        temp_middleware = TempAuthMiddleware()
+        return temp_middleware._is_origin_allowed(origin)
+    except:
+        # Fallback to original logic if new middleware isn't available
+        if not origin:
+            return False
+
+        # Check for exact match first
+        if origin in allowed_origins:
+            return True
+
+        # Check for wildcard domains (e.g., https://*.vercel.app)
+        for allowed_origin in allowed_origins:
+            if allowed_origin.startswith("https://*."):
+                # Extract the domain part after the asterisk
+                domain_suffix = allowed_origin.replace("https://*.", "")
+                # Check if the origin ends with this domain suffix
+                if origin.startswith("https://") and origin.endswith(f".{domain_suffix}"):
+                    return True
+
+        # Enhanced hocomnia.com support - allow all subdomains and the main domain
+        if origin.startswith("https://") and (
+            origin == "https://hocomnia.com"
+            or origin == "https://www.hocomnia.com"
+            or origin.endswith(".hocomnia.com")
+        ):
+            return True
+
+        # Support for Vercel preview deployments
+        if origin.startswith("https://") and ".vercel.app" in origin:
+            return True
+
+        # Support for localhost development
+        if origin.startswith("http://localhost") or origin.startswith("https://localhost"):
+            return True
+
         return False
-
-    # Check for exact match first
-    if origin in allowed_origins:
-        return True
-
-    # Check for wildcard domains (e.g., https://*.vercel.app)
-    for allowed_origin in allowed_origins:
-        if allowed_origin.startswith("https://*."):
-            # Extract the domain part after the asterisk
-            domain_suffix = allowed_origin.replace("https://*.", "")
-            # Check if the origin ends with this domain suffix
-            if origin.startswith("https://") and origin.endswith(f".{domain_suffix}"):
-                return True
-
-    # Enhanced hocomnia.com support - allow all subdomains and the main domain
-    if origin.startswith("https://") and (
-        origin == "https://hocomnia.com"
-        or origin == "https://www.hocomnia.com"
-        or origin.endswith(".hocomnia.com")
-    ):
-        return True
-
-    # Support for Vercel preview deployments
-    if origin.startswith("https://") and ".vercel.app" in origin:
-        return True
-
-    # Support for localhost development
-    if origin.startswith("http://localhost") or origin.startswith("https://localhost"):
-        return True
-
-    return False
 
 
 def setup_cors(app: Quart) -> Quart:

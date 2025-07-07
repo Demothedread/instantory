@@ -6,7 +6,7 @@ from backend.middleware import setup_middleware
 from backend.middleware.cors import setup_cors
 from backend.middleware.error_handlers import setup_error_handlers
 from backend.middleware.request_logger import setup_request_logger
-from backend.middleware.security import setup_security
+from backend.middleware.auth_security import setup_auth_security
 
 pytestmark = pytest.mark.asyncio
 
@@ -80,7 +80,7 @@ class TestCorsMiddleware:
 class TestSecurityMiddleware:
     async def test_rate_limiting(self):
         app = Quart(__name__)
-        setup_security(app, rate_limit=2, rate_window=1)
+        setup_auth_security(app, rate_limit=2, rate_window=1)
         
         @app.route('/test')
         async def test_route():
@@ -100,7 +100,7 @@ class TestSecurityMiddleware:
     async def test_max_body_size(self):
         app = Quart(__name__)
         max_size = 1024  # 1KB
-        setup_security(app, max_body_size=max_size)
+        setup_auth_security(app, max_body_size=max_size)
         
         @app.route('/test', methods=['POST'])
         async def test_route():
@@ -114,7 +114,7 @@ class TestSecurityMiddleware:
 
     async def test_security_headers(self):
         app = Quart(__name__)
-        setup_security(app)
+        setup_auth_security(app)
         
         @app.route('/test')
         async def test_route():

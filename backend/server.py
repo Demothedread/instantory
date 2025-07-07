@@ -43,30 +43,35 @@ def create_app():
         }
     )
 
-    # Set up middleware (including CORS)
+    # Set up new combined auth security middleware
     try:
-        from backend.middleware.setup import setup_middleware
-
-        # Create a settings-like object from config_manager
-        class ConfigSettings:
-            def __init__(self, config_mgr):
-                self.config_mgr = config_mgr
-                self.debug = config_mgr.get_server_config()["debug"]
-
-            def get_env(self, key, default=None):
-                return self.config_mgr.get(key, default)
-
-            def get_max_content_length(self):
-                return self.config_mgr.get_server_config()["max_content_length"]
-
-        settings = ConfigSettings(config_manager)
-        setup_middleware(app, settings)
-        logger.info("Middleware configured successfully")
+        from backend.middleware.auth_security import setup_auth_security
+        
+        setup_auth_security(app)
+        logger.info("Combined Auth-Security-CORS middleware configured successfully")
     except Exception as e:
-        logger.error("Error configuring middleware: %s", str(e))
-        # If middleware setup fails, the app will continue without CORS
-        # This is better than having conflicting CORS implementations
-        logger.warning("Application will continue without CORS middleware")
+        logger.error("Error configuring auth security middleware: %s", str(e))
+        # Fallback to old middleware if new one fails
+        try:
+            from backend.middleware.setup import setup_middleware
+
+            class ConfigSettings:
+                def __init__(self, config_mgr):
+                    self.config_mgr = config_mgr
+                    self.debug = config_mgr.get_server_config()["debug"]
+
+                def get_env(self, key, default=None):
+                    return self.config_mgr.get(key, default)
+
+                def get_max_content_length(self):
+                    return self.config_mgr.get_server_config()["max_content_length"]
+
+            settings = ConfigSettings(config_manager)
+            setup_middleware(app, settings)
+            logger.info("Fallback middleware configured successfully")
+        except Exception as fallback_e:
+            logger.error("Error configuring fallback middleware: %s", str(fallback_e))
+            logger.warning("Application will continue without CORS middleware")
 
     # Register blueprints with individual isolation to prevent test imports
     try:
@@ -93,11 +98,10 @@ def create_app():
         process_bp = None
         health_bp = None
         stats_bp = None
-        setup_auth = None
 
         # Import each blueprint individually with isolation
         blueprint_imports = [
-            ("backend.routes.auth_routes", ["auth_bp", "setup_auth"], "auth"),
+            ("backend.routes.auth", ["auth_bp"], "auth"),  # Updated to use new streamlined auth
             ("backend.routes.documents", ["documents_bp"], "documents"),
             ("backend.routes.files", ["files_bp"], "files"),
             ("backend.routes.health", ["health_bp"], "health"),

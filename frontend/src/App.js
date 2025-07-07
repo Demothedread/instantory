@@ -18,7 +18,7 @@ import ProcessingHub from './pages/ProcessingHub';
 import Resources from './pages/Resources';
 import Search from './pages/Search';
 import Terms from './pages/Terms';
-import EnhancedLandingPage from './pages/UltimateNeoDecoLanding';
+import EnhancedLandingPage from './pages/EnhancedNeoDecoLanding';
 import Upload from './pages/Upload';
 
 // Layout components
@@ -30,6 +30,7 @@ import ProtectedRoute from './components/routing/ProtectedRoute';
 import { css } from '@emotion/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import LoginOverlay from './components/auth/LoginOverlay';
+import ClockworkLoadingPage from './components/loading/ClockworkLoadingPage';
 import { neoDecorocoBase } from './styles/components/neo-decoroco/base';
 import { colors } from './styles/theme/colors';
 
@@ -73,9 +74,11 @@ function App() {
   // Show loading spinner while checking authentication
   if (authLoading) {
     return (
-      <div css={styles.loadingContainer}>
-        <div css={styles.loadingSpinner}>Loading...</div>
-      </div>
+      <ClockworkLoadingPage 
+        message="Initializing your digital sanctuary..." 
+        progress={50} 
+        isVisible={true} 
+      />
     );
   }
 
