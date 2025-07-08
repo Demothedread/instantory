@@ -27,12 +27,9 @@ import PublicLayout from './components/layouts/PublicLayout';
 import ProtectedRoute from './components/routing/ProtectedRoute';
 
 // Other components
-import { css } from '@emotion/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import LoginOverlay from './components/auth/LoginOverlay';
 import ClockworkLoadingPage from './components/loading/ClockworkLoadingPage';
-import { neoDecorocoBase } from './styles/components/neo-decoroco/base';
-import { colors } from './styles/theme/colors';
 
 // Services
 import dataApi from './services/api';
@@ -43,60 +40,89 @@ function App() {
   const [error, setError] = useState(null);
   const hasInitializedRef = useRef(false);
 
-  // Enhanced loading state management for ClockworkLoadingPage 
-  const [authProgress, setAuthProgress] = useState(0); const [authMessage, setAuthMessage] = useState('Initializing your digital sanctuary...');
+  // Enhanced loading state management for ClockworkLoadingPage
+  const [authProgress, setAuthProgress] = useState(0);
+  const [authMessage, setAuthMessage] = useState('Initializing your digital sanctuary...');
 
-  // Centralized data fetching for authenticated users with enhanced progress tracking 
-    const fetchData = useCallback(async () => {
-      try { setAuthMessage('Loading user data...'); setAuthProgress(25);
+  // Centralized data fetching for authenticated users with enhanced progress tracking
+  const fetchData = useCallback(async () => {
+    try {
+      setAuthMessage('Loading user data...');
+      setAuthProgress(25);
 
-
-        const [inventoryResponse, documentsResponse] = await Promise.all([
-          dataApi.getInventory(),
-          dataApi.getDocuments()
-        ]);
-        
-    setAuthProgress(75);
-    setAuthMessage('Synchronizing data...');
-    
-        if (!inventoryResponse || !documentsResponse) {
-          throw new Error('Invalid API response');
-        }
-    
-    setAuthProgress(100);
-    setAuthMessage('Setup complete!');
-    
-      } catch (err) {
-        console.error('Fetch data error:', err);
-        setError(err.message || 'Error fetching data from backend.');
-        setTimeout(() => setError(null), 5000);
-    setAuthProgress(0);
-    setAuthMessage('Error loading data');
+      const [inventoryResponse, documentsResponse] = await Promise.all([
+        dataApi.getInventory(),
+        dataApi.getDocuments()
+      ]);
+      
+      setAuthProgress(75);
+      setAuthMessage('Synchronizing data...');
+      
+      if (!inventoryResponse || !documentsResponse) {
+        throw new Error('Invalid API response');
       }
-    }, []);
+      
+      setAuthProgress(100);
+      setAuthMessage('Setup complete!');
+      
+    } catch (err) {
+      console.error('Fetch data error:', err);
+      setError(err.message || 'Error fetching data from backend.');
+      setTimeout(() => setError(null), 5000);
+      setAuthProgress(0);
+      setAuthMessage('Error loading data');
+    }
+  }, []);
 
-    // Initialize data when user logs in
-    useEffect(() => {
-      if (user && !hasInitializedRef.current) {
-        fetchData();
-        hasInitializedRef.current = true;
-      } else if (!user) {
-        hasInitializedRef.current = false;
-                setAuthProgress(0); setAuthMessage('Initializing your digital sanctuary...'); } }, 
-                [user, fetchData]);
+  // Initialize data when user logs in
+  useEffect(() => {
+    if (user && !hasInitializedRef.current) {
+      fetchData();
+      hasInitializedRef.current = true;
+    } else if (!user) {
+      hasInitializedRef.current = false;
+      setAuthProgress(0);
+      setAuthMessage('......building bartleby...........');
+    }
+  }, [user, fetchData]);
 
-  // Enhanced authentication loading with sophisticated ClockworkLoadingPage 
+  // Progressive authentication loading stages
   useEffect(() => {
     if (authLoading) {
-      return (
-        <ClockworkLoadingPage 
-          message="Initializing your digital sanctuary..." 
-          progress={50} 
-          isVisible={true} 
-        />
-      );
+      const authStages = [
+        { message: 'Connecting to authentication service...', progress: 20 },
+        { message: 'Validating credentials...', progress: 40 },
+        { message: 'Loading user profile...', progress: 60 },
+        { message: 'Preparing ...', progress: 80 },
+        { message: 'Almost ready...', progress: 100 }
+      ];
+
+      let stageIndex = 0;
+      const progressInterval = setInterval(() => {
+        if (stageIndex < authStages.length) {
+          const stage = authStages[stageIndex];
+          setAuthMessage(stage.message);
+          setAuthProgress(stage.progress);
+          stageIndex++;
+        } else {
+          clearInterval(progressInterval);
+        }
+      }, 600); // 600ms per stage for smooth progression
+
+      return () => clearInterval(progressInterval);
     }
   }, [authLoading]);
+
+  // Show ClockworkLoadingPage during authentication
+  if (authLoading) {
+    return (
+      <ClockworkLoadingPage 
+        message={authMessage}
+        progress={authProgress} 
+        isVisible={true} 
+      />
+    );
+  }
 
     return (
       <Router>
