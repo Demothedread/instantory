@@ -1,7 +1,8 @@
 import { css } from '@emotion/react';
-import { useContext } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../contexts/auth/index';
+import BartlebyMain from '../components/main/BartlebyMain';
 import { neoDecorocoBase } from '../styles/components/neo-decoroco/base';
 import layout from '../styles/layouts/constraints';
 import { colors } from '../styles/theme/colors';
@@ -10,212 +11,107 @@ import { typography } from '../styles/theme/typography';
 /**
  * Enhanced Home Page Component
  * Component Genealogy: Control Center -> Command Bridge -> Data Observatory
- * Subverts traditional dashboard hierarchy by presenting tools as portals to knowledge
+ * Now features the tripartitioned BartlebyMain with enhanced rolodex
  */
 const EnhancedHomePage = () => {
   const { user } = useContext(AuthContext);
+  const [inventory, setInventory] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Navigation portals - each represents a different aspect of document intelligence
-  const navigationPortals = [
-    {
-      id: 'kaboodles',
-      path: '/kaboodles',
-      title: 'Kaboodle Archives',
-      description: 'Organize and curate document collections with intelligent categorization systems',
-      icon: '🗂️',
-      color: colors.neonTeal,
-      origin: 'Filing Cabinet',
-      modern: 'Smart Collections',
-      pattern: 'grid'
-    },
-    {
-      id: 'documents',
-      path: '/documents',
-      title: 'Document Observatory',
-      description: 'Explore your document universe with powerful analysis and search capabilities',
-      icon: '📚',
-      color: colors.neonGold,
-      origin: 'Library Index',
-      modern: 'Vector Database',
-      pattern: 'radial'
-    },
-    {
-      id: 'images',
-      path: '/media-hub',
-      title: 'Visual Intelligence',
-      description: 'Process and analyze images with computer vision and pattern recognition',
-      icon: '🖼️',
-      color: colors.neonPurple,
-      origin: 'Photo Album',
-      modern: 'Neural Networks',
-      pattern: 'hexagon'
-    },
-    {
-      id: 'process',
-      path: '/process',
-      title: 'Processing Engine',
-      description: 'Transform raw files into structured, searchable knowledge',
-      icon: '⚡',
-      color: colors.neonPink,
-      origin: 'Manual Sorting',
-      modern: 'AI Pipeline',
-      pattern: 'circuit'
-    }
-  ];
+  // Load sample data for demonstration
+  useEffect(() => {
+    // Simulate loading delay for realistic experience
+    const loadData = async () => {
+      setIsLoading(true);
+      
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Sample inventory data
+      const sampleInventory = [
+        {
+          id: 1,
+          name: 'Research Document Analysis',
+          description: 'AI-powered analysis of research papers and academic documents',
+          status: 'processed',
+          file_type: 'pdf',
+          image_url: '/placeholder.png',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 2,
+          name: 'Financial Reports Q3',
+          description: 'Quarterly financial data and market analysis',
+          status: 'processed',
+          file_type: 'xlsx',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 3,
+          name: 'Product Design Mockups',
+          description: 'UI/UX design concepts and wireframes',
+          status: 'pending',
+          file_type: 'png',
+          image_url: '/placeholder.png',
+          created_at: new Date().toISOString()
+        }
+      ];
 
-  const quickActions = [
-    { path: '/upload', label: 'Upload Documents', icon: '📤', color: colors.neonTeal },
-    { path: '/search', label: 'Search Archive', icon: '🔍', color: colors.neonGold },
-    { path: '/inventory', label: 'Inventory Control', icon: '📦', color: colors.neonPurple },
-    { path: '/about', label: 'Learn More', icon: '💡', color: colors.neonPink }
-  ];
+      // Sample documents data
+      const sampleDocuments = [
+        {
+          id: 1,
+          title: 'Machine Learning Research',
+          content: 'Advanced neural network architectures for document processing',
+          indexed: true,
+          category: 'Research',
+          created_at: new Date().toISOString()
+        },
+        {
+          id: 2,
+          title: 'Business Strategy 2024',
+          content: 'Strategic planning and market positioning for next year',
+          indexed: true,
+          category: 'Business',
+          created_at: new Date().toISOString()
+        }
+      ];
+
+      setInventory(sampleInventory);
+      setDocuments(sampleDocuments);
+      setIsLoading(false);
+    };
+
+    loadData();
+  }, []);
+
+  const handleDataRefresh = () => {
+    // Simulate data refresh
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+  };
+
+  if (isLoading) {
+    return (
+      <div css={styles.loadingContainer}>
+        <div css={styles.loadingSpinner}>
+          <span css={styles.spinnerIcon}>🧠</span>
+          <p css={styles.loadingText}>Initializing Data Observatory...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div css={styles.container}>
-      {/* Background geometric patterns */}
-      <div css={styles.backgroundPattern}>
-        <div css={styles.artDecoElement1} />
-        <div css={styles.artDecoElement2} />
-        <div css={styles.artDecoElement3} />
-      </div>
-
-      {/* Page header with user context */}
-      <header css={styles.pageHeader}>
-        <div css={styles.welcomeSection}>
-          <h1 css={styles.pageTitle}>
-            <span css={styles.titleMain}>Data Intelligence Center</span>
-            {user && (
-              <span css={styles.titleSub}>
-                Welcome back, {user.displayName || user.email}
-              </span>
-            )}
-          </h1>
-          
-          <p css={styles.pageDescription}>
-            Your unified command center for document organization, analysis, and intelligence extraction. 
-            Navigate through the portals below to access different facets of your data ecosystem.
-          </p>
-        </div>
-
-        {/* Status indicators */}
-        <div css={styles.statusIndicators}>
-          <div css={[styles.statusItem, styles.statusActive]}>
-            <span css={styles.statusIcon}>🟢</span>
-            <span css={styles.statusLabel}>System Active</span>
-          </div>
-          <div css={[styles.statusItem, styles.statusReady]}>
-            <span css={styles.statusIcon}>⚡</span>
-            <span css={styles.statusLabel}>AI Ready</span>
-          </div>
-        </div>
-      </header>
-
-      {/* Main navigation portals */}
-      <section css={styles.portalsSection}>
-        <h2 css={styles.sectionTitle}>Intelligence Portals</h2>
-        
-        <div css={styles.portalsGrid}>
-          {navigationPortals.map((portal) => (
-            <Link
-              key={portal.id}
-              to={portal.path}
-              css={[styles.portalCard, { '--portal-color': portal.color }]}
-            >
-              {/* Background pattern */}
-              <div css={[styles.portalPattern, styles[`pattern${portal.pattern}`]]} />
-              
-              {/* Portal header */}
-              <div css={styles.portalHeader}>
-                <div css={styles.portalIcon}>
-                  <span css={styles.iconGlyph}>{portal.icon}</span>
-                  <div css={styles.iconGlow} />
-                </div>
-                
-                <h3 css={styles.portalTitle}>{portal.title}</h3>
-              </div>
-
-              {/* Portal content */}
-              <div css={styles.portalContent}>
-                <p css={styles.portalDescription}>
-                  {portal.description}
-                </p>
-
-                {/* Evolution indicator */}
-                <div css={styles.evolutionIndicator}>
-                  <span css={styles.evolutionLabel}>Evolution:</span>
-                  <div css={styles.evolutionPath}>
-                    <span css={styles.evolutionOrigin}>{portal.origin}</span>
-                    <span css={styles.evolutionArrow}>→</span>
-                    <span css={styles.evolutionModern}>{portal.modern}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Portal activation indicator */}
-              <div css={styles.portalActivator}>
-                <span css={styles.activatorText}>Enter Portal</span>
-                <div css={styles.activatorGlow} />
-              </div>
-
-              {/* Hover effects */}
-              <div css={styles.portalHoverEffect} />
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Quick actions bar */}
-      <section css={styles.quickActionsSection}>
-        <h2 css={styles.sectionTitle}>Quick Access</h2>
-        
-        <div css={styles.quickActionsBar}>
-          {quickActions.map((action) => (
-            <Link
-              key={action.path}
-              to={action.path}
-              css={[styles.quickActionButton, { '--action-color': action.color }]}
-            >
-              <span css={styles.actionIcon}>{action.icon}</span>
-              <span css={styles.actionLabel}>{action.label}</span>
-              <div css={styles.actionRipple} />
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* System insights */}
-      <section css={styles.insightsSection}>
-        <div css={[neoDecorocoBase.panel, styles.insightsPanel]}>
-          <h3 css={styles.insightsTitle}>System Insights</h3>
-          
-          <div css={styles.insightsGrid}>
-            <div css={styles.insightItem}>
-              <span css={styles.insightIcon}>🧠</span>
-              <div css={styles.insightContent}>
-                <h4 css={styles.insightLabel}>AI Analysis</h4>
-                <p css={styles.insightValue}>Ready for Processing</p>
-              </div>
-            </div>
-            
-            <div css={styles.insightItem}>
-              <span css={styles.insightIcon}>🔍</span>
-              <div css={styles.insightContent}>
-                <h4 css={styles.insightLabel}>Search Engine</h4>
-                <p css={styles.insightValue}>Vector Database Online</p>
-              </div>
-            </div>
-            
-            <div css={styles.insightItem}>
-              <span css={styles.insightIcon}>📊</span>
-              <div css={styles.insightContent}>
-                <h4 css={styles.insightLabel}>Data Pipeline</h4>
-                <p css={styles.insightValue}>All Systems Operational</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
+    <BartlebyMain
+      inventory={inventory}
+      documents={documents}
+      onDataRefresh={handleDataRefresh}
+      autoRotateRolodex={true}
+    />
   );
 };
 
@@ -753,6 +649,57 @@ const styles = {
     color: ${colors.textLight};
     margin: 0;
     opacity: 0.9;
+  `,
+
+  /* Loading states */
+  loadingContainer: css`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: ${colors.darkGradient};
+    color: ${colors.textLight};
+  `,
+
+  loadingSpinner: css`
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: ${layout.spacing.xl};
+    text-align: center;
+  `,
+
+  spinnerIcon: css`
+    font-size: ${typography.sizes['6xl']};
+    animation: spinnerRotate 2s linear infinite;
+    filter: drop-shadow(0 0 20px ${colors.neonTeal});
+
+    @keyframes spinnerRotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    ${layout.media.mobile} {
+      font-size: ${typography.sizes['4xl']};
+    }
+  `,
+
+  loadingText: css`
+    margin: 0;
+    font-family: ${typography.fonts.decorative};
+    font-size: ${typography.sizes['2xl']};
+    color: ${colors.neonTeal};
+    text-shadow: 0 0 15px ${colors.neonTeal}50;
+    animation: textPulse 1.5s ease-in-out infinite alternate;
+
+    @keyframes textPulse {
+      from { opacity: 0.6; }
+      to { opacity: 1; }
+    }
+
+    ${layout.media.mobile} {
+      font-size: ${typography.sizes.xl};
+    }
   `,
 
   /* Animations */

@@ -80,6 +80,63 @@ export const dataApi = {
   processFiles: () => api.post('/api/files/process'),
 };
 
+// OpenAI API endpoints
+export const openaiApi = {
+  // Health check
+  checkHealth: () => api.get('/api/openai/health'),
+  
+  // Document processing
+  processDocument: (content, options = {}) => api.post('/api/openai/process-document', {
+    content,
+    file_name: options.fileName || null,
+    document_type: options.documentType || 'unknown',
+    user_instruction: options.userInstruction || null
+  }),
+  
+  // Inventory analysis
+  analyzeInventory: (items) => api.post('/api/openai/analyze-inventory', { items }),
+  
+  // General insights
+  generateInsights: (data, context = null) => api.post('/api/openai/generate-insights', {
+    data_type: 'general',
+    data,
+    context
+  }),
+  
+  // Image description processing
+  processImageDescription: (imageUrl, description) => api.post('/api/openai/process-image-description', {
+    image_url: imageUrl,
+    description
+  }),
+  
+  // Batch processing
+  batchProcess: (items) => api.post('/api/openai/batch-process', { items })
+};
+
+// Dashboard API endpoints
+export const dashboardApi = {
+  // Summary statistics
+  getSummary: (options = {}) => {
+    const params = new URLSearchParams();
+    if (options.period) params.append('period', options.period);
+    if (options.includeInsights !== undefined) {
+      params.append('include_insights', options.includeInsights.toString());
+    }
+    
+    const queryString = params.toString();
+    return api.get(`/api/dashboard/summary${queryString ? '?' + queryString : ''}`);
+  },
+  
+  // Activity feed
+  getActivity: (limit = 20) => api.get(`/api/dashboard/activity?limit=${limit}`),
+  
+  // Statistics
+  getStats: (type = 'general') => api.get(`/api/dashboard/stats?type=${type}`),
+  
+  // AI insights
+  getInsights: () => api.get('/api/dashboard/insights')
+};
+
 // Enhanced error handling interceptor - improve debugging of authentication errors
 api.interceptors.response.use(
   response => {

@@ -43,35 +43,15 @@ def create_app():
         }
     )
 
-    # Set up new combined auth security middleware
+    # Set up combined auth security middleware
     try:
         from backend.middleware.auth_security import setup_auth_security
         
         setup_auth_security(app)
-        logger.info("Combined Auth-Security-CORS middleware configured successfully")
+        logger.info("✅ Combined Auth-Security-CORS middleware configured successfully")
     except Exception as e:
-        logger.error("Error configuring auth security middleware: %s", str(e))
-        # Fallback to old middleware if new one fails
-        try:
-            from backend.middleware.setup import setup_middleware
-
-            class ConfigSettings:
-                def __init__(self, config_mgr):
-                    self.config_mgr = config_mgr
-                    self.debug = config_mgr.get_server_config()["debug"]
-
-                def get_env(self, key, default=None):
-                    return self.config_mgr.get(key, default)
-
-                def get_max_content_length(self):
-                    return self.config_mgr.get_server_config()["max_content_length"]
-
-            settings = ConfigSettings(config_manager)
-            setup_middleware(app, settings)
-            logger.info("Fallback middleware configured successfully")
-        except Exception as fallback_e:
-            logger.error("Error configuring fallback middleware: %s", str(fallback_e))
-            logger.warning("Application will continue without CORS middleware")
+        logger.error("❌ Error configuring auth security middleware: %s", str(e))
+        raise RuntimeError(f"Failed to configure essential middleware: {e}")
 
     # Register blueprints with individual isolation to prevent test imports
     try:
@@ -101,7 +81,7 @@ def create_app():
 
         # Import each blueprint individually with isolation
         blueprint_imports = [
-            ("backend.routes.auth", ["auth_bp"], "auth"),  # Updated to use new streamlined auth
+            ("backend.routes.auth", ["auth_bp"], "auth"),
             ("backend.routes.documents", ["documents_bp"], "documents"),
             ("backend.routes.files", ["files_bp"], "files"),
             ("backend.routes.health", ["health_bp"], "health"),
@@ -109,6 +89,8 @@ def create_app():
             ("backend.routes.search", ["search_bp"], "search"),
             ("backend.routes.stats", ["stats_bp"], "stats"),
             ("backend.routes.inventory", ["inventory_bp"], "inventory"),
+            ("backend.routes.openai_routes", ["openai_bp"], "openai"),
+            ("backend.routes.dashboard_routes", ["dashboard_bp"], "dashboard"),
         ]
 
         imported_blueprints = {}
@@ -142,6 +124,8 @@ def create_app():
         health_bp = imported_blueprints.get("health_bp")
         stats_bp = imported_blueprints.get("stats_bp")
         search_bp = imported_blueprints.get("search_bp")
+        openai_bp = imported_blueprints.get("openai_bp")
+        dashboard_bp = imported_blueprints.get("dashboard_bp")
         setup_auth = imported_blueprints.get("setup_auth")
 
         # Set up authentication
@@ -170,6 +154,10 @@ def create_app():
             (stats_bp, "stats", None),
             # Search routes already include /api/search
             (search_bp, "search", None),
+            # OpenAI routes already include /api/openai
+            (openai_bp, "openai", None),
+            # Dashboard routes already include /api/dashboard
+            (dashboard_bp, "dashboard", None),
         ]
 
         for blueprint, name, url_prefix in blueprint_configs:
@@ -191,7 +179,7 @@ def create_app():
             else:
                 logger.warning("Skipping %s blueprint (not imported)", name)
 
-        logger.info("%d/8 blueprints registered successfully", blueprints_registered)
+        logger.info("%d/10 blueprints registered successfully", blueprints_registered)
 
         # Debug: List all registered routes
         logger.info("=== DEBUG: Registered Routes ===")
