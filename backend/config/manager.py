@@ -88,10 +88,13 @@ class ConfigManager:
 
     @lru_cache(maxsize=1)
     def get_api_config(self) -> Dict[str, Any]:
-        """Get API configuration."""
+        """Get API configuration with environment-aware CORS origins."""
+        # Import here to avoid circular imports
+        from .security import CORSConfig
+        
         return {
             'cors_enabled': self.get_bool('CORS_ENABLED', True),
-            'cors_origins': self.get_list('CORS_ORIGINS', ['http://localhost:3000']),
+            'cors_origins': CORSConfig.get_environment_origins(),
             'allow_credentials': self.get_bool('ALLOW_CREDENTIALS', True),
             'rate_limit': self.get_int('RATE_LIMIT', 100),
             'rate_window': self.get_int('RATE_WINDOW', 60)

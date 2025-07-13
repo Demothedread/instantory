@@ -8,30 +8,81 @@ from .manager import config_manager
 
 
 class CORSConfig:
-    """CORS configuration settings."""
+    """Production-ready CORS configuration with environment-aware origin management."""
+
+    # Production origins - strict allowlist for hocomnia.com deployment
+    PRODUCTION_ORIGINS = [
+        "https://hocomnia.com",
+        "https://www.hocomnia.com",
+        "https://accounts.google.com",
+        "https://oauth2.googleapis.com",
+    ]
+
+    # Staging origins - includes Vercel deployments
+    STAGING_ORIGINS = PRODUCTION_ORIGINS + [
+        "https://bartleby.vercel.app",
+        "https://instantory.vercel.app",
+        "https://bartleby-backend-mn96.onrender.com",
+    ]
+
+    # Development origins - includes localhost
+    DEVELOPMENT_ORIGINS = STAGING_ORIGINS + [
+        "http://localhost:3000",
+        "https://localhost:3000",
+        "http://localhost:5000",
+        "https://localhost:5000",
+    ]
+
+    # Wildcard patterns for dynamic environments
+    WILDCARD_PATTERNS = [
+        "https://*.vercel.app",
+        "https://*.hocomnia.com",
+        "https://*.onrender.com",
+    ]
+
+    @staticmethod
+    def get_environment_origins() -> List[str]:
+        """Get origins based on current environment."""
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        
+        if env == "production":
+            base_origins = CORSConfig.PRODUCTION_ORIGINS.copy()
+        elif env in ["staging", "preview"]:
+            base_origins = CORSConfig.STAGING_ORIGINS.copy()
+        else:
+            base_origins = CORSConfig.DEVELOPMENT_ORIGINS.copy()
+        
+        # Add environment-specific origins from config
+        env_origins = os.getenv("CORS_ORIGINS", "")
+        if env_origins:
+            additional_origins = [origin.strip() for origin in env_origins.split(",") if origin.strip()]
+            base_origins.extend(additional_origins)
+        
+        # Add additional allowed origins if specified
+        additional_origins = os.getenv("ALLOWED_ORIGINS", "")
+        if additional_origins:
+            extra_origins = [origin.strip() for origin in additional_origins.split(",") if origin.strip()]
+            base_origins.extend(extra_origins)
+        
+        # Remove duplicates while preserving order
+        seen = set()
+        unique_origins = []
+        for origin in base_origins:
+            if origin not in seen:
+                seen.add(origin)
+                unique_origins.append(origin)
+        
+        return unique_origins
 
     @staticmethod
     def get_origins() -> List[str]:
-        """Get allowed origins from environment or default to development origins."""
-        # Use ConfigManager for consistency
-        return config_manager.get_api_config()["cors_origins"]
+        """Get allowed origins from environment-aware configuration."""
+        return CORSConfig.get_environment_origins()
 
     @staticmethod
     def get_default_origins() -> List[str]:
-        """Get default origins for development."""
-        # Default origins for development, including hocomnia.com with and without www
-        return [
-            "https://hocomnia.com",
-            "https://www.hocomnia.com",
-            "https://instantory.vercel.app",
-            "https://bartleby.vercel.app",
-            "https://accounts.google.com",
-            "https://bartleby-backend.onrender.com",
-            "https://bartleby-backend-mn96.onrender.com",
-            "https://vercel.live",
-            "http://localhost:3000",
-            "https://localhost:3000",
-        ]
+        """Get default origins for development - deprecated, use get_environment_origins."""
+        return CORSConfig.DEVELOPMENT_ORIGINS
 
     @staticmethod
     def get_headers() -> List[str]:
@@ -82,36 +133,24 @@ class CORSConfig:
 
     @staticmethod
     def is_origin_allowed(origin: Optional[str]) -> bool:
-        """Check if an origin is allowed."""
+        """Check if an origin is allowed using environment-aware configuration."""
         if not origin:
             return False
 
-        # Use ConfigManager for allowed origins
-        allowed_origins = config_manager.get_api_config()["cors_origins"]
-
-        # Also check ALLOWED_ORIGINS environment variable for additional origins
-        env_origins = os.getenv("ALLOWED_ORIGINS", "")
-        if env_origins:
-            allowed_origins.extend(
-                [o.strip() for o in env_origins.split(",") if o.strip()]
-            )
-
-        # Remove duplicates while preserving order
-        allowed_origins = list(dict.fromkeys(allowed_origins))
+        # Get environment-specific allowed origins
+        allowed_origins = CORSConfig.get_environment_origins()
 
         # Check for exact match first
         if origin in allowed_origins:
             return True
 
-        # Check for wildcard domains (e.g., https://*.vercel.app)
-        for allowed_origin in allowed_origins:
-            if allowed_origin.startswith("https://*."):
+        # Check for wildcard patterns
+        for pattern in CORSConfig.WILDCARD_PATTERNS:
+            if pattern.startswith("https://*."):
                 # Extract the domain part after the asterisk
-                domain_suffix = allowed_origin.replace("https://*.", "")
+                domain_suffix = pattern.replace("https://*.", "")
                 # Check if the origin ends with this domain suffix
-                if origin.startswith("https://") and origin.endswith(
-                    f".{domain_suffix}"
-                ):
+                if origin.startswith("https://") and origin.endswith(f".{domain_suffix}"):
                     return True
 
         # Enhanced hocomnia.com support - allow all subdomains and the main domain
@@ -122,15 +161,16 @@ class CORSConfig:
         ):
             return True
 
-        # Support for Vercel preview deployments
-        if origin.startswith("https://") and ".vercel.app" in origin:
-            return True
+        # Support for Vercel preview deployments (environment permitting)
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        if env in ["development", "staging", "preview"]:
+            if origin.startswith("https://") and ".vercel.app" in origin:
+                return True
 
-        # Support for localhost development
-        if origin.startswith("http://localhost") or origin.startswith(
-            "https://localhost"
-        ):
-            return True
+        # Support for localhost development (development only)
+        if env == "development":
+            if origin.startswith("http://localhost") or origin.startswith("https://localhost"):
+                return True
 
         return False
 
@@ -165,22 +205,81 @@ class SecurityConfig:
         return secret
 
     @staticmethod
+    def get_environment_csp() -> str:
+        """Get Content Security Policy based on environment."""
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        
+        # Base CSP for all environments
+        base_csp = {
+            "default-src": "'self'",
+            "script-src": "'self' https://accounts.google.com https://apis.google.com https://gsi.gstatic.com *.googleapis.com",
+            "style-src": "'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://gsi.gstatic.com *.googleapis.com https://fonts.googleapis.com",
+            "img-src": "'self' data: https: blob:",
+            "connect-src": "'self' https://accounts.google.com https://oauth2.googleapis.com https://apis.google.com *.googleapis.com",
+            "frame-src": "https://accounts.google.com",
+            "font-src": "'self' https://fonts.gstatic.com",
+            "base-uri": "'self'",
+            "form-action": "'self'",
+        }
+        
+        if env == "production":
+            # Strict production CSP for hocomnia.com
+            base_csp.update({
+                "script-src": "'self' https://accounts.google.com https://apis.google.com https://gsi.gstatic.com *.googleapis.com https://hocomnia.com",
+                "connect-src": "'self' https://accounts.google.com https://oauth2.googleapis.com https://apis.google.com *.googleapis.com https://bartleby-backend-mn96.onrender.com",
+                "img-src": "'self' data: https://hocomnia.com https://bartleby-backend-mn96.onrender.com https://lh3.googleusercontent.com https://ssl.gstatic.com",
+            })
+        elif env in ["staging", "preview"]:
+            # Staging CSP includes Vercel domains
+            base_csp.update({
+                "script-src": "'self' https://accounts.google.com https://apis.google.com https://gsi.gstatic.com *.googleapis.com https://hocomnia.com *.vercel.app",
+                "connect-src": "'self' https://accounts.google.com https://oauth2.googleapis.com https://apis.google.com *.googleapis.com https://bartleby-backend-mn96.onrender.com *.vercel.app",
+                "img-src": "'self' data: https: blob:",
+            })
+        else:
+            # Development CSP allows unsafe-eval and localhost
+            base_csp.update({
+                "script-src": "'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://apis.google.com https://gsi.gstatic.com *.googleapis.com http://localhost:* https://localhost:*",
+                "connect-src": "'self' https://accounts.google.com https://oauth2.googleapis.com https://apis.google.com *.googleapis.com http://localhost:* https://localhost:* ws://localhost:* wss://localhost:*",
+                "img-src": "'self' data: https: blob: http://localhost:* https://localhost:*",
+            })
+        
+        # Convert to CSP string
+        csp_parts = []
+        for directive, sources in base_csp.items():
+            csp_parts.append(f"{directive} {sources}")
+        
+        return "; ".join(csp_parts)
+
+    @staticmethod
     def get_security_headers() -> Dict[str, str]:
-        """Get security headers for responses."""
-        return {
+        """Get production-ready security headers based on environment."""
+        env = os.getenv("ENVIRONMENT", "development").lower()
+        
+        headers = {
             "X-Content-Type-Options": "nosniff",
             "X-Frame-Options": "DENY",
             "X-XSS-Protection": "1; mode=block",
-            "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
             "Referrer-Policy": "strict-origin-when-cross-origin",
             "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=()",
-            # Updated CSP to allow Google's GSI styles and improve OAuth compatibility
-            "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://gsi.gstatic.com *.googleapis.com; style-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://gsi.gstatic.com *.googleapis.com https://fonts.googleapis.com; img-src 'self' data: https: blob:; connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://apis.google.com *.googleapis.com; frame-src https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; base-uri 'self'; form-action 'self'",
+            "Content-Security-Policy": SecurityConfig.get_environment_csp(),
             "Cross-Origin-Embedder-Policy": "unsafe-none",
-            # Allow OAuth popups and postMessage for authentication
             "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
             "Cross-Origin-Resource-Policy": "cross-origin",
         }
+        
+        # Environment-specific headers
+        if env == "production":
+            # Strict HSTS for production
+            headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+        elif env in ["staging", "preview"]:
+            # Less strict HSTS for staging
+            headers["Strict-Transport-Security"] = "max-age=86400; includeSubDomains"
+        else:
+            # No HSTS for development (allows HTTP)
+            pass
+        
+        return headers
 
 
 def get_security_config() -> SecurityConfig:

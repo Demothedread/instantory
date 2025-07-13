@@ -3,10 +3,10 @@ import { css } from '@emotion/react';
 import { useEffect, useState } from 'react';
 import { colors } from '../../../styles/theme/colors';
 import ClockFace from './ClockFace';
-import GearSystem from './GearSystem';
-import PendulumAssembly from './PendulumAssembly';
 import CuckooMechanism from './CuckooMechanism';
+import GearSystem from './GearSystem';
 import OrnamentalFrame from './OrnamentalFrame';
+import PendulumAssembly from './PendulumAssembly';
 
 /**
  * ClockworkLoadingPage - A beautifully intricate Neo-Deco-Rococo loading experience

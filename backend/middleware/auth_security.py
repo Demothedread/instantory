@@ -52,78 +52,19 @@ class AuthSecurityMiddleware:
         logger.info("Combined Auth-Security-CORS middleware initialized")
 
     def _get_cors_origins(self) -> List[str]:
-        """Get CORS origins from configuration"""
-        cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
-        clean_origins = [origin.strip() for origin in cors_origins if origin.strip()]
-
-        # Add default origins
-        default_origins = [
-            "https://bartleby.vercel.app",
-            "https://hocomnia.com", 
-            "https://www.hocomnia.com",
-            "https://accounts.google.com",
-        ]
-
-        for origin in default_origins:
-            if origin not in clean_origins:
-                clean_origins.append(origin)
-
-        # Add wildcard domain support
-        wildcard_domains = ["https://*.vercel.app", "https://*.hocomnia.com"]
-        for domain in wildcard_domains:
-            if domain not in clean_origins:
-                clean_origins.append(domain)
-
-        return clean_origins
+        """Get CORS origins from centralized configuration"""
+        from backend.config.security import CORSConfig
+        return CORSConfig.get_environment_origins()
 
     def _is_origin_allowed(self, origin: str) -> bool:
-        """Check if origin is allowed with wildcard support"""
-        if not origin:
-            return False
-
-        # Exact match
-        if origin in self.cors_origins:
-            return True
-
-        # Wildcard domains
-        for allowed_origin in self.cors_origins:
-            if allowed_origin.startswith("https://*."):
-                domain_suffix = allowed_origin.replace("https://*.", "")
-                if origin.startswith("https://") and origin.endswith(f".{domain_suffix}"):
-                    return True
-
-        # Enhanced hocomnia.com support
-        if origin.startswith("https://") and (
-            origin == "https://hocomnia.com"
-            or origin == "https://www.hocomnia.com" 
-            or origin.endswith(".hocomnia.com")
-        ):
-            return True
-
-        # Vercel preview deployments
-        if origin.startswith("https://") and ".vercel.app" in origin:
-            return True
-
-        # Localhost development
-        if origin.startswith("http://localhost") or origin.startswith("https://localhost"):
-            return True
-
-        return False
+        """Check if origin is allowed using centralized configuration"""
+        from backend.config.security import CORSConfig
+        return CORSConfig.is_origin_allowed(origin)
 
     def _get_security_headers(self) -> Dict[str, str]:
-        """Get security headers for responses"""
-        return {
-            "X-Content-Type-Options": "nosniff",
-            "X-Frame-Options": "DENY", 
-            "X-XSS-Protection": "1; mode=block",
-            "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
-            "Referrer-Policy": "strict-origin-when-cross-origin",
-            "Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=()",
-            "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://gsi.gstatic.com *.googleapis.com; style-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com https://gsi.gstatic.com *.googleapis.com https://fonts.googleapis.com; img-src 'self' data: https: blob:; connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://apis.google.com *.googleapis.com; frame-src https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; base-uri 'self'; form-action 'self'",
-            "Cross-Origin-Embedder-Policy": "unsafe-none",
-            "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
-            "Cross-Origin-Resource-Policy": "cross-origin",
-        }
+        """Get security headers from centralized configuration"""
+        from backend.config.security import SecurityConfig
+        return SecurityConfig.get_security_headers()
 
     def _setup_middleware(self, app: Quart) -> None:
         """Setup all middleware functions"""

@@ -30,6 +30,7 @@ import ProtectedRoute from './components/routing/ProtectedRoute';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import LoginOverlay from './components/auth/LoginOverlay';
 import ClockworkLoadingPage from './components/loading/ClockworkLoadingPage';
+import TestClockworkPage from './TestClockworkPage';
 
 // Services
 import dataApi from './services/api';
@@ -157,6 +158,10 @@ function App() {
             <PublicLayout>
               <AuthCallback />
             </PublicLayout>
+          } />
+          
+          <Route path="/test-clockwork" element={
+            <TestClockworkPage />
           } />
 
           {/* Protected routes with authenticated layout */}

@@ -9,7 +9,6 @@ from quart import Quart, request
 def is_origin_allowed(origin: str, allowed_origins: List[str]) -> bool:
     """
     Check if the origin is allowed, supporting wildcard domains.
-    Now delegates to the new combined auth_security middleware.
 
     Args:
         origin: The request origin to check
@@ -18,78 +17,39 @@ def is_origin_allowed(origin: str, allowed_origins: List[str]) -> bool:
     Returns:
         True if origin is allowed, False otherwise
     """
-    try:
-        from backend.middleware.auth_security import AuthSecurityMiddleware
-        # Create a temporary instance to use the origin checking logic
-        # Don't actually initialize the app - just access the method
-        class TempAuthMiddleware:
-            def __init__(self):
-                self.cors_origins = allowed_origins
-            
-            def _is_origin_allowed(self, origin):
-                if not origin:
-                    return False
-                # Exact match
-                if origin in self.cors_origins:
-                    return True
-                # Wildcard domains
-                for allowed_origin in self.cors_origins:
-                    if allowed_origin.startswith("https://*."):
-                        domain_suffix = allowed_origin.replace("https://*.", "")
-                        if origin.startswith("https://") and origin.endswith(f".{domain_suffix}"):
-                            return True
-                # Enhanced hocomnia.com support
-                if origin.startswith("https://") and (
-                    origin == "https://hocomnia.com"
-                    or origin == "https://www.hocomnia.com" 
-                    or origin.endswith(".hocomnia.com")
-                ):
-                    return True
-                # Vercel preview deployments
-                if origin.startswith("https://") and ".vercel.app" in origin:
-                    return True
-                # Localhost development
-                if origin.startswith("http://localhost") or origin.startswith("https://localhost"):
-                    return True
-                return False
-        
-        temp_middleware = TempAuthMiddleware()
-        return temp_middleware._is_origin_allowed(origin)
-    except:
-        # Fallback to original logic if new middleware isn't available
-        if not origin:
-            return False
-
-        # Check for exact match first
-        if origin in allowed_origins:
-            return True
-
-        # Check for wildcard domains (e.g., https://*.vercel.app)
-        for allowed_origin in allowed_origins:
-            if allowed_origin.startswith("https://*."):
-                # Extract the domain part after the asterisk
-                domain_suffix = allowed_origin.replace("https://*.", "")
-                # Check if the origin ends with this domain suffix
-                if origin.startswith("https://") and origin.endswith(f".{domain_suffix}"):
-                    return True
-
-        # Enhanced hocomnia.com support - allow all subdomains and the main domain
-        if origin.startswith("https://") and (
-            origin == "https://hocomnia.com"
-            or origin == "https://www.hocomnia.com"
-            or origin.endswith(".hocomnia.com")
-        ):
-            return True
-
-        # Support for Vercel preview deployments
-        if origin.startswith("https://") and ".vercel.app" in origin:
-            return True
-
-        # Support for localhost development
-        if origin.startswith("http://localhost") or origin.startswith("https://localhost"):
-            return True
-
+    if not origin:
         return False
+
+    # Check for exact match first
+    if origin in allowed_origins:
+        return True
+
+    # Check for wildcard domains (e.g., https://*.vercel.app)
+    for allowed_origin in allowed_origins:
+        if allowed_origin.startswith("https://*."):
+            # Extract the domain part after the asterisk
+            domain_suffix = allowed_origin.replace("https://*.", "")
+            # Check if the origin ends with this domain suffix
+            if origin.startswith("https://") and origin.endswith(f".{domain_suffix}"):
+                return True
+
+    # Enhanced hocomnia.com support - allow all subdomains and the main domain
+    if origin.startswith("https://") and (
+        origin == "https://hocomnia.com"
+        or origin == "https://www.hocomnia.com"
+        or origin.endswith(".hocomnia.com")
+    ):
+        return True
+
+    # Support for Vercel preview deployments
+    if origin.startswith("https://") and ".vercel.app" in origin:
+        return True
+
+    # Support for localhost development
+    if origin.startswith("http://localhost") or origin.startswith("https://localhost"):
+        return True
+
+    return False
 
 
 def setup_cors(app: Quart) -> Quart:
@@ -150,16 +110,23 @@ def setup_cors(app: Quart) -> Quart:
                 # Only process if we have an origin header
                 if origin and is_origin_allowed(origin, clean_origins):
                     app.logger.info(f"✅ CORS Preflight - Origin allowed: {origin}")
+                    # Always use https://hocomnia.com if origin matches hocomnia.com
+                    allow_origin = (
+                        "https://hocomnia.com"
+                        if origin == "https://hocomnia.com"
+                        or origin == "https://www.hocomnia.com"
+                        or origin.endswith(".hocomnia.com")
+                        else origin
+                    )
                     headers = {
-                        "Access-Control-Allow-Origin": origin,
+                        "Access-Control-Allow-Origin": allow_origin,
                         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
                         "Access-Control-Allow-Headers": ", ".join(
                             [
                                 "Content-Type",
                                 "Authorization",
-                                "Accept",
-                                # Note: Do not include "Origin" - browsers set this automatically
                                 "X-Requested-With",
+                                "Accept",
                                 "Content-Length",
                                 "Accept-Encoding",
                                 "X-CSRF-Token",
@@ -174,9 +141,7 @@ def setup_cors(app: Quart) -> Quart:
                                 "X-Auth-Token",
                             ]
                         ),
-                        "Access-Control-Allow-Credentials": (
-                            "true" if allow_credentials else "false"
-                        ),
+                        "Access-Control-Allow-Credentials": "true",
                         "Access-Control-Max-Age": "3600",
                         "Vary": "Origin",
                     }
@@ -197,13 +162,28 @@ def setup_cors(app: Quart) -> Quart:
             )
 
             if origin and is_origin_allowed(origin, clean_origins):
-                app.logger.info(
-                    f"✅ CORS Response - Setting headers for origin: {origin}"
+                # Always use https://hocomnia.com if origin matches hocomnia.com
+                allow_origin = (
+                    "https://hocomnia.com"
+                    if origin == "https://hocomnia.com"
+                    or origin == "https://www.hocomnia.com"
+                    or origin.endswith(".hocomnia.com")
+                    else origin
                 )
-                response.headers.set("Access-Control-Allow-Origin", origin)
-                if allow_credentials:
-                    response.headers.set("Access-Control-Allow-Credentials", "true")
+                app.logger.info(
+                    f"✅ CORS Response - Setting headers for origin: {allow_origin}"
+                )
+                response.headers.set("Access-Control-Allow-Origin", allow_origin)
+                response.headers.set("Access-Control-Allow-Credentials", "true")
                 response.headers.set("Vary", "Origin")
+                response.headers.set(
+                    "Access-Control-Allow-Headers",
+                    "Content-Type, Authorization, X-Requested-With, Accept, Content-Length, Accept-Encoding, X-CSRF-Token, google-oauth-token, google-client-id, g-csrf-token, X-Google-OAuth-Token, X-Google-Client-ID, Accept-Language, Cache-Control, X-API-Key, X-Auth-Token"
+                )
+                response.headers.set(
+                    "Access-Control-Allow-Methods",
+                    "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+                )
             elif origin:
                 app.logger.warning(f"❌ CORS Response - Origin not allowed: {origin}")
             else:
@@ -216,7 +196,10 @@ def setup_cors(app: Quart) -> Quart:
                     "Access-Control-Allow-Methods",
                     "GET, POST, PUT, DELETE, OPTIONS, PATCH",
                 )
-
+                response.headers.set(
+                    "Access-Control-Allow-Headers",
+                    "Content-Type, Authorization, X-Requested-With, Accept, Content-Length, Accept-Encoding, X-CSRF-Token, google-oauth-token, google-client-id, g-csrf-token, X-Google-OAuth-Token, X-Google-Client-ID, Accept-Language, Cache-Control, X-API-Key, X-Auth-Token"
+                )
             return response
 
         app.logger.info("✅ Custom CORS middleware enabled (quart_cors removed)")

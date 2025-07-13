@@ -1,0 +1,27 @@
+{
+  "short_name": "Bartleby AI",
+  "name": "Bartleby AI Document Assistant",
+  "description": "Transform documents and inventory into organized, searchable intelligence with AI-powered analysis and vector search capabilities.",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "placeholder.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#1a1a1a",
+  "background_color": "#0a0a0a",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "en-US",
+  "dir": "ltr"
+}
