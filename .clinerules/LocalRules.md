@@ -43,7 +43,7 @@ A wholly original style that blends the timeless elegance and math-infused conso
 - Enforce robust error handling and rate limiting on OpenAI API calls
 - Normalize SQL schema for scalable metadata storage
 - Ensure asynchronous processing with concurrency control on uploads
-
+                                                      
 ## Security & Auth
 - Strict Google OAuth integration and session management
 - Validate and sanitize all user inputs
@@ -53,6 +53,7 @@ A wholly original style that blends the timeless elegance and math-infused conso
 - Optimize frontend loading with SSR/SSG where feasible
 - Cache frequent queries and data exports
 - Lazy-load UI components and images in masonry grid
+- Remove outdated implementation documentation from directory and do not create new documents,  but instead, maintain and update ONE (1)  'IMPLEMENTATION_SUMMARY.md' file with the latest changes,ensuring it reflects the current state, while broken down by components and grouped into daily progress summaries titled by the {MM-DD-YY} with "************" across representing where one day ends and the next behinds.  Most recent changes should always be at the top of the file, with the oldest at the bottom, and each day's changes should be separated by a line of asterisks.  This file should be updated daily, and not be used to track bugs or issues, but rather to summarize the latest implementation status of the project.
 
 ## Prompting Guidelines for Chat
 When using Copilot Chat or inline prompts:

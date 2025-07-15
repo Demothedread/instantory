@@ -1,4 +1,4 @@
-/** @jsxImportSource @emotion/react */                          
+/** @jsxImportSource @emotion/react */
 import { css, keyframes } from '@emotion/react';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { AuthContext } from '../../contexts/auth';
@@ -37,26 +37,9 @@ const mascotSigh = keyframes`
 `;
 
 // 🎨 Main clockwork animations
-const gearRotation = keyframes`
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-`;
 
-const pendulumSwing = keyframes`
-  0%, 100% { transform: rotate(-15deg); transform-origin: top center; }
-  50% { transform: rotate(15deg); transform-origin: top center; }
-`;
 
-const leverPump = keyframes`
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  25% { transform: translateY(-8px) rotate(2deg); }
-  75% { transform: translateY(8px) rotate(-2deg); }
-`;
 
-const springCompress = keyframes`
-  0%, 100% { transform: scaleY(1); }
-  50% { transform: scaleY(0.7); }
-`;
 
 const progressFill = keyframes`
   from { width: 0%; background-position: 0% 50%; }
@@ -77,11 +60,8 @@ const mechanismAssembly = keyframes`
 
 const ClockworkLoadingPage = ({
   message = "Initializing Bartleby Intelligence...",
-  progress = 0,
   isVisible = true,
-  onComplete,
-  phase = 'loading' // 'loading', 'auth', 'transition'
-}) => {
+  onComplete}) => {
   const { user, loading: authLoading } = useContext(AuthContext);
   const [currentStage, setCurrentStage] = useState(0);
   const [showMascot, setShowMascot] = useState(false);

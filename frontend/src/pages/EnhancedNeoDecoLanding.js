@@ -1,11 +1,11 @@
 /** @jsxImportSource @emotion/react */
 import { css, keyframes } from '@emotion/react';
-import { GoogleLogin } from '@react-oauth/google';
 import { Suspense, useContext, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../contexts/auth/index';
 import { colors } from '../styles/theme/colors';
 import ClockworkLoadingPage from '../components/loading/ClockworkLoadingPage';
+import MagicUILogin from '../components/auth/MagicUILogin';
 
 /**
  * 🚀 ENHANCED NEO-DECO-ROCOCO LANDING EXPERIENCE 🚀
@@ -271,13 +271,12 @@ const Modal = ({ isOpen, onClose, children }) => {
 
 // 🏛️ MAIN COMPONENT
 const EnhancedNeoDecoLanding = () => {
-  const { loginWithGoogle, login, error, clearError, user } = useContext(AuthContext);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { user, isAuthenticated } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [expandedPanel, setExpandedPanel] = useState(null);
   const [activeModal, setActiveModal] = useState(null);
   const [showLoadingDemo, setShowLoadingDemo] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
 
   // Panel data
   const panelData = [
@@ -327,24 +326,12 @@ const EnhancedNeoDecoLanding = () => {
     }
   ];
 
-  // Authentication handlers
-  const handleEmailLogin = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      await login({ email, password });
-    } catch (err) {
-      console.error('Authentication failed:', err);
-    } finally {
-      setIsLoading(false);
+  // Check if user is already authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigate('/dashboard');
     }
-  };
-
-  const handleGoogleLogin = async (credentialResponse) => {
-    if (credentialResponse?.credential) {
-      await loginWithGoogle(credentialResponse.credential);
-    }
-  };
+  }, [isAuthenticated, user, navigate]);
 
   const handlePanelToggle = (panelId) => {
     setExpandedPanel(expandedPanel === panelId ? null : panelId);
@@ -408,58 +395,23 @@ const EnhancedNeoDecoLanding = () => {
           </div>
         </div>
 
-        {/* Authentication Modal */}
-        <Modal isOpen={activeModal === 'auth'} onClose={() => setActiveModal(null)}>
-          <div css={styles.authModal}>
-            <h2 css={styles.modalTitle}>🚀 Access Intelligence Platform</h2>
-            
-            {error && (
-              <div css={styles.errorMessage} onClick={clearError}>
-                ⚠️ {error}
-              </div>
-            )}
-
-            <div css={styles.authOptions}>
-              <GoogleLogin
-                onSuccess={handleGoogleLogin}
-                onError={() => console.error('Google Authentication Failed')}
-                theme="filled_black"
-                shape="pill"
-                size="large"
-                text="continue_with"
-                width="100%"
-              />
-            </div>
-
-            <div css={styles.divider}>
-              <span>or use credentials</span>
-            </div>
-
-            <form css={styles.authForm} onSubmit={handleEmailLogin}>
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                css={styles.authInput}
-                required
-              />
-              
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                css={styles.authInput}
-                required
-              />
-              
-              <button type="submit" css={styles.authButton} disabled={isLoading}>
-                {isLoading ? '⏳ Accessing...' : '🚀 Enter Platform'}
-              </button>
-            </form>
-          </div>
-        </Modal>
+        {/* MagicUI Authentication */}
+        {activeModal === 'auth' && (
+          <MagicUILogin
+            variant="modal"
+            showCloseButton={true}
+            onClose={() => setActiveModal(null)}
+            onSuccess={(user) => {
+              setShowLoadingDemo(true);
+              setTimeout(() => {
+                navigate('/dashboard');
+              }, 2000);
+            }}
+            onError={(error) => {
+              console.error('Authentication failed:', error);
+            }}
+          />
+        )}
 
         {/* About Modal */}
         <Modal isOpen={activeModal === 'about'} onClose={() => setActiveModal(null)}>
