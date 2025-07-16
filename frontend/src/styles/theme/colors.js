@@ -46,3 +46,20 @@ export const colors = {
   glass: 'rgba(26, 26, 46, 0.9)',
   subtle: 'rgba(255, 255, 255, 0.1)',
 };
+
+// ---------------------------------------------------------------------------
+// Some style modules within the code-base import this file using a *default*
+// specifier (e.g. `import colors from '.../styles/theme/colors'`) while most
+// others use a *named* import (`import { colors } from '...'`).  The original
+// implementation only provided the named export which causes the build to
+// fail with the error:
+//   "does not contain a default export (imported as 'colors')".
+//
+// To remain backwards-compatible **and** restore the production build we
+// simply re-export the existing `colors` object as the module’s default
+// export.  This tiny change keeps the public API identical for named imports
+// while unblocking modules that expect a default export.
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line import/no-anonymous-default-export
+export default colors;

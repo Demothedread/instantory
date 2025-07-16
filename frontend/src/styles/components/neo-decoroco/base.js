@@ -227,3 +227,14 @@ export const neoDecorocoBase = {
     margin: 1rem 0;
   `
 };
+
+// ---------------------------------------------------------------------------
+// Provide a compatible default export.
+// A handful of legacy style modules import this file using the default import
+// syntax (e.g. `import neoDecorocoBase from '.../neo-decoroco/base'`).  The
+// original implementation only exposed a *named* export which breaks the
+// production build. We therefore alias the existing named export as the
+// default one so both import styles work.
+// ---------------------------------------------------------------------------
+
+export default neoDecorocoBase;

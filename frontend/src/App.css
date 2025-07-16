@@ -216,7 +216,10 @@ body::before {
   left: 0;
   right: 0;
   height: 60px;
-  background-image: url('./assets/borders/border-rocometal-pinkgreen-xl.png');
+  /* Corrected asset path – filename in repo is `border-rocometal-pinkggreen.png`
+     (note the double "g") and there is no `-xl` variant. Referencing the
+     existing file ensures the build can locate the asset during compilation. */
+  background-image: url('./assets/borders/border-rocometal-pinkggreen.png');
   background-size: contain;
   background-repeat: repeat-x;
   z-index: 10;
@@ -245,7 +248,9 @@ body::before {
   position: relative;
   width: 100px;
   height: 85px;
-  background-image: url('./assets/borders/ArtDeco/emeraldDecoll.png');
+  /* Corrected filename – repository contains `EmeraldDeco1.png`…`EmeraldDeco7.png`.
+     Use the first one as decorative header flourish. */
+  background-image: url('./assets/borders/ArtDeco/EmeraldDeco1.png');
   background-size: contain;
   background-repeat: no-repeat;
 }
