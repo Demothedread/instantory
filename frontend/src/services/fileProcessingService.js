@@ -114,46 +114,77 @@ class FileProcessingService {
    * Upload file for storage without immediate processing
    * @param {File} file - The file to upload
    * @param {Function} onProgress - Progress callback function
+   * @param {AbortController} abortController - Optional abort controller for cancellation
    * @returns {Promise<Object>} Upload result
    */
-  async uploadFile(file, onProgress = null) {
+  async uploadFile(file, onProgress = null, abortController = null) {
     try {
       const formData = new FormData();
       formData.append('file', file);
 
-      const xhr = new XMLHttpRequest();
-      
-      return new Promise((resolve, reject) => {
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable && onProgress) {
-            const progress = (event.loaded / event.total) * 100;
-            onProgress(progress);
-          }
-        });
-
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const result = JSON.parse(xhr.responseText);
-              resolve(result);
-            } catch (error) {
-              reject(new Error('Invalid response format'));
-            }
-          } else {
-            reject(new Error(`Upload failed with status: ${xhr.status}`));
-          }
-        });
-
-        xhr.addEventListener('error', () => {
-          reject(new Error('Upload failed due to network error'));
-        });
-
-        xhr.open('POST', `${this.baseURL}/upload`);
-        xhr.withCredentials = true;
-        xhr.send(formData);
+      // Modern fetch with progress tracking using ReadableStream
+      const response = await fetch(`${this.baseURL}/upload`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+        signal: abortController?.signal,
+        headers: {
+          // Don't set Content-Type - let browser set it with boundary for FormData
+        },
       });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Upload failed with status: ${response.status}`);
+      }
+
+      // Read the response with progress tracking if supported
+      if (onProgress && response.body) {
+        const contentLength = response.headers.get('content-length');
+        if (contentLength) {
+          const total = parseInt(contentLength, 10);
+          let loaded = 0;
+
+          const reader = response.body.getReader();
+          const chunks = [];
+
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) break;
+            
+            chunks.push(value);
+            loaded += value.length;
+            
+            if (onProgress) {
+              const progress = (loaded / total) * 100;
+              onProgress(Math.min(progress, 100));
+            }
+          }
+
+          // Reconstruct the response
+          const responseData = new TextDecoder().decode(
+            new Uint8Array(chunks.reduce((acc, chunk) => [...acc, ...chunk], []))
+          );
+          
+          return JSON.parse(responseData);
+        }
+      }
+
+      // Fallback for responses without content-length or progress tracking disabled
+      const result = await response.json();
+      
+      if (onProgress) {
+        onProgress(100);
+      }
+
+      return result;
+
     } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error(`Upload cancelled for file "${file.name}"`);
+      }
+      
       console.error('File upload failed:', error);
       throw new Error(`Failed to upload file "${file.name}": ${error.message}`);
     }
