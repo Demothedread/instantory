@@ -61,7 +61,9 @@ const mechanismAssembly = keyframes`
 const ClockworkLoadingPage = ({
   message = "Initializing Bartleby Intelligence...",
   isVisible = true,
-  onComplete}) => {
+  onComplete,
+  maxLoadTime = 10000 // 10 second timeout
+}) => {
   const { user, loading: authLoading } = useContext(AuthContext);
   const [currentStage, setCurrentStage] = useState(0);
   const [showMascot, setShowMascot] = useState(false);
@@ -69,7 +71,10 @@ const ClockworkLoadingPage = ({
   const [soundEffect, setSoundEffect] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [stageMessage, setStageMessage] = useState(message);
+  const [hasTimedOut, setHasTimedOut] = useState(false);
+  const [error, setError] = useState(null);
   const loadingRef = useRef(null);
+  const timeoutRef = useRef(null);
 
   // Detect mobile device
   useEffect(() => {
@@ -135,6 +140,50 @@ const ClockworkLoadingPage = ({
     const timer = setTimeout(progressStages, 300);
     return () => clearTimeout(timer);
   }, [currentStage, isVisible, stages, isMobile, onComplete]);
+
+  // Timeout handler to prevent infinite loading
+  useEffect(() => {
+    if (!isVisible) return;
+
+    timeoutRef.current = setTimeout(() => {
+      console.warn('Loading timeout reached, forcing completion');
+      setHasTimedOut(true);
+      setStageMessage('Loading timeout - proceeding anyway...');
+      setAssemblyProgress(100);
+      
+      setTimeout(() => {
+        onComplete?.();
+      }, 1000);
+    }, maxLoadTime);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [isVisible, maxLoadTime, onComplete]);
+
+  // Error boundary for loading failures
+  useEffect(() => {
+    const handleError = (event) => {
+      console.error('Loading page error:', event.error);
+      setError(event.error?.message || 'Unknown error occurred');
+      setStageMessage('Error detected - attempting recovery...');
+      
+      // Force completion after error
+      setTimeout(() => {
+        onComplete?.();
+      }, 2000);
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleError);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleError);
+    };
+  }, [onComplete]);
 
   // Auto-complete for mobile
   useEffect(() => {
