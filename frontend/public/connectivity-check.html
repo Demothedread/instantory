@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bartleby Connectivity Diagnostics</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #d4af37;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            color: #d4af37;
+        }
+        
+        .subtitle {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #999;
+            font-size: 1.1rem;
+        }
+        
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .test-section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #d4af37;
+        }
+        
+        .test-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+        
+        .status-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 1rem;
+            border-radius: 50%;
+        }
+        
+        .status-pending {
+            background: #666;
+        }
+        
+        .status-success {
+            background: #4caf50;
+        }
+        
+        .status-error {
+            background: #f44336;
+        }
+        
+        .status-warning {
+            background: #ff9800;
+        }
+        
+        .test-label {
+            flex: 1;
+            font-weight: 500;
+        }
+        
+        .test-result {
+            color: #999;
+            font-size: 0.9rem;
+        }
+        
+        .details {
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #ccc;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .button-container {
+            text-align: center;
+            margin-top: 2rem;
+        }
+        
+        button {
+            background: #d4af37;
+            color: #1a1a1a;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background: #f0c850;
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .summary {
+            text-align: center;
+            font-size: 1.2rem;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            background: rgba(212, 175, 55, 0.1);
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+        }
+        
+        .summary.success {
+            background: rgba(76, 175, 80, 0.1);
+            border-color: #4caf50;
+            color: #4caf50;
+        }
+        
+        .summary.error {
+            background: rgba(244, 67, 54, 0.1);
+            border-color: #f44336;
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Bartleby Connectivity Diagnostics</h1>
+        <p class="subtitle">Testing frontend and backend connectivity</p>
+        
+        <div class="test-section">
+            <h2>Frontend Configuration</h2>
+            <div id="frontend-tests"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Backend Connectivity</h2>
+            <div id="backend-tests"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>CORS & Security</h2>
+            <div id="cors-tests"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Environment Variables</h2>
+            <div id="env-tests"></div>
+        </div>
+        
+        <div class="button-container">
+            <button id="run-tests">Run Connectivity Tests</button>
+        </div>
+        
+        <div id="summary" style="display: none;" class="summary"></div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'https://bartleby-backend-mn96.onrender.com';
+        const FRONTEND_URL = 'https://hocomnia.com';
+        
+        let testResults = {
+            passed: 0,
+            failed: 0,
+            warnings: 0
+        };
+
+        function createTestItem(label, container) {
+            const item = document.createElement('div');
+            item.className = 'test-item';
+            item.innerHTML = `
+                <div class="status-icon status-pending"></div>
+                <div class="test-label">${label}</div>
+                <div class="test-result">Pending...</div>
+            `;
+            container.appendChild(item);
+            return item;
+        }
+
+        function updateTestItem(item, status, result, details = null) {
+            const icon = item.querySelector('.status-icon');
+            const resultEl = item.querySelector('.test-result');
+            
+            icon.className = `status-icon status-${status}`;
+            resultEl.textContent = result;
+            
+            if (details) {
+                const detailsEl = document.createElement('div');
+                detailsEl.className = 'details';
+                detailsEl.textContent = typeof details === 'object' 
+                    ? JSON.stringify(details, null, 2) 
+                    : details;
+                item.appendChild(detailsEl);
+            }
+            
+            if (status === 'success') testResults.passed++;
+            else if (status === 'error') testResults.failed++;
+            else if (status === 'warning') testResults.warnings++;
+        }
+
+        async function testFrontendConfig() {
+            const container = document.getElementById('frontend-tests');
+            
+            // Test 1: Current URL
+            const urlTest = createTestItem('Current URL', container);
+            updateTestItem(urlTest, 'success', window.location.href);
+            
+            // Test 2: Origin
+            const originTest = createTestItem('Current Origin', container);
+            updateTestItem(originTest, 'success', window.location.origin);
+            
+            // Test 3: Protocol
+            const protocolTest = createTestItem('Using HTTPS', container);
+            const isHttps = window.location.protocol === 'https:';
+            updateTestItem(
+                protocolTest, 
+                isHttps ? 'success' : 'warning',
+                isHttps ? 'Yes (Secure)' : 'No (HTTP)',
+                `Protocol: ${window.location.protocol}`
+            );
+        }
+
+        async function testBackendConnectivity() {
+            const container = document.getElementById('backend-tests');
+            
+            // Test 1: Backend Health Check
+            const healthTest = createTestItem('Backend Health Check', container);
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateTestItem(
+                        healthTest, 
+                        'success', 
+                        `Connected (${response.status})`,
+                        data
+                    );
+                } else {
+                    updateTestItem(
+                        healthTest, 
+                        'warning', 
+                        `HTTP ${response.status}`,
+                        `Backend responded but with status ${response.status}`
+                    );
+                }
+            } catch (error) {
+                updateTestItem(
+                    healthTest, 
+                    'error', 
+                    'Connection Failed',
+                    error.message
+                );
+            }
+            
+            // Test 2: Backend Response Time
+            const responseTimeTest = createTestItem('Backend Response Time', container);
+            try {
+                const start = Date.now();
+                const response = await fetch(`${BACKEND_URL}/api/health`);
+                const duration = Date.now() - start;
+                
+                const status = duration < 1000 ? 'success' : duration < 3000 ? 'warning' : 'error';
+                updateTestItem(
+                    responseTimeTest, 
+                    status, 
+                    `${duration}ms`,
+                    `Response time: ${duration}ms (< 1000ms is good, < 3000ms is acceptable)`
+                );
+            } catch (error) {
+                updateTestItem(
+                    responseTimeTest, 
+                    'error', 
+                    'Failed',
+                    error.message
+                );
+            }
+        }
+
+        async function testCORS() {
+            const container = document.getElementById('cors-tests');
+            
+            // Test 1: CORS Headers
+            const corsTest = createTestItem('CORS Configuration', container);
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/health`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const corsHeaders = {
+                    'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                    'Access-Control-Allow-Credentials': response.headers.get('Access-Control-Allow-Credentials'),
+                    'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods')
+                };
+                
+                if (corsHeaders['Access-Control-Allow-Origin']) {
+                    updateTestItem(
+                        corsTest, 
+                        'success', 
+                        'CORS Enabled',
+                        corsHeaders
+                    );
+                } else {
+                    updateTestItem(
+                        corsTest, 
+                        'warning', 
+                        'CORS headers not visible (may be working)',
+                        'CORS headers might be set but not visible from client'
+                    );
+                }
+            } catch (error) {
+                updateTestItem(
+                    corsTest, 
+                    'error', 
+                    'CORS Check Failed',
+                    error.message
+                );
+            }
+            
+            // Test 2: Credentials Support
+            const credTest = createTestItem('Credentials Support', container);
+            try {
+                const response = await fetch(`${BACKEND_URL}/api/health`, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                updateTestItem(
+                    credTest, 
+                    response.ok ? 'success' : 'warning', 
+                    response.ok ? 'Working' : 'Partial',
+                    `Status: ${response.status}`
+                );
+            } catch (error) {
+                updateTestItem(
+                    credTest, 
+                    'error', 
+                    'Failed',
+                    error.message
+                );
+            }
+        }
+
+        async function testEnvironment() {
+            const container = document.getElementById('env-tests');
+            
+            // Test 1: Browser Info
+            const browserTest = createTestItem('Browser', container);
+            updateTestItem(
+                browserTest, 
+                'success', 
+                navigator.userAgent.split(' ').slice(-1)[0],
+                navigator.userAgent
+            );
+            
+            // Test 2: Network Status
+            const networkTest = createTestItem('Network Status', container);
+            updateTestItem(
+                networkTest, 
+                navigator.onLine ? 'success' : 'error',
+                navigator.onLine ? 'Online' : 'Offline'
+            );
+            
+            // Test 3: Local Storage
+            const storageTest = createTestItem('Local Storage', container);
+            try {
+                localStorage.setItem('test', 'test');
+                localStorage.removeItem('test');
+                updateTestItem(storageTest, 'success', 'Available');
+            } catch (error) {
+                updateTestItem(
+                    storageTest, 
+                    'warning', 
+                    'Not Available',
+                    error.message
+                );
+            }
+            
+            // Test 4: Cookies
+            const cookieTest = createTestItem('Cookies', container);
+            updateTestItem(
+                cookieTest, 
+                navigator.cookieEnabled ? 'success' : 'error',
+                navigator.cookieEnabled ? 'Enabled' : 'Disabled'
+            );
+        }
+
+        function showSummary() {
+            const summaryEl = document.getElementById('summary');
+            const total = testResults.passed + testResults.failed + testResults.warnings;
+            
+            summaryEl.style.display = 'block';
+            
+            if (testResults.failed === 0 && testResults.warnings === 0) {
+                summaryEl.className = 'summary success';
+                summaryEl.innerHTML = `
+                    <h2>✅ All Systems Operational</h2>
+                    <p>All ${total} tests passed successfully!</p>
+                    <p style="margin-top: 1rem;"><a href="/" style="color: #4caf50;">Go to Main Application →</a></p>
+                `;
+            } else if (testResults.failed > 0) {
+                summaryEl.className = 'summary error';
+                summaryEl.innerHTML = `
+                    <h2>❌ Connectivity Issues Detected</h2>
+                    <p>${testResults.failed} test(s) failed, ${testResults.warnings} warning(s)</p>
+                    <p style="margin-top: 1rem; font-size: 0.9rem;">
+                        Please review the failed tests above and contact support if issues persist.
+                    </p>
+                `;
+            } else {
+                summaryEl.className = 'summary';
+                summaryEl.innerHTML = `
+                    <h2>⚠️ Some Warnings</h2>
+                    <p>${testResults.warnings} warning(s) detected, ${testResults.passed} test(s) passed</p>
+                    <p style="margin-top: 1rem;"><a href="/" style="color: #d4af37;">Proceed to Application →</a></p>
+                `;
+            }
+        }
+
+        async function runAllTests() {
+            const button = document.getElementById('run-tests');
+            button.disabled = true;
+            button.textContent = 'Running Tests...';
+            
+            // Reset results
+            testResults = { passed: 0, failed: 0, warnings: 0 };
+            document.getElementById('summary').style.display = 'none';
+            
+            // Clear previous results
+            ['frontend-tests', 'backend-tests', 'cors-tests', 'env-tests'].forEach(id => {
+                document.getElementById(id).innerHTML = '';
+            });
+            
+            try {
+                await testFrontendConfig();
+                await testBackendConnectivity();
+                await testCORS();
+                await testEnvironment();
+                
+                showSummary();
+            } catch (error) {
+                console.error('Test execution error:', error);
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Run Tests Again';
+            }
+        }
+
+        document.getElementById('run-tests').addEventListener('click', runAllTests);
+        
+        // Auto-run tests on page load
+        window.addEventListener('load', () => {
+            setTimeout(runAllTests, 500);
+        });
+    </script>
+</body>
+</html>
