@@ -155,6 +155,19 @@
             border-color: #f44336;
             color: #f44336;
         }
+        
+        .link-success {
+            color: #4caf50;
+        }
+        
+        .link-primary {
+            color: #d4af37;
+        }
+        
+        .text-small {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -190,8 +203,16 @@
     </div>
 
     <script>
-        const BACKEND_URL = 'https://bartleby-backend-mn96.onrender.com';
-        const FRONTEND_URL = 'https://hocomnia.com';
+        // Configuration - can be overridden by URL parameters
+        const params = new URLSearchParams(window.location.search);
+        const BACKEND_URL = params.get('backend') || 'https://bartleby-backend-mn96.onrender.com';
+        const FRONTEND_URL = params.get('frontend') || window.location.origin || 'https://hocomnia.com';
+        
+        // Display configuration info
+        console.log('Connectivity Diagnostics Configuration:');
+        console.log('  Backend URL:', BACKEND_URL);
+        console.log('  Frontend URL:', FRONTEND_URL);
+        console.log('  Note: Add ?backend=<url>&frontend=<url> to override defaults');
         
         let testResults = {
             passed: 0,
@@ -441,14 +462,14 @@
                 summaryEl.innerHTML = `
                     <h2>✅ All Systems Operational</h2>
                     <p>All ${total} tests passed successfully!</p>
-                    <p style="margin-top: 1rem;"><a href="/" style="color: #4caf50;">Go to Main Application →</a></p>
+                    <p class="text-small"><a href="/" class="link-success">Go to Main Application →</a></p>
                 `;
             } else if (testResults.failed > 0) {
                 summaryEl.className = 'summary error';
                 summaryEl.innerHTML = `
                     <h2>❌ Connectivity Issues Detected</h2>
                     <p>${testResults.failed} test(s) failed, ${testResults.warnings} warning(s)</p>
-                    <p style="margin-top: 1rem; font-size: 0.9rem;">
+                    <p class="text-small">
                         Please review the failed tests above and contact support if issues persist.
                     </p>
                 `;
@@ -457,7 +478,7 @@
                 summaryEl.innerHTML = `
                     <h2>⚠️ Some Warnings</h2>
                     <p>${testResults.warnings} warning(s) detected, ${testResults.passed} test(s) passed</p>
-                    <p style="margin-top: 1rem;"><a href="/" style="color: #d4af37;">Proceed to Application →</a></p>
+                    <p class="text-small"><a href="/" class="link-primary">Proceed to Application →</a></p>
                 `;
             }
         }

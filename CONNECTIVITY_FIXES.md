@@ -42,8 +42,10 @@
 - ✅ Environment diagnostics (browser, network, storage, cookies)
 - ✅ Real-time test execution with visual feedback
 - ✅ Detailed error reporting and troubleshooting info
+- ✅ Configurable backend/frontend URLs via query parameters
 
 **Access:** Navigate to `/connectivity-check.html` on your deployed site
+**Custom URLs:** Add `?backend=<url>&frontend=<url>` to test different endpoints
 
 ## CORS Configuration
 
