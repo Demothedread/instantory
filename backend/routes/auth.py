@@ -260,6 +260,9 @@ async def login():
         set_auth_cookies(response, access_token, refresh_token)
         return response
         
+    except RuntimeError as runtime_error:
+        logger.warning("Login unavailable: %s", runtime_error)
+        return jsonify({"error": str(runtime_error)}), 503
     except Exception as e:
         logger.exception("Login failed: %s", e)
         return jsonify({"error": "Authentication failed"}), 500
@@ -314,6 +317,9 @@ async def register():
         set_auth_cookies(response, access_token, refresh_token)
         return response
         
+    except RuntimeError as runtime_error:
+        logger.warning("Registration unavailable: %s", runtime_error)
+        return jsonify({"error": str(runtime_error)}), 503
     except Exception as e:
         logger.exception("Registration failed: %s", e)
         return jsonify({"error": "Registration failed"}), 500
@@ -373,6 +379,9 @@ async def google_login():
         set_auth_cookies(response, access_token, refresh_token)
         return response
         
+    except RuntimeError as runtime_error:
+        logger.warning("Google login unavailable: %s", runtime_error)
+        return jsonify({"error": str(runtime_error)}), 503
     except Exception as e:
         logger.exception("Google login failed: %s", e)
         return jsonify({"error": "Authentication failed"}), 500
@@ -444,6 +453,9 @@ async def check_session():
             "data": {"last_login": None}
         })
         
+    except RuntimeError as runtime_error:
+        logger.warning("Session check unavailable: %s", runtime_error)
+        return jsonify({"authenticated": False, "error": str(runtime_error)}), 503
     except Exception as e:
         logger.exception("Session check failed: %s", e)
         return jsonify({"authenticated": False, "error": str(e)}), 500
@@ -493,6 +505,9 @@ async def refresh_token_route():
         
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
         return jsonify({"error": "Refresh token expired"}), 401
+    except RuntimeError as runtime_error:
+        logger.warning("Token refresh unavailable: %s", runtime_error)
+        return jsonify({"error": str(runtime_error)}), 503
     except Exception as e:
         logger.exception("Token refresh failed: %s", e)
         return jsonify({"error": "Authentication failed"}), 500
@@ -538,6 +553,9 @@ async def admin_login():
         set_auth_cookies(response, access_token, refresh_token)
         return response
         
+    except RuntimeError as runtime_error:
+        logger.warning("Admin login unavailable: %s", runtime_error)
+        return jsonify({"error": str(runtime_error)}), 503
     except Exception as e:
         logger.exception("Admin login failed: %s", e)
         return jsonify({"error": "Admin authentication failed"}), 500
