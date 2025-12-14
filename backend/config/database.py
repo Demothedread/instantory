@@ -68,10 +68,9 @@ class DatabaseConfig:
 
         logger.info("Available database URLs: %s", safe_urls)
 
-        # Ensure at least one database URL is provided
         if not any(self.database_urls.values()):
-            raise ValueError(
-                "At least one database URL environment variable is required"
+            logger.warning(
+                "No database URLs configured; database-backed features will be disabled"
             )
 
         # Configure vector database
@@ -95,17 +94,13 @@ class DatabaseConfig:
         )
 
         # Parse connection details if URLs are available
-        self.vector_config = (
-            self._parse_url(self.vector_url) if self.vector_url else None
-        )
-        self.metadata_config = (
-            self._parse_url(self.metadata_url) if self.metadata_url else None
-        )
+        self.vector_config = self._parse_url(self.vector_url)
+        self.metadata_config = self._parse_url(self.metadata_url)
 
-    def _parse_url(self, url: str) -> Dict[str, Any]:
+    def _parse_url(self, url: Optional[str]) -> Optional[Dict[str, Any]]:
         """Parse database URL into connection parameters."""
         if not url:
-            return {}
+            return None
 
         logger.debug(
             "Parsing database URL: %s", url[:50] + "..." if len(url) > 50 else url
@@ -158,7 +153,7 @@ class DatabaseConfig:
 
         except (ValueError, TypeError, AttributeError) as e:
             logger.error("Error parsing database URL: %s", e)
-            return {}
+            return None
 
     async def get_pool(self, db_type: DatabaseType) -> Optional[asyncpg.Pool]:
         """Get or create a database connection pool for the specified type.
@@ -178,7 +173,9 @@ class DatabaseConfig:
 
         # If no configuration is available, log a warning and return None
         if not config:
-            logger.warning("No configuration available for %s database", db_type.value)
+            logger.warning(
+                "No configuration available for %s database", db_type.value
+            )
             return None
 
         try:
@@ -249,17 +246,24 @@ class DatabaseConfig:
 db_config = DatabaseConfig()
 
 
-async def get_db_pool() -> Optional[asyncpg.Pool]:
+async def get_db_pool(raise_on_missing: bool = True) -> Optional[asyncpg.Pool]:
     """Get the default (metadata) database connection pool.
 
-    Returns None if not available. Check the return value before use.
+    When ``raise_on_missing`` is ``True`` (default), a :class:`RuntimeError`
+    is raised if the pool is requested without a corresponding configuration.
+    When ``False``, ``None`` is returned instead so call sites can decide how
+    to handle missing database connectivity.
     """
+
     pool = await db_config.get_pool(DatabaseType.METADATA)
     if pool is None:
-        logger.error(
-            "Failed to retrieve metadata database pool. Ensure the configuration is correct."
+        message = (
+            "Metadata database pool requested but configuration is unavailable"
         )
-        raise RuntimeError("Metadata database pool is not available.")
+        if raise_on_missing:
+            raise RuntimeError(message)
+        logger.debug(message)
+        return None
     return pool
 
 

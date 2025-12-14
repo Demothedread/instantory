@@ -59,6 +59,21 @@ logger = logging.getLogger(__name__)
 
 files_bp = Blueprint('files', __name__)
 
+
+async def _get_files_pool():
+    """Return the metadata pool for file routes if configured."""
+
+    pool = await get_db_pool(raise_on_missing=False)
+    if pool is None:
+        logger.warning(
+            "Metadata database configuration missing; file route operation unavailable"
+        )
+    return pool
+
+
+def _files_db_unavailable_response(message: str):
+    return jsonify({"error": message}), 503
+
 # File size limits
 MAX_SINGLE_FILE_SIZE_MB = 4.5
 MAX_SINGLE_FILE_BYTES = MAX_SINGLE_FILE_SIZE_MB * 1024 * 1024
@@ -134,22 +149,27 @@ async def get_upload_url():
         )
 
         # Record in the database for tracking
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
-                if file_type == 'image':
-                    # Track the image upload in progress
-                    await conn.execute("""
-                        INSERT INTO upload_tracking (
-                            user_id, filename, temp_url, status, file_type
-                        ) VALUES ($1, $2, $3, $4, $5)
-                    """, int(user_id), unique_filename, temp_url, 'pending', 'image')
-                else:
-                    # Track the document upload in progress
-                    await conn.execute("""
-                        INSERT INTO upload_tracking (
-                            user_id, filename, temp_url, status, file_type
-                        ) VALUES ($1, $2, $3, $4, $5)
-                    """, int(user_id), unique_filename, temp_url, 'pending', 'document')
+        pool = await _get_files_pool()
+        if pool is None:
+            return _files_db_unavailable_response(
+                "Database configuration missing; unable to track upload"
+            )
+
+        async with pool.acquire() as conn:
+            if file_type == 'image':
+                # Track the image upload in progress
+                await conn.execute("""
+                    INSERT INTO upload_tracking (
+                        user_id, filename, temp_url, status, file_type
+                    ) VALUES ($1, $2, $3, $4, $5)
+                """, int(user_id), unique_filename, temp_url, 'pending', 'image')
+            else:
+                # Track the document upload in progress
+                await conn.execute("""
+                    INSERT INTO upload_tracking (
+                        user_id, filename, temp_url, status, file_type
+                    ) VALUES ($1, $2, $3, $4, $5)
+                """, int(user_id), unique_filename, temp_url, 'pending', 'document')
 
         return jsonify({
             'filename': unique_filename,
@@ -174,14 +194,19 @@ async def finalize_upload():
         if not all([temp_url, user_id, filename]):
             return jsonify({'error': 'Missing required parameters'}), 400
 
+        pool = await _get_files_pool()
+        if pool is None:
+            return _files_db_unavailable_response(
+                "Database configuration missing; unable to finalize upload"
+            )
+
         # Update tracking status
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
-                await conn.execute("""
-                    UPDATE upload_tracking
-                    SET status = 'processing'
-                    WHERE user_id = $1 AND temp_url = $2
-                """, int(user_id), temp_url)
+        async with pool.acquire() as conn:
+            await conn.execute("""
+                UPDATE upload_tracking
+                SET status = 'processing'
+                WHERE user_id = $1 AND temp_url = $2
+            """, int(user_id), temp_url)
 
         # Move file to permanent storage (either Vercel Blob or fallback)
         content_type = get_content_type(filename)
@@ -194,52 +219,50 @@ async def finalize_upload():
 
         if not permanent_url:
             # Update tracking with error
-            async with get_db_pool() as pool:
-                async with pool.acquire() as conn:
-                    await conn.execute("""
-                        UPDATE upload_tracking
-                        SET status = 'error', error_message = 'Failed to move to permanent storage'
-                        WHERE user_id = $1 AND temp_url = $2
-                    """, int(user_id), temp_url)
+            async with pool.acquire() as conn:
+                await conn.execute("""
+                    UPDATE upload_tracking
+                    SET status = 'error', error_message = 'Failed to move to permanent storage'
+                    WHERE user_id = $1 AND temp_url = $2
+                """, int(user_id), temp_url)
             return jsonify({'error': 'Failed to move file to permanent storage'}), 500
 
         # Update database with permanent URL based on file type
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
-                async with conn.transaction():
-                    # Update tracking record
-                    await conn.execute("""
-                        UPDATE upload_tracking
-                        SET status = 'complete', permanent_url = $1
-                        WHERE user_id = $2 AND temp_url = $3
-                    """, permanent_url, int(user_id), temp_url)
-                    
-                    # Update relevant data table based on file type
-                    if file_type == 'image':
-                        # If this is an inventory item image
-                        inventory_id = metadata.get('inventory_id')
-                        if inventory_id:
-                            await conn.execute("""
-                                UPDATE user_inventory
-                                SET original_image_url = $1
-                                WHERE id = $2 AND user_id = $3
-                            """, permanent_url, inventory_id, int(user_id))
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                # Update tracking record
+                await conn.execute("""
+                    UPDATE upload_tracking
+                    SET status = 'complete', permanent_url = $1
+                    WHERE user_id = $2 AND temp_url = $3
+                """, permanent_url, int(user_id), temp_url)
+
+                # Update relevant data table based on file type
+                if file_type == 'image':
+                    # If this is an inventory item image
+                    inventory_id = metadata.get('inventory_id')
+                    if inventory_id:
+                        await conn.execute("""
+                            UPDATE user_inventory
+                            SET original_image_url = $1
+                            WHERE id = $2 AND user_id = $3
+                        """, permanent_url, inventory_id, int(user_id))
+                else:
+                    # For documents, update or insert into user_documents
+                    doc_id = metadata.get('document_id')
+                    if doc_id:
+                        # Update existing document
+                        await conn.execute("""
+                            UPDATE user_documents
+                            SET file_path = $1, file_type = $2
+                            WHERE id = $3 AND user_id = $4
+                        """, permanent_url, content_type, doc_id, int(user_id))
                     else:
-                        # For documents, update or insert into user_documents
-                        doc_id = metadata.get('document_id')
-                        if doc_id:
-                            # Update existing document
-                            await conn.execute("""
-                                UPDATE user_documents
-                                SET file_path = $1, file_type = $2
-                                WHERE id = $3 AND user_id = $4
-                            """, permanent_url, content_type, doc_id, int(user_id))
-                        else:
-                            # Create minimal document entry - additional metadata will be added later
-                            await conn.execute("""
-                                INSERT INTO user_documents (user_id, title, file_path, file_type)
-                                VALUES ($1, $2, $3, $4)
-                            """, int(user_id), filename, permanent_url, content_type)
+                        # Create minimal document entry - additional metadata will be added later
+                        await conn.execute("""
+                            INSERT INTO user_documents (user_id, title, file_path, file_type)
+                            VALUES ($1, $2, $3, $4)
+                        """, int(user_id), filename, permanent_url, content_type)
 
         return jsonify({'url': permanent_url}), 200
 
@@ -247,7 +270,8 @@ async def finalize_upload():
         logger.error(f"Error finalizing upload: {e}")
         # Update tracking with error
         try:
-            async with get_db_pool() as pool:
+            pool = await _get_files_pool()
+            if pool is not None:
                 async with pool.acquire() as conn:
                     await conn.execute("""
                         UPDATE upload_tracking
@@ -271,21 +295,26 @@ async def download_file(filename):
         if not file_type:
             return jsonify({'error': 'Invalid file type'}), 400
 
+        pool = await _get_files_pool()
+        if pool is None:
+            return _files_db_unavailable_response(
+                "Database configuration missing; cannot verify file ownership"
+            )
+
         # Verify ownership
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
-                if file_type == 'images':
-                    row = await conn.fetchrow(
-                        "SELECT image_url as file_url FROM user_inventory WHERE user_id = $1 AND image_url LIKE $2",
-                        int(user_id), f"%{filename}"
-                    )
-                else:
-                    row = await conn.fetchrow(
-                        "SELECT file_path as file_url FROM user_documents WHERE user_id = $1 AND file_path LIKE $2",
-                        int(user_id), f"%{filename}"
-                    )
-                if not row:
-                    return jsonify({'error': 'File not found or unauthorized'}), 404
+        async with pool.acquire() as conn:
+            if file_type == 'images':
+                row = await conn.fetchrow(
+                    "SELECT image_url as file_url FROM user_inventory WHERE user_id = $1 AND image_url LIKE $2",
+                    int(user_id), f"%{filename}"
+                )
+            else:
+                row = await conn.fetchrow(
+                    "SELECT file_path as file_url FROM user_documents WHERE user_id = $1 AND file_path LIKE $2",
+                    int(user_id), f"%{filename}"
+                )
+            if not row:
+                return jsonify({'error': 'File not found or unauthorized'}), 404
 
         content = await storage_manager.get_file(row['file_url'])
         if not content:
@@ -315,15 +344,20 @@ async def get_thumbnail(filename):
         if get_file_type(filename) != 'images':
             return jsonify({'error': 'Not an image file'}), 400
 
+        pool = await _get_files_pool()
+        if pool is None:
+            return _files_db_unavailable_response(
+                "Database configuration missing; unable to generate thumbnail"
+            )
+
         # Get original image
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
-                row = await conn.fetchrow(
-                    "SELECT image_url as file_url FROM user_inventory WHERE user_id = $1 AND image_url LIKE $2",
-                    int(user_id), f"%{filename}"
-                )
-                if not row:
-                    return jsonify({'error': 'Image not found or unauthorized'}), 404
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT image_url as file_url FROM user_inventory WHERE user_id = $1 AND image_url LIKE $2",
+                int(user_id), f"%{filename}"
+            )
+            if not row:
+                return jsonify({'error': 'Image not found or unauthorized'}), 404
 
         content = await storage_manager.get_file(row['file_url'])
         if not content:
@@ -376,21 +410,26 @@ async def delete_file(filename):
         if not file_type:
             return jsonify({'error': 'Invalid file type'}), 400
 
+        pool = await _get_files_pool()
+        if pool is None:
+            return _files_db_unavailable_response(
+                "Database configuration missing; unable to delete file"
+            )
+
         # Verify ownership and get file URL
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
-                if file_type == 'images':
-                    row = await conn.fetchrow(
-                        "SELECT image_url as file_url FROM user_inventory WHERE user_id = $1 AND image_url LIKE $2",
-                        int(user_id), f"%{filename}"
-                    )
-                else:
-                    row = await conn.fetchrow(
-                        "SELECT file_path as file_url FROM user_documents WHERE user_id = $1 AND file_path LIKE $2",
-                        int(user_id), f"%{filename}"
-                    )
-                if not row:
-                    return jsonify({'error': 'File not found or unauthorized'}), 404
+        async with pool.acquire() as conn:
+            if file_type == 'images':
+                row = await conn.fetchrow(
+                    "SELECT image_url as file_url FROM user_inventory WHERE user_id = $1 AND image_url LIKE $2",
+                    int(user_id), f"%{filename}"
+                )
+            else:
+                row = await conn.fetchrow(
+                    "SELECT file_path as file_url FROM user_documents WHERE user_id = $1 AND file_path LIKE $2",
+                    int(user_id), f"%{filename}"
+                )
+            if not row:
+                return jsonify({'error': 'File not found or unauthorized'}), 404
 
         # Delete the file
         success = await storage_manager.delete_file(row['file_url'])
