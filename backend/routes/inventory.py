@@ -12,6 +12,24 @@ logger = logging.getLogger(__name__)
 inventory_bp = Blueprint("inventory", __name__)
 
 
+async def _get_inventory_pool():
+    """Retrieve the metadata pool for inventory routes, if configured."""
+
+    pool = await get_db_pool(raise_on_missing=False)
+    if pool is None:
+        logger.warning(
+            "Metadata database configuration missing; inventory endpoint unavailable"
+        )
+    return pool
+
+
+def _inventory_db_unavailable_response():
+    return (
+        jsonify({"error": "Database configuration missing; inventory unavailable"}),
+        503,
+    )
+
+
 @inventory_bp.route("/api/inventory", methods=["GET"])
 async def get_inventory():
     """Get user's inventory items."""
@@ -20,8 +38,11 @@ async def get_inventory():
         if not user_id:
             return jsonify({"error": "User ID required"}), 400
 
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
+        pool = await _get_inventory_pool()
+        if pool is None:
+            return _inventory_db_unavailable_response()
+
+        async with pool.acquire() as conn:
                 # Join with inventory_assets to get image URLs
                 rows = await conn.fetch(
                     """
@@ -50,8 +71,11 @@ async def create_inventory_item():
             return jsonify({"error": "User ID required"}), 400
 
         # Start transaction
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
+        pool = await _get_inventory_pool()
+        if pool is None:
+            return _inventory_db_unavailable_response()
+
+        async with pool.acquire() as conn:
                 async with conn.transaction():
                     # Create inventory item
                     row = await conn.fetchrow(
@@ -107,8 +131,11 @@ async def update_inventory_item(item_id):
         if not user_id:
             return jsonify({"error": "User ID required"}), 400
 
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
+        pool = await _get_inventory_pool()
+        if pool is None:
+            return _inventory_db_unavailable_response()
+
+        async with pool.acquire() as conn:
                 async with conn.transaction():
                     # Update inventory item
                     row = await conn.fetchrow(
@@ -202,8 +229,11 @@ async def delete_inventory_item(item_id):
         if not user_id:
             return jsonify({"error": "User ID required"}), 400
 
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
+        pool = await _get_inventory_pool()
+        if pool is None:
+            return _inventory_db_unavailable_response()
+
+        async with pool.acquire() as conn:
                 async with conn.transaction():
                     # Get image URL before deletion
                     asset_row = await conn.fetchrow(
@@ -249,8 +279,11 @@ async def search_inventory():
         if not user_id:
             return jsonify({"error": "User ID required"}), 400
 
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
+        pool = await _get_inventory_pool()
+        if pool is None:
+            return _inventory_db_unavailable_response()
+
+        async with pool.acquire() as conn:
                 where_clause = "i.user_id = $1"
                 params = [int(user_id)]
 
@@ -297,8 +330,11 @@ async def get_categories():
         if not user_id:
             return jsonify({"error": "User ID required"}), 400
 
-        async with get_db_pool() as pool:
-            async with pool.acquire() as conn:
+        pool = await _get_inventory_pool()
+        if pool is None:
+            return _inventory_db_unavailable_response()
+
+        async with pool.acquire() as conn:
                 rows = await conn.fetch(
                     """
                     SELECT DISTINCT category, COUNT(*) as count
