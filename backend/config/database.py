@@ -23,6 +23,10 @@ class DatabaseType(Enum):
     METADATA = "metadata"  # For metadata
 
 
+class DatabaseNotConfiguredError(RuntimeError):
+    """Raised when a database operation is attempted without configuration."""
+
+
 class DatabaseConfig:
     """Database configuration and pool management.
 
@@ -70,8 +74,8 @@ class DatabaseConfig:
 
         # Ensure at least one database URL is provided
         if not any(self.database_urls.values()):
-            raise ValueError(
-                "At least one database URL environment variable is required"
+            logger.warning(
+                "No database URLs configured. Database-dependent features will be disabled."
             )
 
         # Configure vector database
@@ -245,22 +249,56 @@ class DatabaseConfig:
         await self.close_pools()
 
 
+class _PoolAccessor:
+    """Lazy async accessor that supports both await and async with semantics."""
+
+    def __init__(self, db_type: DatabaseType, error_message: str):
+        self._db_type = db_type
+        self._error_message = error_message
+
+    async def _resolve_pool(self) -> asyncpg.Pool:
+        global db_config
+
+        config_instance = db_config
+        if not hasattr(config_instance, "get_pool"):
+            logger.warning(
+                "Database configuration instance missing get_pool; reinitializing."
+            )
+            config_instance = DatabaseConfig()
+            db_config = config_instance
+
+        pool = await config_instance.get_pool(self._db_type)
+        if pool is None:
+            raise DatabaseNotConfiguredError(self._error_message)
+        return pool
+
+    def __await__(self):
+        return self._resolve_pool().__await__()
+
+    async def __aenter__(self) -> asyncpg.Pool:
+        return await self._resolve_pool()
+
+    async def __aexit__(self, exc_type, exc, tb) -> bool:
+        return False
+
+
 # Global instance
 db_config = DatabaseConfig()
 
 
-async def get_db_pool() -> Optional[asyncpg.Pool]:
-    """Get the default (metadata) database connection pool.
+def get_db_pool() -> _PoolAccessor:
+    """Return an accessor for the metadata database pool.
 
-    Returns None if not available. Check the return value before use.
+    The accessor can be awaited or used with ``async with``. It raises
+    :class:`DatabaseNotConfiguredError` when the metadata database has not been
+    configured, ensuring the application only fails when a database operation is
+    actually requested.
     """
-    pool = await db_config.get_pool(DatabaseType.METADATA)
-    if pool is None:
-        logger.error(
-            "Failed to retrieve metadata database pool. Ensure the configuration is correct."
-        )
-        raise RuntimeError("Metadata database pool is not available.")
-    return pool
+
+    return _PoolAccessor(
+        DatabaseType.METADATA,
+        "Metadata database is not configured. Set DATABASE_URL or METADATA_DATABASE_URL.",
+    )
 
 
 async def get_vector_pool() -> Optional[Union[asyncpg.Pool, "QdrantService"]]:
@@ -293,7 +331,12 @@ async def get_vector_pool() -> Optional[Union[asyncpg.Pool, "QdrantService"]]:
         logger.warning(
             "Vector database unavailable, attempting to use metadata database as fallback"
         )
-        return await db_config.get_pool(DatabaseType.METADATA)
+        fallback_pool = await db_config.get_pool(DatabaseType.METADATA)
+        if fallback_pool is None:
+            raise DatabaseNotConfiguredError(
+                "Vector database is not configured. Set VECTOR_DATABASE_URL or DATABASE_URL."
+            )
+        return fallback_pool
     return pool
 
 
@@ -305,6 +348,10 @@ class DatabaseManager:
     async def get_metadata_pool(self):
         if not self._metadata_pool:
             config = config_manager.get_database_config()
+            if not config["metadata_url"]:
+                raise DatabaseNotConfiguredError(
+                    "Metadata database is not configured. Set DATABASE_URL or METADATA_DATABASE_URL."
+                )
             self._metadata_pool = await asyncpg.create_pool(
                 config["metadata_url"],
                 min_size=config["min_connections"],
@@ -317,6 +364,15 @@ class DatabaseManager:
             config = config_manager.get_database_config()
             if config["vector_url"]:
                 self._vector_pool = await asyncpg.create_pool(config["vector_url"])
+            elif config["metadata_url"]:
+                logger.warning(
+                    "Vector database configuration missing. Falling back to metadata database."
+                )
+                self._vector_pool = await asyncpg.create_pool(config["metadata_url"])
+            else:
+                raise DatabaseNotConfiguredError(
+                    "Vector database is not configured. Set VECTOR_DATABASE_URL or DATABASE_URL."
+                )
         return self._vector_pool
 
 

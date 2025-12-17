@@ -11,6 +11,7 @@ from quart import Quart, jsonify, request
 
 # Import centralized configuration manager
 from backend.config.manager import config_manager
+from backend.config.database import DatabaseNotConfiguredError
 
 # Configure logging using config manager
 server_config = config_manager.get_server_config()
@@ -25,6 +26,19 @@ def create_app():
     """Create and configure the Quart application."""
     app = Quart(__name__, static_folder=None)
     blueprints_registered = 0  # Track successful blueprint registrations
+
+    @app.errorhandler(DatabaseNotConfiguredError)
+    async def handle_database_not_configured(error):
+        logger.warning("Database access attempted without configuration: %s", error)
+        return (
+            jsonify(
+                {
+                    "error": "database_not_configured",
+                    "detail": str(error),
+                }
+            ),
+            503,
+        )
 
     # Get configuration from centralized manager
     server_config = config_manager.get_server_config()
